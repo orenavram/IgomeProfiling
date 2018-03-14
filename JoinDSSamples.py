@@ -5,7 +5,7 @@ from Auxilaries import *
 
 import logging
 logger = logging.getLogger('main')
-logging.basicConfig(level=logging.DEBUG) # set level to logging.DEBUG to see debugging comments
+logging.basicConfig(level=logging.INFO) # set level to logging.DEBUG to see debugging comments
 
 def split_dict_by_interest(domains_of_interest, domain_to_counts, correction):
     of_interest = dict.fromkeys(domains_of_interest, '0') # set to 0 by default
