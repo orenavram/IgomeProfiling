@@ -7,7 +7,7 @@ import regex
 fth1_anealed_site = "AAGTAGGGGATCCAGG"  # mistakes allowed
 fth1_anealed_antisense = "TCTAGAGCCGACCGCGA"  # no mistakes allowed
 
-sample_barcode_length = 5
+sample_barcode_length = 8
 fth1_anealed_site_length = len(fth1_anealed_site)
 VarLength = 12;
 fth1_anealed_antisense_length = len(fth1_anealed_antisense)

@@ -3,7 +3,7 @@
 
 # The structure is:
 # ===============================================
-# Barcodes (5 bp) - no mistakes allowed
+# Barcodes (8 bp) - no mistakes allowed
 # fth1 anealed Site (16 bp) - with mistakes allowed
 # Domain BC (12 bp)
 # fth1 anealed - anti sense (17 bp) - no mistakes allowed
