@@ -41,11 +41,12 @@ corrected_copy_number_file = os.path.join(out_dir, lib_name + '.copy_number.corr
 corrected_percents_file = os.path.join(out_dir, lib_name + '.percent.corrected_by_'+correction+'.csv')
 real_vs_leftovers_file = os.path.join(out_dir, lib_name + '.real_vs_leftovers.csv')
 
-#counter_types = [TooManyMistakes, Seq_with_errors_in_fth1_annealed_anti_sense, Wrong_Seq_With_N, TotalSeq, TotalSeqsOK]
+#counter_types = [TOO_MANY_MISTAKES, SEQ_WITH_ERRORS_IN_FTH1_ANNEALED_ANTI_SENSE, WRONG_SEQ_WITH_N, TOTAL_SEQ, TOTAL_SEQS_OK]
 #OUT_FILES_TYPES = dict((x, '.'.join(['MistakesAllowed', mistakes_allowed, x])) for x in [FILTERED, FASTQ, INFO, FS])
 
 
 domains_of_interest_to_names = load_table_to_dict(names_to_domains_of_interest_file, backwards=True)
+names_to_domains_of_interest = load_table_to_dict(names_to_domains_of_interest_file)
 #read the list of relevant domains
 domains_of_interest_list = domains_of_interest_to_names.keys()
 
@@ -66,7 +67,7 @@ for sub_dir_name in os.listdir(out_dir):
     if os.path.isdir(sub_dir_path) and lib_name in sub_dir_name.lower(): # scan only relevant dirs
         for file_name in os.listdir(sub_dir_path):
             logger.debug('file_name ' + file_name)
-            if file_name.endswith(COUNTS + suffix):
+            if file_name.endswith(COUNTS + SUFFIX):
                 counts_file_path = os.path.join(sub_dir_path, file_name)
                 domain_to_counts = load_table_to_dict(counts_file_path, open_operator=open)
                 domain_of_interest_to_counts, domain_of_interest_to_corrected_counts, domain_leftovers_to_counts =\
@@ -74,15 +75,24 @@ for sub_dir_name in os.listdir(out_dir):
 
                 logger.info('Aggregating {}'.format(counts_file_path))
 
-                of_interest_path = os.path.join(sub_dir_path, file_name.replace(suffix, DOMAIN_OF_INTEREST + suffix))
+                names=[]
+                with open(names_to_domains_of_interest_file) as f:
+                    for line in f:
+                        name = line.split()[0]
+                        names.append(name)
+                sorted_domain_of_interest_by_name = [names_to_domains_of_interest[name] for name in names]
+                print(sorted_domain_of_interest_by_name)
+
+                of_interest_path = os.path.join(sub_dir_path, file_name.replace(SUFFIX, DOMAIN_OF_INTEREST + SUFFIX))
                 with open(of_interest_path, 'w') as f:
                     # domain_of_interest_to_counts keys are exactly domains_of_interest_list but
                     # we need to keep the order in domains_of_interest_list
                     f.write('\n'.join(
-                        domains_of_interest_to_names[domain] + '\t' + domain_of_interest_to_counts[domain] for domain in domains_of_interest_list))
+                        domains_of_interest_to_names[domain] + '\t' + domain_of_interest_to_counts[domain] for domain in sorted_domain_of_interest_by_name))
 
 
-                leftovers_path = os.path.join(sub_dir_path, file_name.replace(suffix, LEFTOVERS + suffix))
+                leftovers_path = os.path.join(sub_dir_path, file_name.replace(SUFFIX, LEFTOVERS + SUFFIX))
+                sorted_leftovers = sorted(domain_leftovers_to_counts, key=domain_leftovers_to_counts.get, reverse=True)
                 with open(leftovers_path, 'w') as f:
                     #print(domain_leftovers_to_counts)
                     '''for domain in domain_leftovers_to_counts:
@@ -92,7 +102,7 @@ for sub_dir_name in os.listdir(out_dir):
                     print(leftovers_path)
                     f.write('\n'.join(
                         domain + '\t' +
-                        domain_leftovers_to_counts[domain] for domain in domain_leftovers_to_counts))
+                        domain_leftovers_to_counts[domain] for domain in sorted_leftovers))
 
                 data_is_not_empty = True # to determine if the files should be written or not
 

@@ -6,6 +6,8 @@ def fetch_join_ds_samples(correction = '50', gershoni_dir = '/groups/pupko/orena
     domains_of_interest_dir = os.path.join(gershoni_dir, 'domains_of_interest')
 
     for exp in os.listdir(experiments_dir):
+        # if 'DP' not in exp:
+        #     continue
         experiment_dir = os.path.join(gershoni_dir, 'Experiments', exp)
         cmds_file = os.path.join(experiment_dir, 'JoinDSSample.cmds')
         cmds = ''

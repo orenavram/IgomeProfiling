@@ -4,15 +4,15 @@ import os
 import regex
 
 # CONSTANTS:
-fth1_anealed_site = "AAGTAGGGGATCCAGG"  # mistakes allowed
-fth1_anealed_antisense = "TCTAGAGCCGACCGCGA"  # no mistakes allowed
+FTH1_ANEALED_SITE = "AAGTAGGGGATCCAGG"  # mistakes allowed
+FTH1_ANEALED_ANTISENSE = "TCTAGAGCCGACCGCGA"  # no mistakes allowed
 
-sample_barcode_length = 8
-fth1_anealed_site_length = len(fth1_anealed_site)
-VarLength = 12;
-fth1_anealed_antisense_length = len(fth1_anealed_antisense)
-var_starts = sample_barcode_length + fth1_anealed_site_length
-antisense_starts = var_starts + VarLength
+SAMPLE_BARCODE_LENGTH = 8
+FTH1_ANEALED_SITE_LENGTH = len(FTH1_ANEALED_SITE)
+VARIABLE_REGION_LENGTH = 12;
+FTH1_ANEALED_ANTISENSE_LENGTH = len(FTH1_ANEALED_ANTISENSE)
+VARIBLE_REGION_START = SAMPLE_BARCODE_LENGTH + FTH1_ANEALED_SITE_LENGTH
+ANTISENSE_START = VARIBLE_REGION_START + VARIABLE_REGION_LENGTH
 
 FILTERED = 'filtered'
 INFO = 'info'
@@ -23,13 +23,13 @@ COUNTS = 'counts'
 TOTAL_SEQ_AFTER_FILTERS = 'TOTAL SEQ AFTER FILTERS'
 DOMAIN_OF_INTEREST = '.domain_of_interest'
 LEFTOVERS = '.domain_leftovers'
-suffix = '.txt'
+SUFFIX = '.txt'
 
-TooManyMistakes = 'TOO_MANY_MISTAKES'#'TooManyMistakes'
-Seq_with_errors_in_fth1_annealed_anti_sense = 'Seq_with_errors_in_fth1_annealed_anti_sense'
-Wrong_Seq_With_N = 'Wrong_Seq_With_N'
-TotalSeq = 'TotalSeq'
-TotalSeqsOK = 'TotalSeqsOK'
+TOO_MANY_MISTAKES = 'TOO_MANY_MISTAKES'#'TOO_MANY_MISTAKES'
+SEQ_WITH_ERRORS_IN_FTH1_ANNEALED_ANTI_SENSE = 'SEQ_WITH_ERRORS_IN_FTH1_ANNEALED_ANTI_SENSE'
+WRONG_SEQ_WITH_N = 'WRONG_SEQ_WITH_N'
+TOTAL_SEQ = 'TOTAL_SEQ'
+TOTAL_SEQS_OK = 'TOTAL_SEQS_OK'
 
 def load_table_to_dict(file_to_read, d = None, delimiter ='\t', backwards = 0, open_operator=open):
     '''
@@ -60,5 +60,10 @@ def measure_time(start, end):
     hours = int(end - start) / 3600
     minutes = (int(end - start) % 3600) / 60
     seconds = int(end - start) % 60
-    return '%d:%d:%d hours.' % (hours, minutes, seconds)
+    if hours != 0:
+        return '%d:%d:%d hours.' % (hours, minutes, seconds)
+    elif minutes != 0:
+        return '%d:%d minutes.' % (minutes, seconds)
+    else:
+        return '%d seconds.' % (seconds)
 
