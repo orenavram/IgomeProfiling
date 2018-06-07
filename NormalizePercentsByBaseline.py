@@ -7,6 +7,7 @@ def normalize(percents): #with a name that is related to the file's name
     data = np.loadtxt(percents, delimiter=',', skiprows=1, usecols=range(1, ncols + 1))
 
     #WAS DONE MANUALLY IN EXCEL
+    #averaging the 3 baseline samples and dividing each sample by the baseline.
 
 
 if __name__ == '__main__':
