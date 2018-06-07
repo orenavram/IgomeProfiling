@@ -2,6 +2,11 @@ import gzip
 from sys import argv
 import os
 import regex
+from collections import Counter
+from time import time
+import logging
+
+logger = logging.getLogger('main')
 
 # CONSTANTS:
 FTH1_ANEALED_SITE = "AAGTAGGGGATCCAGG"  # mistakes allowed
@@ -31,22 +36,30 @@ WRONG_SEQ_WITH_N = 'WRONG_SEQ_WITH_N'
 TOTAL_SEQ = 'TOTAL_SEQ'
 TOTAL_SEQS_OK = 'TOTAL_SEQS_OK'
 
-def load_table_to_dict(file_to_read, d = None, delimiter ='\t', backwards = 0, open_operator=open):
+def load_table_to_dict(file_to_read, delimiter ='\t', backwards = 0):
     '''
     parse a delimited file with two columns to a dictionary
     if backwards == 0 keys are taken from the first column o.w., from the second
     open_operator can also be set to gzip.open if the file is zipped
     '''
-    if d == None:
-        d = {}
-    with open_operator(file_to_read) as f:
+    d = {}
+    values_are_repetative = ''
+    with open(file_to_read) as f:
         for line in f:
             if line != '' and not line.isspace():
                 item1, item2 = line.rstrip().split(delimiter)
+                if item1 in d:
+                    logger.error('Cannot load table to dict! key: {} appears twice in file'.format(item1))
+                    raise KeyError
+                if item2 in d:
+                    values_are_repetative = item2
                 d[item1] = item2
     if backwards:
+        if values_are_repetative != '':
+            logger.error('Cannot load reversed table to dict! value: {} appears twice in file'.format(values_are_repetative))
+            #raise ValueError
         d = dict((d[key],key) for key in d)
-    return d #, dict([(barcode_to_name[barcode], barcode) for barcode in barcode_to_name])
+    return d
 
 def diff(s1, s2):
     assert len(s1) == len(s2)
@@ -67,3 +80,10 @@ def measure_time(start, end):
     else:
         return '%d seconds.' % (seconds)
 
+def get_column_from_file(columns_file, column):
+    items = []
+    with open(columns_file) as f:
+        for line in f:
+            item = line.rstrip().split('\t')[column]
+            items.append(item)
+    return items

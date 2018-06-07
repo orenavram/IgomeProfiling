@@ -1,9 +1,6 @@
-from time import time
+from Auxilaries import *
 start = time()
 
-from Auxilaries import *
-
-import logging
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO) # set level to logging.DEBUG to see debugging comments
 
@@ -15,22 +12,24 @@ def split_dict_by_interest(domains_of_interest, domain_to_counts, correction):
         if domain in domains_of_interest:
             of_interest[domain] = domain_to_counts[domain]
             of_interest_corrected[domain] = str(int(domain_to_counts[domain]) + int(of_interest_corrected[domain]))
-            print(of_interest_corrected[domain])
+            logger.debug('of_interest_corrected[domain] = {}'.format(of_interest_corrected[domain]))
         else:
             leftovers[domain] = domain_to_counts[domain]
     return of_interest, of_interest_corrected, leftovers
 
-if len(argv) < 3:
+if len(argv) < 4:
     # logger.error('Usage: python '+argv[0]+' <names_to_domains_of_interest_file> <out_dir>; <?correction>')
     # exit(-1)
     names_to_domains_of_interest_file = '/Users/Oren/Dropbox/Projects/gershoni/domains_of_interest/HCV-HIV_P8.txt'
+    barcode_to_name_file = '/Users/Oren/Dropbox/Projects/gershoni/Experiments/Exp27B/data/DS_Samples.txt'
     out_dir = '/Users/Oren/Dropbox/Projects/gershoni/Experiments/Exp27B/first_phase_output/'
     correction = '50'
     lib_name = 'p8'.lower()
 else:
     names_to_domains_of_interest_file = argv[1]
-    out_dir = argv[2].rstrip('/')
-    correction = '50' if len(argv)<=3 else argv[3]
+    barcode_to_name_file = argv[2]
+    out_dir = argv[3].rstrip('/')
+    correction = '50' if len(argv)<=4 else argv[4]
     lib_name = os.path.split(names_to_domains_of_interest_file)[-1].split('_')[1].split('.')[0].lower()
 
 logger.info('argv: {} ; len(argv)= {}'.format(argv, len(argv)))
@@ -47,8 +46,14 @@ real_vs_leftovers_file = os.path.join(out_dir, lib_name + '.real_vs_leftovers.cs
 
 domains_of_interest_to_names = load_table_to_dict(names_to_domains_of_interest_file, backwards=True)
 names_to_domains_of_interest = load_table_to_dict(names_to_domains_of_interest_file)
-#read the list of relevant domains
-domains_of_interest_list = domains_of_interest_to_names.keys()
+
+
+# list of relevant domains (in the same order they appear in the file!)
+domains_of_interest_list = get_column_from_file(names_to_domains_of_interest_file, 1)
+logger.info('domains_of_interest_list = {}'.format(domains_of_interest_list))
+
+samples_names = get_column_from_file(barcode_to_name_file, 1)
+logger.info('samples_names = {}'.format(samples_names))
 
 copy_number_result = ','.join(['sample'] + [domains_of_interest_to_names[domain] for domain in domains_of_interest_list] + ['TOTAL']) + '\n'
 corrected_copy_number_result = copy_number_result
@@ -59,40 +64,32 @@ data_is_not_empty = False
 
 logger.info('Aggregating the following files:')
 #initializing resources
-for sub_dir_name in os.listdir(out_dir):
-    sub_dir_path = os.path.join(out_dir, sub_dir_name)
+for sample_name in samples_names:
+    sub_dir_path = os.path.join(out_dir, sample_name)
     logger.debug('sub_dir_path ' + sub_dir_path)
-    if not lib_name in sub_dir_name.lower():
-        logger.debug('lib_name {} NOT in sub_dir_name {}'.format(lib_name, sub_dir_name.lower()))
-    if os.path.isdir(sub_dir_path) and lib_name in sub_dir_name.lower(): # scan only relevant dirs
+    if not lib_name in sample_name.lower():
+        logger.debug('lib_name {} NOT in sub_dir_name {}'.format(lib_name, sample_name.lower()))
+    if os.path.isdir(sub_dir_path) and lib_name in sample_name.lower(): # scan only relevant dirs
         for file_name in os.listdir(sub_dir_path):
             logger.debug('file_name ' + file_name)
             if file_name.endswith(COUNTS + SUFFIX):
                 counts_file_path = os.path.join(sub_dir_path, file_name)
-                domain_to_counts = load_table_to_dict(counts_file_path, open_operator=open)
+                domain_to_counts = load_table_to_dict(counts_file_path)
                 domain_of_interest_to_counts, domain_of_interest_to_corrected_counts, domain_leftovers_to_counts =\
                     split_dict_by_interest(set(domains_of_interest_list), domain_to_counts, correction)
 
                 logger.info('Aggregating {}'.format(counts_file_path))
-
-                names=[]
-                with open(names_to_domains_of_interest_file) as f:
-                    for line in f:
-                        name = line.split()[0]
-                        names.append(name)
-                sorted_domain_of_interest_by_name = [names_to_domains_of_interest[name] for name in names]
-                print(sorted_domain_of_interest_by_name)
 
                 of_interest_path = os.path.join(sub_dir_path, file_name.replace(SUFFIX, DOMAIN_OF_INTEREST + SUFFIX))
                 with open(of_interest_path, 'w') as f:
                     # domain_of_interest_to_counts keys are exactly domains_of_interest_list but
                     # we need to keep the order in domains_of_interest_list
                     f.write('\n'.join(
-                        domains_of_interest_to_names[domain] + '\t' + domain_of_interest_to_counts[domain] for domain in sorted_domain_of_interest_by_name))
+                        domains_of_interest_to_names[domain] + '\t' + domain_of_interest_to_counts[domain] for domain in domains_of_interest_list))
 
 
                 leftovers_path = os.path.join(sub_dir_path, file_name.replace(SUFFIX, LEFTOVERS + SUFFIX))
-                sorted_leftovers = sorted(domain_leftovers_to_counts, key=domain_leftovers_to_counts.get, reverse=True)
+                sorted_leftovers = sorted(domain_leftovers_to_counts, key=lambda x:int(domain_leftovers_to_counts[x]), reverse=True)
                 with open(leftovers_path, 'w') as f:
                     #print(domain_leftovers_to_counts)
                     '''for domain in domain_leftovers_to_counts:
@@ -108,15 +105,15 @@ for sub_dir_name in os.listdir(out_dir):
 
                 #copy_number file
                 total_of_interest = sum(int(domain_of_interest_to_counts[domain]) for domain in domains_of_interest_list)
-                copy_number_result += ','.join([sub_dir_name] + [domain_of_interest_to_counts[domain] for domain in domains_of_interest_list] + [str(total_of_interest)]) + '\n'
+                copy_number_result += ','.join([sample_name] + [domain_of_interest_to_counts[domain] for domain in domains_of_interest_list] + [str(total_of_interest)]) + '\n'
 
                 #corrected_copy_number file
                 total_of_interest_corrected = sum(int(domain_of_interest_to_corrected_counts[domain]) for domain in domains_of_interest_list)
-                corrected_copy_number_result += ','.join([sub_dir_name] + [str(domain_of_interest_to_corrected_counts[domain]) for domain in domains_of_interest_list] + [str(total_of_interest_corrected)]) + '\n'
+                corrected_copy_number_result += ','.join([sample_name] + [str(domain_of_interest_to_corrected_counts[domain]) for domain in domains_of_interest_list] + [str(total_of_interest_corrected)]) + '\n'
 
                 #corrected_percent file
                 corrected_percents = [float(domain_of_interest_to_corrected_counts[domain]) / total_of_interest_corrected for domain in domains_of_interest_list]
-                corrected_percents_result += ','.join([sub_dir_name] + ['%.7f' % percent for percent in corrected_percents]) + '\n'
+                corrected_percents_result += ','.join([sample_name] + ['%.7f' % percent for percent in corrected_percents]) + '\n'
 
                 #real_vs_leftovers file
                 info_file_path = os.path.join(sub_dir_path, file_name.replace(COUNTS, INFO))
