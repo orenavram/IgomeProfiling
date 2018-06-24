@@ -275,14 +275,15 @@ text_to_info_file += TOTAL_SEQ_AFTER_FILTERS + ': ' + str(summary_counters[TOTAL
 with open(os.path.join(out_dir, 'info.txt'), 'w') as f:
     f.write(text_to_info_file)
 
-# freeing up resources
+logger.info('Freeing up resources...')
 for barcode in files_handlers:
     for handler in files_handlers[barcode]:
         files_handlers[barcode][handler].close()
 
 #frequency_counters_per_sample = {}
-#write unique files
+logger.info('Writing unique files...')
 for barcode in barcodes:
+    logger.info('Barcode: ' + barcode)
     #frequency_counters_per_sample[barcode] = {}
     with open(files_paths[barcode][FS]) as f:
         txt = f.read()

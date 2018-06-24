@@ -46,14 +46,16 @@ def load_table_to_dict(file_to_read, delimiter ='\t', backwards = 0):
     values_are_repetative = ''
     with open(file_to_read) as f:
         for line in f:
-            if line != '' and not line.isspace():
-                item1, item2 = line.rstrip().split(delimiter)
-                if item1 in d:
-                    logger.error('Cannot load table to dict! key: {} appears twice in file'.format(item1))
-                    raise KeyError
-                if item2 in d:
-                    values_are_repetative = item2
-                d[item1] = item2
+            line = line.rstrip()
+            if not line:
+                continue
+            item1, item2 = line.rstrip().split(delimiter)
+            if item1 in d:
+                logger.error('Cannot load table to dict! key: {} appears twice in file'.format(item1))
+                raise KeyError
+            if item2 in d:
+                values_are_repetative = item2
+            d[item1] = item2
     if backwards:
         if values_are_repetative != '':
             logger.error('Cannot load reversed table to dict! value: {} appears twice in file'.format(values_are_repetative))
@@ -84,6 +86,9 @@ def get_column_from_file(columns_file, column):
     items = []
     with open(columns_file) as f:
         for line in f:
-            item = line.rstrip().split('\t')[column]
+            line = line.rstrip()
+            if not line:
+                continue
+            item = line.split('\t')[column]
             items.append(item)
     return items
