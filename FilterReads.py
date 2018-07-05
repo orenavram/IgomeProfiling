@@ -34,7 +34,7 @@ if len(argv)>6:
 
 logger.info('argv: {} ; len(argv)= {}'.format(argv, len(argv)))
 
-def parse_fastq_file(fastq_file, counters, files_paths, sequence_without_barcode_to_counts):
+def parse_fastq_file(fastq_file, counters, sequence_without_barcode_to_counts):
     local_num_of_seqs_read = 0
     local_num_of_no_barcode = 0
     if fastq_file.endswith('gz'):
@@ -207,15 +207,15 @@ logger.info('Done initializing parameters! Starting to parse the fastq file...')
 
 #parsing the deep sequencing file
 fastq_files = []
-if os.path.isfile(fastq_path):
-    fastq_files.append(fastq_path)
-else: #fastq_path is a folder
+if os.path.isdir(fastq_path):
     fastq_files.extend(os.path.join(fastq_path, file_name) for file_name in os.listdir(fastq_path) if 'fastq' in file_name)
+else: #fastq_path is a filescp -v
+    fastq_files.append(fastq_path)
 
 sequence_without_barcode_to_counts = {}
 for fastq_file in fastq_files:
     logger.info('\n' + '#'*50 + '\nStart parsing {}\n'.format(fastq_file) + '#'*50)
-    local_values = parse_fastq_file(fastq_file, counters, files_paths, sequence_without_barcode_to_counts)
+    local_values = parse_fastq_file(fastq_file, counters, sequence_without_barcode_to_counts)
     num_of_seqs_read += local_values[0]
     num_of_no_barcode += local_values[1]
 
