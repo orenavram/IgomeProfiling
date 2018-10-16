@@ -4,21 +4,13 @@ import os
 import regex
 from collections import Counter
 from time import time
+from ParseFastQ import ParseFastQ
 import logging
-
 logger = logging.getLogger('main')
 
+DEFAULT_PARAMS = False
+
 # CONSTANTS:
-FTH1_ANEALED_SITE = "AAGTAGGGGATCCAGG"  # mistakes allowed
-FTH1_ANEALED_ANTISENSE = "TCTAGAGCCGACCGCGA"  # no mistakes allowed
-
-SAMPLE_BARCODE_LENGTH = 8
-FTH1_ANEALED_SITE_LENGTH = len(FTH1_ANEALED_SITE)
-VARIABLE_REGION_LENGTH = 12;
-FTH1_ANEALED_ANTISENSE_LENGTH = len(FTH1_ANEALED_ANTISENSE)
-VARIBLE_REGION_START = SAMPLE_BARCODE_LENGTH + FTH1_ANEALED_SITE_LENGTH
-ANTISENSE_START = VARIBLE_REGION_START + VARIABLE_REGION_LENGTH
-
 FILTERED = 'filtered'
 INFO = 'info'
 FASTQ = 'fastq'
@@ -26,12 +18,12 @@ FS = 'fs'
 COUNTS = 'counts'
 
 TOTAL_SEQ_AFTER_FILTERS = 'TOTAL SEQ AFTER FILTERS'
-DOMAIN_OF_INTEREST = '.domain_of_interest'
-LEFTOVERS = '.domain_leftovers'
-SUFFIX = '.txt'
+DOMAIN_OF_INTEREST = 'recognized_domains'
+LEFTOVERS = 'unrecognized_domains'
+ALL = 'all_domains'
 
 TOO_MANY_MISTAKES = 'TOO_MANY_MISTAKES'#'TOO_MANY_MISTAKES'
-SEQ_WITH_ERRORS_IN_FTH1_ANNEALED_ANTI_SENSE = 'SEQ_WITH_ERRORS_IN_FTH1_ANNEALED_ANTI_SENSE'
+SEQ_WITH_ERRORS_IN_DOMAIN_BARCODE_DOWNSTREAM_SEQUENCE = 'SEQ_WITH_ERRORS_IN_DOMAIN_BARCODE_DOWNSTREAM_SEQUENCE'
 WRONG_SEQ_WITH_N = 'WRONG_SEQ_WITH_N'
 TOTAL_SEQ = 'TOTAL_SEQ'
 TOTAL_SEQS_OK = 'TOTAL_SEQS_OK'
@@ -51,7 +43,7 @@ def load_table_to_dict(file_to_read, delimiter ='\t', backwards = 0):
                 continue
             item1, item2 = line.rstrip().split(delimiter)
             if item1 in d:
-                logger.error('Cannot load table to dict! key: {} appears twice in file'.format(item1))
+                logger.error(f'Cannot load table to dict! key: {item1} appears twice in file. (line: {line.rstrip()})')
                 raise KeyError
             if item2 in d:
                 values_are_repetative = item2
