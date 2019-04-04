@@ -13,9 +13,9 @@ for sample_name in os.listdir(first_phase_output_dir):
                 samplename2biologicalcondition[tokens[0]] = tokens[1]
 
     sample_path=os.path.join(first_phase_output_dir, sample_name)
-    print('sample_name is: ' + str(sample_name))
+    print('file name is: ' + str(sample_name))
     if not os.path.isdir(sample_path):
-        print('Skipping sample_name ' + str(sample_name) + ' (not a directory).')
+        # print('Skipping sample_name ' + str(sample_name) + ' (not a directory).')
         continue
     file = ''
     file_name_is_legal = False
@@ -24,13 +24,16 @@ for sample_name in os.listdir(first_phase_output_dir):
             file_name_is_legal = True
             break
     if not file_name_is_legal:
-        print('sample_name ' + str(sample_name) + ' does not contain UNIQUE.NORMALIZATION_RpM file.')
-        raise ValueError
+        print('Warning!!!!!\nsample_name ' + str(sample_name) + ' does not contain UNIQUE.NORMALIZATION_RpM file.')
     file_path = os.path.join(sample_path, file_name)
     print('file_path is: ' + str(file_path))
     #if len(sample_name)>8 and sample_name[8] == '_': #e.g., TTACAGCG_Israel_HCV_RNAplus_02_a_Random
-    biological_condition = samplename2biologicalcondition[sample_name[9:]]
-    result += file_path + ',' + biological_condition + ',' + sample_name + '\n'
+    sample_name_without_barcode = sample_name[9:]
+    if sample_name_without_barcode in samplename2biologicalcondition:
+        biological_condition = samplename2biologicalcondition[sample_name_without_barcode]
+        result += file_path + ',' + biological_condition + ',' + sample_name + '\n'
+    else:
+        print(f'{sample_name_without_barcode} is not in samplename2biologicalcondition. Skipping...')
 with open(resuls_path, 'w') as f:
     f.write(result)
 
@@ -73,12 +76,14 @@ final_df.to_csv(output_table, index=False)
 '''
 
 '''
+csvs=['P5E2_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_3_Features.csv', 'P5E3_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_14_Features.csv', 'P12E2_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_4_Features.csv', 'P12E3_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_3_Features.csv', 'P4E2_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_4_Features.csv', 'P4E3_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_49_Features.csv', 'P18E2_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_3_Features.csv', 'P18E3_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_96_Features.csv', 'P15E3_against_Exp_DP_2.TESTING_PVals_significant_binary_labeled.Top_28_Features.csv']
 import pandas as pd
 import os
 from functools import reduce
-results_dir = '/Users/Oren/Dropbox/Projects/gershoni/Experiments/Exp_DP_4/analyses/1_ALL/mAbs_motifs_vs_mAbs_hits'
-dfs = [pd.read_csv(results_dir+'/'+csv) for csv in os.listdir(results_dir) if csv.endswith('csv') and 'labeled' not in csv]
+results_dir = '/Users/Oren/Dropbox/Projects/gershoni/Experiments/Exp_DP_2/analyses/TB_per_patient/random_forest'
+dfs = [pd.read_csv(results_dir+'/'+csv, index_col=0).drop('label', 1) for csv in csvs]
 final_df = reduce(lambda left,right: pd.merge(left,right,on='sample_name'), dfs) #merge all dfs
-final_df = final_df.reindex(list([a for a in final_df.columns if a != 'sample_name' and 'label' not in a])+['sample_name'], axis=1) #move sample_name to last column
-final_df.to_csv(results_dir+'/mAbs_motifs_merged_hits_df.csv', index=False)
+final_df = final_df.reindex(list([a for a in final_df.columns if a != 'sample_name'])+['sample_name'], axis=1) #move sample_name to last column
+final_df.to_csv(results_dir+'/TB_motifs_merged_pvals_df.csv', index=False)
+
 '''
