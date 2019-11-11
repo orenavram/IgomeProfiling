@@ -13,6 +13,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('input_path', type=lambda x: x.rstrip('/'), help='A path to the data folder')
 parser.add_argument('output_path', type=lambda x: x.rstrip('/'), help='A path to which the results will be written')
 parser.add_argument('fastq', help='A path to the fastq file')
+parser.add_argument('reads_type', choices=['short', 'long'],
+                    help='Is it an old chip (e.g., exp12) or new one (e.g., DP)?')
 parser.add_argument('-q', '--queue_name', help='The cluster to which the job(s) will be submitted to',
                     choices=['pupkoweb', 'pupkolab', 'pupkotmp',
                              'pupkowebr', 'pupkolabr', 'pupkotmpr',
