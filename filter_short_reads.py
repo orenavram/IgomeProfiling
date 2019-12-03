@@ -131,18 +131,16 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
     right_construct_length = len(right_construct)
 
     logger.info(f'{datetime.datetime.now()}: Loading barcode2samplename file from:\n{barcode2samplename_path}')
-    barcode_to_samplename = load_barcode_to_sample_name(barcode2samplename_path)
-    assert len(barcode_to_samplename) > 0, f'No barcodes were found in {barcode2samplename_path}'  # TODO: add informative error to log
+    barcode2samplename = load_barcode_to_sample_name(barcode2samplename_path)
+    assert len(barcode2samplename) > 0, f'No barcodes were found in {barcode2samplename_path}'  # TODO: add informative error to log
 
     # get barcode's length by taking the length of an arbitrary barcode
-    for barcode in barcode_to_samplename:
+    for barcode in barcode2samplename:
         barcode_len = len(barcode)
         break
 
     # initialize dictionaries that map barcode to output file names, file handlers and statistics
-    barcode2filenames, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode_to_samplename, lib_types, output_dir)
-
-    log_f = open(f'{output_dir}/summary_log.txt', 'w')
+    barcode2filenames, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode2samplename, lib_types, output_dir)
 
     # counters:
     no_barcode = 0
@@ -174,15 +172,11 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
 
             # check that barcode exists
             barcode = dna_read[:barcode_len]
-            if barcode not in barcode_to_samplename:
+            if barcode not in barcode2samplename:
                 no_barcode += 1
                 continue
 
             barcode2statistics[barcode]['total_sequences'] += 1
-
-            # TODO: remove
-            a = barcode_to_samplename[barcode]
-            b = barcode2statistics[barcode]['total_sequences']
 
             # check that the barcode quality is above the required threshold
             barcode_quality = quality[:barcode_len]
@@ -196,10 +190,12 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
 
             # verify left construct
             current_left_construct = dna_read[barcode_len: barcode_len + left_construct_length]
-            if regex.match(f'({current_left_construct})' + '{s<='f"{max_mismatches_allowed}"'}', left_construct) == None:
+            # if regex.match(f'({current_left_construct})' + '{s<='f"{max_mismatches_allowed}"'}', left_construct) == None:
+            num_of_mismatches_on_the_left = str_diff(current_left_construct, left_construct)
+            if num_of_mismatches_on_the_left > max_mismatches_allowed:
                 barcode2statistics[barcode]['too_many_mistakes'] += 1
                 too_many_mistakes += 1
-                barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics[barcode]['total_sequences']}\tleft construct has {num_of_mismatches} (which is more than the allowed amount: {max_mismatches_allowed} mismatches)\t{dna_read}\n")
+                barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics[barcode]['total_sequences']}\tleft construct has {num_of_mismatches_on_the_left} (which is more than the allowed amount: {max_mismatches_allowed} mismatches)\t{dna_read}\n")
                 continue
 
             # if an appropriate library is found this variable will be set to False
@@ -208,8 +204,8 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
             # TODO: make one file for short reads analysis and one for long ones
 
             for current_lib_type in lib_types:
-                # Since the reads are too short (we have 50 bps out of which 5 are barcode's and 9 are left construct's)
-                # there are only 36 bps left for the random fragment + 4 bps of the right construct. Thus, we cannot
+                # Since the reads are too short (we have 51 bps out of which 5 are barcode's and 9 are left construct's)
+                # there are only 37 bps left for the random fragment + 4 bps of the right construct. Thus, we cannot
                 # infer directly from which library the read comes from. What we do is the following- for each possible
                 # library, we assume it is the correct one and see if the read's configuration (library) makes sense. If
                 # it does, we stop searching for "the right configuration". The order of the library types is very
@@ -236,19 +232,21 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
 
                 # the right construct is induced by the current library
                 # not sure if it will success (maybe this library won't fit and we will have to try another one)
-                current_right_construct = dna_read[random_dna_end: random_dna_end + right_construct_length]
-                num_of_mismatches = str_diff(current_right_construct, right_construct)
-                if num_of_mismatches > max_mismatches_allowed:
-                    barcode2statistics[barcode]['too_many_mistakes'] += 1
-                    too_many_mistakes += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics[barcode]['total_sequences']}\tright construct has {num_of_mismatches} (which is more than the allowed amount: {max_mismatches_allowed} mismatches)\t{dna_read}\n")
+                if random_dna_end + right_construct_length < len(dna_read):
+                    current_right_construct = dna_read[random_dna_end: random_dna_end + right_construct_length]
+                num_of_mismatches_on_the_right = str_diff(current_right_construct, right_construct)
+                if num_of_mismatches_on_the_right > max_mismatches_allowed - num_of_mismatches_on_the_left:
+                    #barcode2statistics[barcode]['too_many_mistakes'] += 1
+                    # too_many_mistakes += 1
+                    #barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics[barcode]['total_sequences']}\tright construct has {num_of_mismatches_on_the_right} (which is more than the allowed amount: {max_mismatches_allowed} mismatches)\t{dna_read}\n")
                     continue
 
                 # maybe it's a C12C but the read is too short so we see C11
-                # C12C requires a special handling because it is too long for the short reads (50 bps)
+                # C12C requires a special handling because it is too long for the short reads (51 bps)
                 # 5 (barcode) + 9 (right construct) + 36 (C11) -> 50 (total read's length)
                 if current_lib_type == 'C12C':
                     # This block should never happen if "C12C" is checked lastly because the read will be assigned as "12"
+                    logger.error(f"{datetime.datetime.now()}: {barcode2samplename[barcode]} {barcode}\n")
                     logger.error(f"{datetime.datetime.now()}: >Seq_{barcode2statistics[barcode]['total_sequences']}_Lib_{current_lib_type}\n{dna_read}\n")
                     logger.error(f"{datetime.datetime.now()}: >Seq_{barcode2statistics[barcode]['total_sequences']}_Lib_{current_lib_type}\n{random_peptide}\n")
                     raise ValueError('How come? "C12C" is checked lastly so this read should have been assigned as "12"')
@@ -290,14 +288,15 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
                 barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics[barcode]['total_sequences']}\tno library matched (total N's count is: {N_count})\t{dna_read[random_dna_start:]}\n")
 
 
-    for barcode in barcode_to_samplename:
+    for barcode in barcode2samplename:
         barcode2filehandlers[barcode]['fastq'].close()
         barcode2filehandlers[barcode]['faa'].close()
         barcode2filehandlers[barcode]['fna'].close()
         barcode2filehandlers[barcode]['filtration_log'].close()
 
 
-    for barcode in barcode_to_samplename:
+
+    for barcode in barcode2samplename:
         with open(barcode2info_filenames[barcode], 'w') as f:
             f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
             f.write(f'filter_reads function is invoked with the following parameters:\n')
@@ -308,34 +307,91 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
                     f'right_construct = {right_construct}\n'
                     f'max_mismatches_allowed = {max_mismatches_allowed}\n'
                     f'min_sequencing_quality = {min_sequencing_quality}\n'
-                    f'lib_types = {lib_types}\n'
-                    f'\n\n\n')
-            f.write('')
+                    f'lib_types = {lib_types}\n')
 
             sanity_check = barcode2statistics[barcode]['poor_quality_barcode'] + barcode2statistics[barcode]['high_quality_barcode'] == barcode2statistics[barcode]['total_sequences']
             assert sanity_check, 'poor_quality + high_quality != total'
+            f.write('_'*70+'\n')
             f.write(f"Total sequences with an appropriate barcode: {barcode2statistics[barcode]['total_sequences']}\n")
-            f.write(f'Filtration statistics:\n'
-                    f"Poor quality barcode -> {barcode2statistics[barcode]['poor_quality_barcode']}"
-                    f"(Sanity check: {sanity_check}"
+            f.write('_'*70 + '\n'
+                    'Filtration statistics:\n'
+                    f"Poor quality barcode -> {barcode2statistics[barcode]['poor_quality_barcode']} "
+                    f"(Sanity check {'PASSED' if sanity_check else 'FAILED'}: "
                     f"{barcode2statistics[barcode]['poor_quality_barcode']} (poor) + "
                     f"{barcode2statistics[barcode]['high_quality_barcode']} (high) = "
                     f"{barcode2statistics[barcode]['total_sequences']} (total)\n"
-                    f"Too many mismatches in flanking constant sequences -> {barcode2statistics[barcode]['too_many_mistakes']}\n"
+                    f"Sequences in more than {max_mismatches_allowed} mistakes in the right constant sequence -> {barcode2statistics[barcode]['too_many_mistakes']}\n"
                     f"Not NNK sequences -> {barcode2statistics[barcode]['not_nnk']}\n"
-                    f"Nonsense stop codon -> {barcode2statistics[barcode]['stop_codon']}\n"
+                    f"Nonsense stop codon -> {barcode2statistics[barcode]['stop_codon']}\n")
+
+            f.write('_'*70+'\n'
+                    'Hits statistics: (peptide\'s configuration -> hit count)\n')
+
+            for libtype in lib_types:
+                f.write(f'{libtype} -> {sum(barcode2statistics[barcode][libtype] for barcode in barcode2samplename)}\n')
+
+            f.write('_'*70+'\n'
+                    'Other statistics:\n'
                     f"UAG stop codon (q) -> {barcode2statistics[barcode]['uag']}\n"
                     f"No library matched -> {barcode2statistics[barcode]['no_library_matched']}\n"
                     f"Too many unrecognized nucleotides (N) -> {barcode2statistics[barcode]['N_count']}\n"
-                    f"Total sequences after filtration -> {barcode2statistics[barcode]['total_translated_sequences']}\n"
+                    f"Total translated sequences after filtration (not unique) -> {barcode2statistics[barcode]['total_translated_sequences']}\n"
                     f'\n\n\n')
 
 
+    logger.info('Writing execution summary file...')
+
+    log_f = open(f'{output_dir}/summary_log.txt', 'w')
+    log_f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
+    log_f.write(f'filter_reads function is invoked with the following parameters:\n')
+    log_f.write(f'fastq_file = {fastq_file}\n'
+                f'output_dir = {output_dir}\n'
+                f'barcode2samplename_path = {barcode2samplename_path}\n'
+                f'left_construct = {left_construct}\n'
+                f'right_construct = {right_construct}\n'
+                f'max_mismatches_allowed = {max_mismatches_allowed}\n'
+                f'min_sequencing_quality = {min_sequencing_quality}\n'
+                f'lib_types = {lib_types}\n')
+    log_f.write(f'Barcodes = {" ".join(barcode2samplename)}\n'
+                f'Sample names = {" ".join(barcode2samplename[barcode] for barcode in barcode2samplename)}\n\n')
+
+    total_translated_sequences = sum(barcode2statistics[barcode]["total_translated_sequences"] for barcode in barcode2samplename)
+
+    uag = sum(barcode2statistics[barcode]["uag"] for barcode in barcode2samplename)
+    log_f.write('_' * 70 + '\n'
+            f'Total number of dna sequences (i.e., fastq records) processed: {record_num}\n'
+            f'Total number of dna sequences with an INAPPROPRIATE barcode: {no_barcode}\n'
+            f'Total number of dna sequences with a LEGAL barcode: {record_num - no_barcode}\n')
+    for barcode in barcode2samplename:
+        log_f.write(f'{barcode} -> {barcode2statistics[barcode]["total_sequences"]}\n')
+
+
+    log_f.write('_' * 70 + '\n'
+                f"Sequences in more than {max_mismatches_allowed} mistakes in the right constant sequence -> {too_many_mistakes}\n"
+                f"Not NNK sequences -> {not_nnk}\n"
+                f"Nonsense stop codon -> {stop_codon}\n")
+
+    log_f.write('_' * 70 + '\n'
+            'Translated peptides (per library):\n')
+    for libtype in lib_types:
+        log_f.write(f'{libtype} -> {sum(barcode2statistics[barcode][libtype] for barcode in barcode2samplename)}\n')
+
+    log_f.write('_' * 70 + '\n'
+            f'Total number of dna sequences (i.e., fastq records) processed: {record_num}\n'
+            f'Total number of dna sequences with an INAPPROPRIATE barcode: {no_barcode}\n'
+            f'Total number of dna sequences with a LEGAL barcode: {record_num - no_barcode}\n')
+
+    log_f.write('_' * 70 + '\n'
+            'Translated peptides (per barcode):\n')
+    for barcode in barcode2samplename:
+        log_f.write(f'{barcode} -> {barcode2statistics[barcode]["total_translated_sequences"]}\n')
+
+    log_f.write(f'\nTOTAL NUMBER OF TRANSLATED PEPTIDES -> {total_translated_sequences}\n\n'
+                f'Total number of dna sequences with UAG (q): {uag}\n')
 
     log_f.close()
     logger.info(f'Started processing at {start_time}')
     logger.info(f'Done Processing! at {datetime.datetime.now()}')
-
 
 
 
@@ -356,7 +412,10 @@ if __name__ == '__main__':
     parser.add_argument('--min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('--lib_types', type=str.upper, default='C6C,C8C,C10C,6,8,10,12,7,C12C', help='CxC,x')  # However, this makes more sense: 'C12C,C10C,12,C8C,10,C6C,8,6'
+
+    # C12C is irrelevant for 51bps-long reads
+    # However, this makes more sense: 'C12C,C10C,12,C8C,10,C6C,8,6' (without C12C when inapplicable)
+    parser.add_argument('--lib_types', type=str.upper, default='C6C,C8C,C10C,6,8,10,12,7', help='CxC,x')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
