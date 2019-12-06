@@ -13,8 +13,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('input_path', type=lambda x: x.rstrip('/'), help='A path to the data folder')
 parser.add_argument('output_path', type=lambda x: x.rstrip('/'), help='A path to which the results will be written')
 parser.add_argument('fastq', help='A path to the fastq file')
-parser.add_argument('reads_type', choices=['short', 'long'],
-                    help='Is it an old chip (e.g., exp12) or new one (e.g., DP)?')
+parser.add_argument('barcode2samplename', help='A path to a table with barcode to sample name mapping')
+parser.add_argument('samplename2biologicalcondition', help='A path to a table with sample name to biological condition mapping')
+
 parser.add_argument('-q', '--queue_name', help='The cluster to which the job(s) will be submitted to',
                     choices=['pupkoweb', 'pupkolab', 'pupkotmp',
                              'pupkowebr', 'pupkolabr', 'pupkotmpr',
@@ -26,6 +27,8 @@ args = parser.parse_args()
 folder_input = args.input_path
 folder_output = args.output_path
 fastq_file = args.fastq
+barcode2samplename_path = args.barcode2samplename
+samplename2biologicalcondition_path = args.samplename2biologicalcondition
 queue_name = args.q
 
 
@@ -35,5 +38,4 @@ biggest_cluster_sec = 400
 max_peptide = 1000
 gap_threshold = 0.1  # alignment columns with more than gap_threshold proportion of gaps are discarded
 split_num = 10
-gz = "no"
-MistakeAllowed = 1 #default # default == 1
+MistakeAllowed = 1 # default
