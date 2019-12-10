@@ -13,11 +13,14 @@ import sys
 
 def filter_reads(fasta_file, out_fasta_file, rpm_factors_file):
 
-    sequences_to_counts = {}
-    with open(fasta_file) as f:
-        for line in f:
-            sequence = f.readline().rstrip()
-            sequences_to_counts[sequence] = sequences_to_counts.get(sequence, 0) + 1
+    open_function = open
+    mode = 'r'
+    if fasta_file.endswith('gz'):
+        import gzip
+        open_function = gzip.open
+        mode = 'rt'
+
+    sequences_to_counts = get_sequences_frequency_counter(fasta_file, open_function, mode)
 
     sorted_sequences = sorted(sequences_to_counts, key=sequences_to_counts.get, reverse=True)
     total_sequences_count = sum(sequences_to_counts.values())
@@ -35,7 +38,17 @@ def filter_reads(fasta_file, out_fasta_file, rpm_factors_file):
             lib = f'{len_seq}'
             if seq.startswith('C') and seq.endswith('C'):
                 lib = f'C{len_seq-2}C'
-            f.write(f'>Seq_{i+1}_Lib_{lib}_Len_{len_seq}_counts_{counts}\n{seq}\n')
+            f.write(f'>seq_{i+1}_lib_{lib}_len_{len_seq}_counts_{counts}\n{seq}\n')
+
+
+def get_sequences_frequency_counter(fasta_file, open_function, mode):
+    sequences_to_counts = {}
+    with open_function(fasta_file, mode) as f:
+        for line in f:
+            # skip headers. Read only sequences.
+            sequence = f.readline().rstrip()
+            sequences_to_counts[sequence] = sequences_to_counts.get(sequence, 0) + 1
+    return sequences_to_counts
 
 
 if __name__ == '__main__':
