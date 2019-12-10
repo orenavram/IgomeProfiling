@@ -17,8 +17,9 @@ def cluster_sequences(fasta_file, output_path, threshhold, word_length, throw_se
     with open(output_path) as f:
         if len(f.read(10).strip()) == 0:
             # TODO: write error to a global error file
-            logger.error(f'CD-hit failed to cluster {output_path}')
-            raise RuntimeError(f'CD-hit failed to cluster {output_path}')
+            msg = f'CD-hit failed to cluster {output_path}'
+            logger.error(msg)
+            raise RuntimeError(msg)
 
     with open(f'{os.path.split(output_path)[0]}/done.txt', 'w'):
         pass
