@@ -15,11 +15,19 @@ def load_barcode_to_sample_name(barcode2samplename_path):
     return barcode_to_samplename
 
 
-def get_barcodes_dictionaries(barcode_to_samplename, output_dir) -> {str: {str: str}}:
-    barcode2filenames = {}
+def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {str: str}}:
+    barcode2filepaths = {}
     barcode2filehandlers = {}
     barcode2statistics = {}
     barcode2info_filenames = {}
+
+    open_function = open
+    mode = 'w'
+    extension = ''
+    if gz:
+        open_function = gzip.open
+        mode = 'wt'
+        extension = '.gz'
 
     for barcode in barcode_to_samplename:
         sample_name = barcode_to_samplename[barcode]  # f'{barcode}_{os.path.split(fastq_file)[-1]}'
@@ -29,24 +37,22 @@ def get_barcodes_dictionaries(barcode_to_samplename, output_dir) -> {str: {str: 
         os.makedirs(subdir_path, exist_ok=True)
 
         # add filenames
-        barcode2filenames[barcode] = {}
-        # translated seq # TODO: change to .gz
-        barcode2filenames[barcode]['fastq'] = f'{subdir_path}/{sample_name}.fastq'
-        # translated seq # TODO: change to .gz
-        barcode2filenames[barcode]['fna'] = f'{subdir_path}/{sample_name}.fna'
+        barcode2filepaths[barcode] = {}
         # translated seq
-        barcode2filenames[barcode]['faa'] = f'{subdir_path}/{sample_name}.faa'
+        barcode2filepaths[barcode]['fastq'] = f'{subdir_path}/{sample_name}.fastq{extension}'
+        # translated seq
+        barcode2filepaths[barcode]['fna'] = f'{subdir_path}/{sample_name}.fna{extension}'
+        # translated seq
+        barcode2filepaths[barcode]['faa'] = f'{subdir_path}/{sample_name}.faa{extension}'
         # where in the filter seqs dropped
-        barcode2filenames[barcode]['filtration_log'] = f'{subdir_path}/{sample_name}.filtration_log.txt'
+        barcode2filepaths[barcode]['filtration_log'] = f'{subdir_path}/{sample_name}.filtration_log.txt{extension}'
 
         # add filehandlers
         barcode2filehandlers[barcode] = {}
-        # TODO: change to zip.open, 'wb'
-        barcode2filehandlers[barcode]['fastq'] = open(barcode2filenames[barcode]['fastq'], 'w')
-        # TODO: change to zip.open, 'wb'
-        barcode2filehandlers[barcode]['fna'] = open(barcode2filenames[barcode]['fna'], 'w')
-        barcode2filehandlers[barcode]['faa'] = open(barcode2filenames[barcode]['faa'], 'w')
-        barcode2filehandlers[barcode]['filtration_log'] = open(barcode2filenames[barcode]['filtration_log'], 'w')
+        barcode2filehandlers[barcode]['fastq'] = open_function(barcode2filepaths[barcode]['fastq'], mode)
+        barcode2filehandlers[barcode]['fna'] = open_function(barcode2filepaths[barcode]['fna'], mode)
+        barcode2filehandlers[barcode]['faa'] = open_function(barcode2filepaths[barcode]['faa'], mode)
+        barcode2filehandlers[barcode]['filtration_log'] = open_function(barcode2filepaths[barcode]['filtration_log'], mode)
 
         barcode2statistics[barcode] = dict.fromkeys(['legal_barcode',
                                      'poor_quality_barcode',
@@ -60,7 +66,7 @@ def get_barcodes_dictionaries(barcode_to_samplename, output_dir) -> {str: {str: 
 
         barcode2info_filenames[barcode] = f'{subdir_path}/{sample_name}_info.txt'
 
-    return barcode2filenames, barcode2filehandlers, barcode2statistics, barcode2info_filenames
+    return barcode2filepaths, barcode2filehandlers, barcode2statistics, barcode2info_filenames
 
 
 def str_diff(s1, s2):
@@ -80,7 +86,7 @@ def write_header(f_handler, txt):
 
 def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
                  left_construct, right_construct, max_mismatches_allowed,
-                 min_sequencing_quality):
+                 min_sequencing_quality, gz):
 
     start_time = datetime.datetime.now()
 
@@ -119,7 +125,7 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
         break
 
     # initialize dictionaries that map barcode to output file names, file handlers and statistics
-    barcode2filenames, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode2samplename, output_dir)
+    barcode2filepaths, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode2samplename, output_dir, gz)
 
     lib_types = set()  # keeps all the library types seen
     record_num = 0  # so the line number will represent the actual sequence inside each record
@@ -328,15 +334,17 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
         uag = sum(barcode2statistics[barcode]["uag"] for barcode in barcode2samplename)
         write_header(log_f, f'Total number of dna sequences with UAG (q) -> {uag}\n')
 
-        log_f.close()
         end_time = datetime.datetime.now()
+        write_header(f'Total running time: {str(end_time-start_time)[:-3]}')
+
+        log_f.close()
+
         logger.info(f'Started processing at {start_time}')
         logger.info(f'Done Processing! at {end_time}')
         logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
 
     with open(f'{output_dir}/done.txt', 'w'):
         pass
-
 
 
 if __name__ == '__main__':
@@ -357,6 +365,7 @@ if __name__ == '__main__':
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     # more than 12 aa-long random peptide (e.g., C12C) is irrelevant for 51bps-long reads
     # parser.add_argument('--lib_types', type=str.upper, default='6,C6C,8,C8C,10,C10C,12', help='OBSOLETE: Ignore this param. CxC,x')
+    parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -369,4 +378,4 @@ if __name__ == '__main__':
 
     filter_reads(argv, args.fastq_file, args.output_dir, args.barcode2samplename,
                  args.left_construct, args.right_construct, args.MistakeAllowed,
-                 args.min_sequencing_quality)
+                 args.min_sequencing_quality, True if args.gz else False)
