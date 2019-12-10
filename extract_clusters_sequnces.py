@@ -1,15 +1,6 @@
 import datetime
 import os
-
-def verify_file_is_not_empty(file_path):
-    # make sure that there are results and the file is not empty
-    with open(file_path) as f:
-        if len(f.read(10).strip()) == 0:
-            # TODO: write error to a global error file
-            msg = f'Input file is empty {file_path}'
-            logger.error(msg)
-            raise RuntimeError(msg)
-
+from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 def load_member_prefix_to_record_dict(fasta_file, prefix_length=10):
     # Why 10 by default? see load_clusters_to_members_dict documentation
