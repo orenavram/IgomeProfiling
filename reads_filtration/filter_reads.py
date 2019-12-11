@@ -251,7 +251,7 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
     for barcode in barcode2samplename:
         with open(barcode2info_filenames[barcode], 'w') as f:
             f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
-            f.write(f'filter_reads function is invoked with the following parameters:\n')
+            f.write(f'reads_filtration function is invoked with the following parameters:\n')
             f.write(f'fastq_file = {fastq_file}\n'
                     f'output_dir = {output_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
@@ -288,7 +288,7 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
 
     with open(f'{output_dir}/summary_log.txt', 'w') as log_f:
         log_f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
-        log_f.write(f'filter_reads function is invoked with the following parameters:\n')
+        log_f.write(f'reads_filtration function is invoked with the following parameters:\n')
         log_f.write(f'fastq_file = {fastq_file}\n'
                     f'output_dir = {output_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
@@ -335,7 +335,7 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
         write_header(log_f, f'Total number of dna sequences with UAG (q) -> {uag}\n')
 
         end_time = datetime.datetime.now()
-        write_header(f'Total running time: {str(end_time-start_time)[:-3]}')
+        write_header(log_f, f'Total running time: {str(end_time-start_time)[:-3]}')
 
         log_f.close()
 
