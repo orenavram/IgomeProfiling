@@ -1,3 +1,4 @@
+from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 import logging
 logger = logging.getLogger('main')
 
@@ -15,6 +16,8 @@ def load_msa(in_path):
 
 def remove_sparse_columns(msa_path, out_path, maximal_gap_frequency_allowed_per_column):
     logger.info(f'Removing sparse columns from {msa_path} (allowing columns with gap frequency lower than {maximal_gap_frequency_allowed_per_column})')
+    verify_file_is_not_empty(msa_path)
+
     header_to_sequence, number_of_sequences, msa_length = load_msa(msa_path)
     cleaned_header_to_sequence = dict.fromkeys(header_to_sequence, '')
     for j in range(msa_length):
