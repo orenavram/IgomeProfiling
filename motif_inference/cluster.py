@@ -5,6 +5,7 @@ from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 def cluster_sequences(fasta_file, output_path, threshhold, word_length, throw_sequences_shorter_than):
 
+    verify_file_is_not_empty(fasta_file)
 
     # TODO: module load CD hit
     cmd = f'cd-hit -i {fasta_file} ' \

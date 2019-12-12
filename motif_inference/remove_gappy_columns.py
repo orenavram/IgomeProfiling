@@ -1,17 +1,6 @@
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_msa
 import logging
 logger = logging.getLogger('main')
-
-
-def load_msa(in_path):
-    header_to_sequence = {}
-    with open(in_path) as f:
-        for header in f:
-            if not header.startswith('>'):
-                raise TypeError('Illegal fasta file')
-            header_to_sequence[header.rstrip()] = f.readline().rstrip()
-
-    return header_to_sequence, len(header_to_sequence), len(header_to_sequence[header.rstrip()])
 
 
 def remove_sparse_columns(msa_path, out_path, maximal_gap_frequency_allowed_per_column):
