@@ -90,27 +90,7 @@ def filter_reads(argv, fastq_file, output_dir, barcode2samplename_path,
 
     start_time = datetime.datetime.now()
 
-    nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
-                 "CTT": "L", "CTG": "L", "TTG": "L",
-                 "TCT": "S", "TCG": "S", "AGT": "S",
-                 "GCT": "A", "GCG": "A",
-                 "GGT": "G", "GGG": "G",
-                 "CCT": "P", "CCG": "P",
-                 "ACT": "T", "ACG": "T",
-                 "CAG": "Q",
-                 "TAG": "q",
-                 "GTT": "V", "GTG": "V",
-                 "AAT": "N",
-                 "GAT": "D",
-                 "TGT": "C",
-                 "GAG": "E",
-                 "CAT": "H",
-                 "ATT": "I",
-                 "AAG": "K",
-                 "ATG": "M",
-                 "TTT": "F",
-                 "TGG": "W",
-                 "TAT": "Y"}
+    from Auxiliaries.pipeline_auxiliaries import nnk_table
 
     left_construct_length = len(left_construct)
     right_construct_length = len(right_construct)
