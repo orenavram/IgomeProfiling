@@ -21,7 +21,7 @@ def remove_sparse_columns(msa_path, out_path, maximal_gap_frequency_allowed_per_
 
     with open(out_path, 'w') as f:
         for header in cleaned_header_to_sequence:
-            f.write(f'{header}\n{cleaned_header_to_sequence[header]}\n')
+            f.write(f'>{header}\n{cleaned_header_to_sequence[header]}\n')
 
     logger.info(f'Shortened from {msa_length} to {len(cleaned_header_to_sequence[header])} columns')
 
