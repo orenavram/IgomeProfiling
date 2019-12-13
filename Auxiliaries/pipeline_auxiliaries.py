@@ -32,19 +32,19 @@ def verify_file_is_not_empty(file_path):
             raise RuntimeError(msg)
 
 
-def load_msa(msa_path):
+def load_fasta_to_dict(fasta_path):
     """
-    :param msa_path: a path to an MSA file (in FASTA format)
+    :param fasta_path: a path to a FASTA file
     :return: a dictionary that maps each header (without ">" and rstriped()) to its corresponding sequence (rstriped())
              an int that represent the number of sequences
              an int that represent the length of the alignment
     """
     header_to_sequence = {}
-    with open(msa_path) as f:
+    with open(fasta_path) as f:
         for header in f:
             if not header.startswith('>'):
                 raise TypeError('Illegal fasta file')
             # returns header without ">" !
             header_to_sequence[header[1:].rstrip()] = f.readline().rstrip()
 
-    return header_to_sequence, len(header_to_sequence), len(header_to_sequence[header.rstrip()])
+    return header_to_sequence, len(header_to_sequence), len(header_to_sequence[header[1:].rstrip()])

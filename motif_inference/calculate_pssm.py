@@ -5,7 +5,7 @@ import os
 import sys
 sys.path.insert(0, '/Users/Oren/Dropbox/Projects/gershoni/src/')
 print(sys.version)
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_msa, nnk_table
+from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict, nnk_table
 import logging
 logger = logging.getLogger('main')
 
@@ -49,7 +49,7 @@ def add_pssm_to_meme_file(msa_path, meme_path, add_header):
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(msa_path)
 
-    header_to_sequence, number_of_sequences, msa_length = load_msa(msa_path)
+    header_to_sequence, number_of_sequences, msa_length = load_fasta_to_dict(msa_path)
     letters = sorted(set(letter.upper() for letter in nnk_table.values()))  # don't differentiate between Q and q...
     column_to_letters_frequency_counter = get_pssm(header_to_sequence, msa_length, letters)
 
