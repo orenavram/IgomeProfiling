@@ -1,4 +1,18 @@
+import datetime
+from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+import logging
+logger = logging.getLogger('main')
+
 def remove_cysteine(fasta_file, out_fasta_file):
+    """
+    :param fasta_file: a fasta file with sequences
+    :param out_fasta_file: a fasta file with the same sequences but flanking Cysteine is removed
+    :return:
+    """
+    logger.info(f'{datetime.datetime.now()}: removing Cysteine loop from {fasta_file}')
+
+    verify_file_is_not_empty(fasta_file)
+
     f_in = open(fasta_file)
     f_out = open(out_fasta_file, 'w')
     for header in f_in:
@@ -19,11 +33,9 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
-    import logging
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger('main')
 
     remove_cysteine(args.fasta_file, args.out_fasta_file)

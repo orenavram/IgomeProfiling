@@ -1,24 +1,24 @@
-#######################################################################
-# Take a FASTA file (where each sequence is in one line) and
-# output a FASTA file where each sequence is unique including number of repeats
-# Input: (1)  FASTA file (where each sequence is in one line)
-#        (2)  ADD to output header the LibType? (YES|NO) [default=NO]
-#        (3)  Normalization method (NONE|RpM)
-#             [RpM = 1/(Total reads in sample) x 1,000,000, multiply seq-CopyNumber by RpM]
-#/groups/pupko/bialik/trash//first_phase_output/TACGCGAT_UH_8_c/TACGCGAT_EXP_5_10-6-18_S1_ALL_head_1000000.UH_8_c.MistakeAllowed.1.AA.fs
-# YES
-# RpM >> /groups/pupko/bialik/trash/RpM_Factors.txt
+import datetime
+import logging
+logger = logging.getLogger('main')
 
-import sys
-
-def filter_reads(fasta_file, out_fasta_file, rpm_factors_file):
-
+def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file):
+    """
+    :param fasta_file: a fasta file with non unique sequences
+    :param out_fasta_file: a fasta file with the sequences from the input file but with summarized counts (of
+    duplicates), normalized to rpm (if $rpm_factors_file is provided) and collapsed (i.e., without duplicates)
+    unique sequences.
+    :param rpm_factors_file: a path to which the reads per million (RPM) normalization factor should be written to
+    :return:
+    """
     open_function = open
     mode = 'r'
     if fasta_file.endswith('gz'):
         import gzip
         open_function = gzip.open
         mode = 'rt'
+
+    logger.info(f'{datetime.datetime.now()}: counting and collapsing {fasta_file} (mode: {mode})')
 
     sequences_to_counts = get_sequences_frequency_counter(fasta_file, open_function, mode)
 
@@ -70,4 +70,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    filter_reads(args.fasta_file, args.out_fasta_file, args.rpm)
+    count_and_collapse(args.fasta_file, args.out_fasta_file, args.rpm)

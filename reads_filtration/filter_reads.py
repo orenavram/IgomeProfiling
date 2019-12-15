@@ -234,7 +234,7 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
             f.write(f'reads_filtration function is invoked with the following parameters:\n')
             f.write(f'fastq_file = {fastq_file}\n'
                     f'results_output_dir = {results_output_dir}\n'
-                    f'logs_output_dir = {logs_output_dir}\n'
+                    # f'logs_output_dir = {logs_output_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
                     f'left_construct = {left_construct}\n'
                     f'right_construct = {right_construct}\n'
@@ -272,7 +272,7 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
         log_f.write(f'reads_filtration function is invoked with the following parameters:\n')
         log_f.write(f'fastq_file = {fastq_file}\n'
                     f'results_output_dir = {results_output_dir}\n'
-                    f'logs_output_dir = {logs_output_dir}\n'
+                    # f'logs_output_dir = {logs_output_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
                     f'left_construct = {left_construct}\n'
                     f'right_construct = {right_construct}\n'
@@ -325,7 +325,7 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
         logger.info(f'Done Processing! at {end_time}')
         logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
 
-    with open(f'{output_dir}/done.txt', 'w'):
+    with open(f'{results_output_dir}/done.txt', 'w'):
         pass
 
 

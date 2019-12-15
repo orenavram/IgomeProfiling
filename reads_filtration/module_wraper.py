@@ -25,30 +25,30 @@ def run_first_phase(fastq_path, parsed_fastq_results, barcode2samplename,
 
         fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py', parameters)
 
-        # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
-        for path, dirs, files in os.walk(results_output):
-            for file in files:
-                # look for faa files to collapse
-                if '.faa' not in file:
-                    continue
+    # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
+    for path, dirs, files in os.walk(results_output):
+        for file in files:
+            # look for faa files to collapse
+            if '.faa' not in file:
+                continue
 
-                sample_name = file.split('.faa')[0]
-                file_path = f'{path}/{file}'
-                output_file_path = f'{path}/{sample_name}_unique_rpm.faa'
-                parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
-                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
+            sample_name = file.split('.faa')[0]
+            file_path = f'{path}/{file}'
+            output_file_path = f'{path}/{sample_name}_unique_rpm.faa'
+            parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
+            fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
 
-                file_path = output_file_path
-                output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-                parameters = [file_path, output_file_path]
-                fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
+            file_path = output_file_path
+            output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
+            parameters = [file_path, output_file_path]
+            fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
 
-                # num_of_expected_results += 1
-                break
+            # num_of_expected_results += 1
+            break
 
-        # wait_for_results(script_name, num_of_expected_results)
-        with open(done_path, 'w'):
-            pass
+    # wait_for_results(script_name, num_of_expected_results)
+    with open(done_path, 'w'):
+        pass
 
 
 
