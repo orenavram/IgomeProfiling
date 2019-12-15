@@ -9,49 +9,46 @@ def run_first_phase(fastq_path, parsed_fastq_results, barcode2samplename,
 
     results_output = f'{parsed_fastq_results}/results/'
     # logs_output = f'{parsed_fastq_results}/logs/'
+    done_path = f'{results_output}/done.txt'
 
-    print('='*100 + '\n' + results_output)
-    # run filter_reads.py
-    # num_of_expected_results = 0
-    parameters = [fastq_path, results_output, barcode2samplename,
-                  f'--left_construct {left_construct}',
-                  f'--right_construct {right_construct}',
-                  f'--max_mismatches_allowed {max_mismatches_allowed}',
-                  f'--min_sequencing_quality {min_sequencing_quality}']
-    if gz:
-        parameters.append('--gz')
-    if verbose:
-        parameters.append('-v')
+    if not os.path.exists(done_path):
+        # run filter_reads.py
+        parameters = [fastq_path, results_output, barcode2samplename,
+                      f'--left_construct {left_construct}',
+                      f'--right_construct {right_construct}',
+                      f'--max_mismatches_allowed {max_mismatches_allowed}',
+                      f'--min_sequencing_quality {min_sequencing_quality}']
+        if gz:
+            parameters.append('--gz')
+        if verbose:
+            parameters.append('-v')
 
-    fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py', parameters)
-    # num_of_expected_results += 1
+        fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py', parameters)
 
-    # wait_for_results(script_name, parsed_fastq_results, num_of_expected_results,
-    #                  f'{parsed_fastq_results}/error.txt', 'done.txt')
+        # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
+        for path, dirs, files in os.walk(results_output):
+            for file in files:
+                # look for faa files to collapse
+                if '.faa' not in file:
+                    continue
 
-    # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
-    num_of_expected_results = 0
-    for path, dirs, files in os.walk(results_output):
-        for file in files:
-            # look for faa files to collapse
-            if '.faa' not in file:
-                continue
+                sample_name = file.split('.faa')[0]
+                file_path = f'{path}/{file}'
+                output_file_path = f'{path}/{sample_name}_unique_rpm.faa'
+                parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
+                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
 
-            sample_name = file.split('.faa')[0]
-            file_path = f'{path}/{file}'
-            output_file_path = f'{path}/{sample_name}_unique_rpm.faa'
-            parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
-            fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
+                file_path = output_file_path
+                output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
+                parameters = [file_path, output_file_path]
+                fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
 
-            file_path = output_file_path
-            output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-            parameters = [file_path, output_file_path]
-            fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
+                # num_of_expected_results += 1
+                break
 
-            # num_of_expected_results += 1
-            break
-
-    # wait_for_results(script_name, num_of_expected_results)
+        # wait_for_results(script_name, num_of_expected_results)
+        with open(done_path, 'w'):
+            pass
 
 
 
