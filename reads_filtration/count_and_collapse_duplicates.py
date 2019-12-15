@@ -29,7 +29,7 @@ def filter_reads(fasta_file, out_fasta_file, rpm_factors_file):
     if rpm_factors_file:
         factor = 1_000_000 / total_sequences_count
         with open(rpm_factors_file, 'a') as f:
-            f.write(f'{fasta_file}\t{total_sequences_count}\t{factor}')
+            f.write(f'{fasta_file}\t{total_sequences_count}\t{factor}\n')
 
     with open(out_fasta_file, 'w') as f:
         for i, seq in enumerate(sorted_sequences):
