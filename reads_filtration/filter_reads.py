@@ -33,7 +33,7 @@ def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {s
         sample_name = barcode_to_samplename[barcode]  # f'{barcode}_{os.path.split(fastq_file)[-1]}'
 
         # create a sub dir for that barcode (under output_dir)
-        subdir_path = f'{output_dir}/{sample_name}_{barcode}'
+        subdir_path = f'{output_dir}/{sample_name}'
         os.makedirs(subdir_path, exist_ok=True)
 
         # add filenames

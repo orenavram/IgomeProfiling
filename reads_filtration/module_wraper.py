@@ -26,15 +26,18 @@ def run_first_phase(fastq_path, parsed_fastq_results, barcode2samplename,
         fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py', parameters)
 
     # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
-    for path, dirs, files in os.walk(results_output):
-        for file in files:
+    for dir_name in sorted(os.listdir(results_output)):
+        dir_path = os.path.join(results_output, dir_name)
+        if not os.path.isdir(dir_path):
+            continue
+        for file in os.listdir(dir_path):
             # look for faa files to collapse
-            if '.faa' not in file:
+            if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
                 continue
 
             sample_name = file.split('.faa')[0]
-            file_path = f'{path}/{file}'
-            output_file_path = f'{path}/{sample_name}_unique_rpm.faa'
+            file_path = f'{dir_path}/{file}'
+            output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
             parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
             fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
 
