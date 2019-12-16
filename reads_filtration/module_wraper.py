@@ -41,10 +41,12 @@ def run_first_phase(fastq_path, parsed_fastq_results, barcode2samplename,
             parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
             fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
 
-            file_path = output_file_path
-            output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-            parameters = [file_path, output_file_path]
-            fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
+            # file_path = output_file_path
+            # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
+            # parameters = [file_path, output_file_path]
+            # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
+            # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
+            # E.g.: CAAAAC and AAAA are the same after removing Cys
 
             # num_of_expected_results += 1
             break
