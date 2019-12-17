@@ -23,7 +23,7 @@ def merge_meme_files(motif_inference_path, biological_condition, meme_file_name,
             continue
         if dir_name in samples_to_skip:
             # skip unwanted samples
-            logger.info(f'{datetime.datetime.now()}: skipping analysis for {dir_path}')
+            logger.info(f'{datetime.datetime.now()}: skipping {dir_path} (according to user\'s request)')
             continue
         try:
             with open(os.path.join(dir_path, 'meme.txt')) as f:
