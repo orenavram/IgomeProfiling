@@ -1,18 +1,15 @@
+import datetime
 import gzip
 import os
-import datetime
+import sys
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+else:
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+sys.path.insert(0, src_dir)
 
-def load_barcode_to_sample_name(barcode2samplename_path):
-    barcode_to_samplename = {}
-    with open(barcode2samplename_path) as f:
-        for line in f:
-            if line.isspace():  # empty line
-                continue
-            barcode, sample_name = line.strip().split()
-            if barcode in barcode_to_samplename:
-                assert False, f'Barcode {barcode} belongs to more than one sample!!'  # TODO: write to a global error log file
-            barcode_to_samplename[barcode] = sample_name
-    return barcode_to_samplename
+# needs $src_dir in path
+from auxiliaries.pipeline_auxiliaries import load_barcode_to_sample_name, fail
 
 
 def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {str: str}}:
@@ -84,13 +81,14 @@ def write_header(f_handler, txt):
     f_handler.write('_' * 80 + f'\n{txt}')
 
 
-def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
+def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
+                 done_path, barcode2samplename_path,
                  left_construct, right_construct, max_mismatches_allowed,
                  min_sequencing_quality, gz):
 
     start_time = datetime.datetime.now()
 
-    from Auxiliaries.pipeline_auxiliaries import nnk_table
+    from auxiliaries.pipeline_auxiliaries import nnk_table
 
     left_construct_length = len(left_construct)
     right_construct_length = len(right_construct)
@@ -105,7 +103,7 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
         break
 
     # initialize dictionaries that map barcode to output file names, file handlers and statistics
-    barcode2filepaths, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode2samplename, results_output_dir, gz)
+    barcode2filepaths, barcode2filehandlers, barcode2statistics, barcode2info_filenames = get_barcodes_dictionaries(barcode2samplename, parsed_fastq_results, gz)
 
     lib_types = set()  # keeps all the library types seen
     record_num = 0  # so the line number will represent the actual sequence inside each record
@@ -228,13 +226,14 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
 
     lib_types = sorted(lib_types, key=lambda x: int(x) if x.isdigit() else 100 + int(x[1:-1]))  # no C's then C's
 
+    print(barcode2info_filenames)
     for barcode in barcode2samplename:
         with open(barcode2info_filenames[barcode], 'w') as f:
             f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
             f.write(f'reads_filtration function is invoked with the following parameters:\n')
             f.write(f'fastq_file = {fastq_file}\n'
-                    f'results_output_dir = {results_output_dir}\n'
-                    # f'logs_output_dir = {logs_output_dir}\n'
+                    f'parsed_fastq_results = {parsed_fastq_results}\n'
+                    f'logs_dir = {logs_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
                     f'left_construct = {left_construct}\n'
                     f'right_construct = {right_construct}\n'
@@ -267,12 +266,12 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
 
     logger.info('Writing execution summary file...')
 
-    with open(f'{results_output_dir}/summary_log.txt', 'w') as log_f:
+    with open(f'{parsed_fastq_results}/summary_log.txt', 'w') as log_f:
         log_f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
         log_f.write(f'reads_filtration function is invoked with the following parameters:\n')
         log_f.write(f'fastq_file = {fastq_file}\n'
-                    f'results_output_dir = {results_output_dir}\n'
-                    # f'logs_output_dir = {logs_output_dir}\n'
+                    f'parsed_fastq_results = {parsed_fastq_results}\n'
+                    f'logs_dir = {logs_dir}\n'
                     f'barcode2samplename_path = {barcode2samplename_path}\n'
                     f'left_construct = {left_construct}\n'
                     f'right_construct = {right_construct}\n'
@@ -325,7 +324,7 @@ def filter_reads(argv, fastq_file, results_output_dir, barcode2samplename_path,
         logger.info(f'Done Processing! at {end_time}')
         logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
 
-    with open(f'{results_output_dir}/done.txt', 'w'):
+    with open(done_path, 'w'):
         pass
 
 
@@ -335,12 +334,14 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('fastq_path', type=str, help='fastq file')
-    parser.add_argument('results_output_dir', type=str, help='output')
-    # parser.add_argument('logs_output_dir', type=str, help='output')
+    parser.add_argument('fastq_path', type=str, help='A fastq file to parse')
+    parser.add_argument('parsed_fastq_results', type=str, help='folder output')
+    parser.add_argument('logs_dir', type=str, help='logs folder')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the clustering was finished.')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
-    parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='SfilSite')
-    parser.add_argument('--right_construct', type=str, default="GCCT", help='RightConstruct')
+    parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
+    parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')
+    parser.add_argument('--right_construct', type=str, default="GCCT", help='right constant sequence')
     parser.add_argument('--max_mismatches_allowed', type=int, default=1,
                         help='number of mismatches allowed together in both constructs')
     parser.add_argument('--min_sequencing_quality', type=int, default=38,
@@ -359,6 +360,13 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    filter_reads(argv, args.fastq_path, args.results_output_dir, args.barcode2samplename,
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed,
-                 args.min_sequencing_quality, True if args.gz else False)
+    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
+    try:
+        filter_reads(argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
+                     args.done_file_path, args.barcode2samplename,
+                     args.left_construct, args.right_construct, args.max_mismatches_allowed,
+                     args.min_sequencing_quality, True if args.gz else False)
+    except Exception as e:
+        fail(error_path, e)
+
