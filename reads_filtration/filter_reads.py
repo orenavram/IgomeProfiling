@@ -226,7 +226,6 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
     lib_types = sorted(lib_types, key=lambda x: int(x) if x.isdigit() else 100 + int(x[1:-1]))  # no C's then C's
 
-    print(barcode2info_filenames)
     for barcode in barcode2samplename:
         with open(barcode2info_filenames[barcode], 'w') as f:
             f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
