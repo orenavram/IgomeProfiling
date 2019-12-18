@@ -2,7 +2,7 @@ import datetime
 import logging
 logger = logging.getLogger('main')
 
-def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file):
+def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_path):
     """
     :param fasta_file: a fasta file with non unique sequences
     :param out_fasta_file: a fasta file with the sequences from the input file but with summarized counts (of
@@ -40,6 +40,9 @@ def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file):
                 lib = f'C{len_seq-2}C'
             f.write(f'>seq_{i+1}_lib_{lib}_len_{len_seq}_counts_{counts}\n{seq}\n')
 
+    with open(done_file_path, 'w') as f:
+        pass
+
 
 def get_sequences_frequency_counter(fasta_file, open_function, mode):
     sequences_to_counts = {}
@@ -59,6 +62,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('fasta_file', help='A fasta file to collapse for unique sequences and their counts')
     parser.add_argument('out_fasta_file', help='A fasta file to write the results')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the clustering was finished.')
     parser.add_argument('--rpm', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -70,4 +74,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    count_and_collapse(args.fasta_file, args.out_fasta_file, args.rpm)
+    count_and_collapse(args.fasta_file, args.out_fasta_file,
+                       args.rpm, args.done_file_path)

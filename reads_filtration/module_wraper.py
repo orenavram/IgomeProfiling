@@ -1,75 +1,108 @@
+import datetime
 import os
-from Auxiliaries.pipeline_auxiliaries import fetch_cmd
+import sys
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+else:
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+sys.path.insert(0, src_dir)
+
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from global_params import src_dir
 
 
-def run_first_phase(fastq_path, parsed_fastq_results, barcode2samplename,
+def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose):
+                    gz, verbose, error_path):
 
-    results_output = f'{parsed_fastq_results}/results/'
-    # logs_output = f'{parsed_fastq_results}/logs/'
-    done_path = f'{results_output}/done.txt'
+    os.makedirs(first_phase_output_path, exist_ok=True)
+    os.makedirs(logs_dir, exist_ok=True)
 
-    if not os.path.exists(done_path):
-        # run filter_reads.py
-        parameters = [fastq_path, results_output, barcode2samplename,
-                      f'--left_construct {left_construct}',
-                      f'--right_construct {right_construct}',
-                      f'--max_mismatches_allowed {max_mismatches_allowed}',
-                      f'--min_sequencing_quality {min_sequencing_quality}']
-        if gz:
-            parameters.append('--gz')
-        if verbose:
-            parameters.append('-v')
+    first_phase_done_path = f'{logs_dir}/done_filtering_reads.txt'
+    if not os.path.exists(first_phase_done_path):
+        done_path = f'{logs_dir}/done_demultiplexing.txt'
+        if not os.path.exists(done_path):
+            # run filter_reads.py
+            parameters = [fastq_path, first_phase_output_path, logs_dir,
+                          done_path, barcode2samplename,
+                          f'--error_path {error_path}',
+                          f'--left_construct {left_construct}',
+                          f'--right_construct {right_construct}',
+                          f'--max_mismatches_allowed {max_mismatches_allowed}',
+                          f'--min_sequencing_quality {min_sequencing_quality}'] + (['--gz'] if gz else [])
 
-        fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py', parameters)
+            fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
+                      parameters, verbose, error_path)
+            num_of_expected_results = 1
+            wait_for_results('filter_reads.py', logs_dir, num_of_expected_results,
+                             error_file_path=error_path, suffix='demultiplexing.txt')
+        else:
+            logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
 
-    # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
-    for dir_name in sorted(os.listdir(results_output)):
-        dir_path = os.path.join(results_output, dir_name)
-        if not os.path.isdir(dir_path):
-            continue
-        for file in os.listdir(dir_path):
-            # look for faa files to collapse
-            if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
-                continue
+        collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
+        if not os.path.exists(collapsing_done_path):
 
-            sample_name = file.split('.faa')[0]
-            file_path = f'{dir_path}/{file}'
-            output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
-            parameters = [file_path, output_file_path, '--rpm', f'{results_output}/rpm_factors.txt']
-            fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters)
+            # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
+            num_of_expected_results = 0
+            for dir_name in sorted(os.listdir(first_phase_output_path)):
+                dir_path = os.path.join(first_phase_output_path, dir_name)
+                if not os.path.isdir(dir_path):
+                    continue
+                for file in os.listdir(dir_path):
+                    # look for faa files to collapse
+                    if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
+                        continue
 
-            # file_path = output_file_path
-            # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-            # parameters = [file_path, output_file_path]
-            # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py', parameters)
-            # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
-            # E.g.: CAAAAC and AAAA are the same after removing Cys
+                    sample_name = file.split('.faa')[0]
+                    file_path = f'{dir_path}/{file}'
+                    output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
+                    done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
 
-            # num_of_expected_results += 1
-            break
+                    parameters = [file_path, output_file_path, done_path,
+                                  '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
+                    fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
+                              parameters, verbose, error_path)
 
-    # wait_for_results(script_name, num_of_expected_results)
-    with open(done_path, 'w'):
-        pass
+                    # file_path = output_file_path
+                    # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
+                    # parameters = [file_path, output_file_path]
+                    # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py',
+                    #             parameters, verbose, error_path)
+                    # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
+                    # E.g.: CAAAAC and AAAA are the same after removing Cys
 
+                    num_of_expected_results += 1
+                    break
+
+            wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
+                         error_file_path=error_path, suffix='collapsing.txt')
+            with open(collapsing_done_path, 'w'):
+                pass
+
+        else:
+            logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
+        with open(first_phase_done_path, 'w'):
+            pass
+
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
 
 
 
 if __name__ == '__main__':
     from sys import argv
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}', flush=True)
 
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('fastq_path', type=str, help='A fastq file to parse')
-    parser.add_argument('parsed_fastq_results', type=str, help='folder output')
+    parser.add_argument('parsed_fastq_results', type=str, help='output folder')
+    parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
 
-    parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='SfilSite')
-    parser.add_argument('--right_construct', type=str, default="GCCT", help='RightConstruct')
+    parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
+    parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')
+    parser.add_argument('--right_construct', type=str, default="GCCT", help='right constant sequence')
     parser.add_argument('--max_mismatches_allowed', type=int, default=1,
                         help='number of mismatches allowed together in both constructs')
     parser.add_argument('--min_sequencing_quality', type=int, default=38,
@@ -86,8 +119,10 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    run_first_phase(args.fastq_path, args.parsed_fastq_results,
+    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
+    run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False)
+                    True if args.verbose else False, error_path)

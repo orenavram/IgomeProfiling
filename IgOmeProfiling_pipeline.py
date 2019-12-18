@@ -13,7 +13,6 @@ from global_params import *
 pssm_score_peptide = "/groups/pupko/orenavr2/gershoni/src/PSSM_score_Peptide_Jan2018.NonVerbose/PSSM_score_Peptide.verbose"
 python = "python/python-anaconda3.6.5"
 gcc = "gcc/gcc-8.2.0"
-#que = "pupkoweb"
 qsub = f"python {src_dir}/q_submitter_power.py"
 
 input_path = args.input_path.rstrip('/')
@@ -24,9 +23,6 @@ motif_inference_path = f'{output_path}/motif_inference'
 motif_inference_logs = f'{motif_inference_path}/logs'
 classificaion_path = f'{output_path}/classification'
 classificaion_logs = f'{classificaion_path}/logs'
-
-barcode2samplename_path = f'{input_path}/metadata/barcode2samplename.txt'
-samplename2biologicalcondition_path = f'{input_path}/metadata/samplename2biologicalcondition.txt'
 
 os.makedirs(output_path, exist_ok=True)
 
@@ -45,53 +41,67 @@ os.makedirs(f'{classificaion_path}/hits', exist_ok=True)
 configuration_file_path = f'{output_path}/configuration.txt'
 logger.info(f'Writing configuration file to: {configuration_file_path}')
 #TODO: write configuration file properly
-with open(configuration_file_path, 'w') as f:
-    with open("/groups/pupko/bialik/py/new/global_params.py", 'r') as f2:
-        for l in f2:
-            f.write(l)
-
-comma_separated_barcodes = ""
-
-# logger.info(f'{datetime.datetime.now()}: Loading barcode2samplename file from:\n{barcode2samplename_path}')
-# with open(barcode2samplename_path) as f:
+# with open(configuration_file_path, 'w') as f:
+#     with open("/groups/pupko/bialik/py/new/global_params.py", 'r') as f2:
+#         for l in f2:
+#             f.write(l)
+#
+#
+# logger.info(f'{datetime.datetime.now()}: Loading samplename2biologicalcondition file from:\n{samplename2biologicalcondition_path}')
+# biological_conditions = set()
+# with open(samplename2biologicalcondition_path, 'r') as f:
 #     for line in f:
-#         comma_separated_barcodes += line.split('\t')[0] + ','
-# comma_separated_barcodes = comma_separated_barcodes[:-1]  # remove last redundant comma
+#         bc = line.rstrip().split('\t')[1]
+#         biological_conditions.add(bc)
+#
+
+# Filter reads step
 
 
-logger.info(f'{datetime.datetime.now()}: Loading samplename2biologicalcondition file from:\n{samplename2biologicalcondition_path}')
-biological_conditions = set()
-with open(samplename2biologicalcondition_path, 'r') as f:
-    for line in f:
-        bc = line.rstrip().split('\t')[1]
-        biological_conditions.add(bc)
+
+
+# Motif inference step
+
+
+# Classification step
 
 logger.info(f'{datetime.datetime.now()}: Filtering the following fastq file:\n{fastq_file}')
 subprocess.call(
-    f"python {src_dir}/filter_{reads_type}_reads.py "  # FilterReads_and_Translate_fth1_RL_P8_LongReads.py 
-    f" {fastq_file} "
-    f"{output_path}/first_phase_output/ "
-    f"{input_path}/metadata/barcode2samplename.txt ",
+    f"python {src_dir}/reads_filtration.py " 
+    f"{fastq_file} "
+    f"{first_phase_path} "
+    f"{barcode2samplename_path} ",
     shell=True)
 
 
-#need to change it to sent the coutuniqseq_fasta.py as jobs
-# print(datetime.datetime.now())
-for path, dirname, filename in os.walk(folder_output + "first_phase_output"):
-    for f in filename:
-        if f.endswith('.faa'):
-            file = path + '/' + f
-            subprocess.call(f"python /groups/pupko/bialik/py/countUniqSeq_Fasta.py {file} YES RpM", shell=True)
-print(datetime.datetime.now())
-print("RPM has been finished")
+# TODO: wait for the results
+
+# TODO: need to change it to sent the coutuniqseq_fasta.py as jobs
+logger.info(f'{datetime.datetime.now()}: Generating unique_rpm.faa files for every faa file '
+            f'(i.e., normalized and without duplications) with and without flanking Cysteine')
+for path, dirs, filenames in os.walk(folder_output + "first_phase_output"):
+    for filename in filenames:
+        if filename.endswith('faa'):
+            in_file = os.path.join(path, filename)
+            prefix, suffix = os.path.splitext(in_file)
+            out_file = f'{prefix}_unique_rpm{suffix}'
+            subprocess.call(f"python {src_dir}/count_and_collapse_duplicates.py "
+                            f"{in_file} "
+                            f"{out_file} "
+                            f"--rpm {first_phase_path}/rpm_factors.txt ", shell=True)
+
+            subprocess.call(f"python {src_dir}/remove_cysteine_loop.py "
+                            f"{out_file} "  # This is OK (previous out_file is now in_file)
+                            f"{prefix}_unique_rpm_cysteine_trimmed{suffix}", shell=True)
 
 
+#TODO: create a done path
+# TODO: wait for the results
 
-# print(datetime.datetime.now())
-logger.info(f'Inferring motifs...')
+logger.info(f'{datetime.datetime.now()}: Inferring motifs...')
 subprocess.call(
-    f"python /groups/pupko/bialik/py/new/motif_inference.py {folder_input}metadata/ {folder_output}first_phase_output/ {folder_output}motif_inference"
-    f" {queue_name} {max_peptide} {biggest_cluster} {biggest_cluster_sec} {1-gap_threshold}", shell=True)
+    f"python /groups/pupko/bialik/py/new/motif_inference.py {folder_input}/metadata/ {folder_output}/first_phase_output/ {folder_output}/motif_inference"
+    f" {queue_name} {max_peptide} {biggest_cluster} {biggest_cluster_sec} {maximal_gap_frequency_allowed_per_column}", shell=True)
 # print(datetime.datetime.now())
 
 
@@ -127,7 +137,7 @@ for bc in biological_conditions:
             if not os.path.exists(output_path + "/classification/logs/" + bc):
                 os.mkdir(output_path + "/classification/logs/" + bc)
             subprocess.call(
-                f"python {src_dir}/split_meme_like_motifs_files_and_cutoffs.py {output_path}motif_inference/{bc} {split_num}", shell=True)
+                f"python {src_dir}/split_meme_like_motifs_files_and_cutoffs.py {output_path}/motif_inference/{bc} {split_num}", shell=True)
             for i in range(len(os.listdir(output_path + "motif_inference/" + bc + "/pssm"))):
                 pssm = f"{output_path}motif_inference/{bc}/pssm/{i}.txt"
                 cutoffs = f"{output_path}motif_inference/{bc}/cutoffs/{i}.txt"
@@ -142,8 +152,7 @@ for bc in biological_conditions:
                     append_write = 'a'
                     jobs += 1
 
-subprocess.call(
-    f"{qsub} {output_path}/classification/Calc_Pval_for_motifs_vs_samples.S100.cmds {output_path}/classification/logs/ -q {queue_name}", shell=True)
+subprocess.call(f"{qsub} {output_path}/classification/Calc_Pval_for_motifs_vs_samples.S100.cmds {output_path}/classification/logs/ -q {queue_name}", shell=True)
 for bc in biological_conditions:
     while True:
         if len(os.listdir(output_path + "/classification/logs/done")) == jobs:
@@ -157,9 +166,9 @@ print("PSSM_score_Peptide has been finished")
 
 # print(datetime.datetime.now())
 for bc in biological_conditions:
-    subprocess.call(f"python {src_dir}/pvalues_new.py {output_path}classification/logs/{bc}"
-                    f" {output_path}/classification/"
-                    f" {input_path}/metadata/samplename2biologicalcondition.txt", shell=True)
+    subprocess.call(f"python {src_dir}/pvalues_new.py {output_path}/classification/logs/{bc} "
+                    f"{output_path}/classification/ "
+                    f"{samplename2biologicalcondition_path}", shell=True)
 
 
 # print(datetime.datetime.now())
@@ -177,13 +186,13 @@ for csv in csv_files:
     subprocess.call(f"python {src_dir}/random_forest.py {csv}", shell=True)
 # print(datetime.datetime.now())
 
-biological_condition = ""
-with open(input_path + "/metadata/samplename2biologicalcondition.txt", 'r') as f:
-    for line in f:
-        line = line.rstrip().split("\t")[1]
-        if line not in biological_condition and "test" not in line:
-            biological_condition += line + ','
-biological_condition = biological_condition.rstrip(',')
+# biological_condition = ""
+# with open(input_path + "/metadata/samplename2biologicalcondition.txt", 'r') as f:
+#     for line in f:
+#         line = line.rstrip().split("\t")[1]
+#         if line not in biological_condition and "test" not in line:
+#             biological_condition += line + ','
+# biological_condition = biological_condition.rstrip(',')
 
 for i in ['hits','pvalues']:
     subprocess.call(f"python {src_dir}/merge.py {output_path}classification/{i} {biological_condition}", shell=True)

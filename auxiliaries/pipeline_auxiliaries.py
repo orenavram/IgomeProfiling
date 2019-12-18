@@ -88,7 +88,7 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
     """
     if not start:
         start = time()
-    logger.info(f'Waiting for {script_name}...\nContinues when {num_of_expected_results} results will be in:\n{path}')
+    logger.info(f'Waiting for {script_name}...\nContinues when {num_of_expected_results} results with suffix="{suffix}" will be in:\n{path}')
     if num_of_expected_results==0:
         logger.fatal(f'\n{"#"*100}\nnum_of_expected_results in {path} is {num_of_expected_results}!\nSomething went wrong in the previous step...\n{"#"*100}')
         #raise ValueError(f'\n{"#"*100}\nnum_of_expected_results is {num_of_expected_results}! Something went wrong in the previous step...\n{"#"*100}')
@@ -114,10 +114,9 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
     assert not os.path.exists(error_file_path), f'An error occurred. For further details see: {error_file_path}'
 
 
-def submit_pipeline_step(script_path, params, tmp_dir, job_name, queue_name, new_line_delimiter='!@#',
+def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         done_files_script_path=f'{global_params.src_dir}/file_writer.py',
-                         required_modules_as_list=None, more_cmds=None, num_of_cpus=1, raw=False):
+                         required_modules_as_list=None, num_of_cpus=1):
 
     required_modules_as_str = 'python/python-anaconda3.6.5-orenavr2'
     if required_modules_as_list:
@@ -127,19 +126,14 @@ def submit_pipeline_step(script_path, params, tmp_dir, job_name, queue_name, new
     # the queue does not like very long commands so I use a dummy delimiter (!@#) to break the rows in q_submitter
     cmds_as_str += new_line_delimiter
 
-    if more_cmds:
-        for cmd in more_cmds:
-            cmds_as_str += ' '.join(['python', script_path, *cmd]) + ';'
-            cmds_as_str += new_line_delimiter
-
-    # ACTUAL COMMAND (last command if it's a batch)
-    cmds_as_str += ' '.join(['python', script_path, *params]) + ';'
-    cmds_as_str += new_line_delimiter
+    for params in params_lists:
+        cmds_as_str += ' '.join(['python', script_path, *params] + (['-v'] if verbose else [])) + ';'
+        cmds_as_str += new_line_delimiter
 
     # GENERATE DONE FILE
     # write an empty string (like "touch" command)
-    cmds_as_str += ' '.join(['python', done_files_script_path, os.path.join(tmp_dir, job_name + '.done'), 'done'])+';'
-    cmds_as_str += new_line_delimiter
+    # cmds_as_str += ' '.join(['python', done_files_script_path, os.path.join(tmp_dir, job_name + '.done'), 'done'])+';'
+    # cmds_as_str += new_line_delimiter
 
     cmds_as_str += '\t' + job_name + '\n'
     logger.debug(cmds_as_str)
@@ -153,11 +147,15 @@ def submit_pipeline_step(script_path, params, tmp_dir, job_name, queue_name, new
     run(process)
 
 
-def fetch_cmd(script_name, parameters, verbose):
+def fetch_cmd(script_name, parameters, verbose, error_path):
     cmd = f'python3 {script_name} ' + ' '.join(parameters + (['-v'] if verbose else []))
     logger.info(f'Executing:\n{cmd}')
-    run(cmd, shell=True)
-    # logger.info(f'Finished:\n{cmd}')
+    try:
+        run(cmd, shell=True)
+        # logger.info(f'Finished:\n{cmd}')
+    except Exception as e:
+        fail(error_path, e)
+
 
 
 def load_barcode_to_sample_name(barcode2samplename_path):

@@ -1,5 +1,5 @@
 import datetime
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 import logging
 logger = logging.getLogger('main')
 
