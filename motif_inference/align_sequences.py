@@ -1,7 +1,7 @@
 import argparse
 import subprocess
 import os
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
 def reconstruct_msa(sequences_file_path, output_file_path):

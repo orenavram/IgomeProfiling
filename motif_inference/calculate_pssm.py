@@ -5,7 +5,7 @@ import os
 import sys
 sys.path.insert(0, '/Users/Oren/Dropbox/Projects/gershoni/src/')
 print(sys.version)
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict, nnk_table
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict, nnk_table
 import logging
 logger = logging.getLogger('main')
 

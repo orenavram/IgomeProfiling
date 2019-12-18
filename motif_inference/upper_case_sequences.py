@@ -1,17 +1,30 @@
 import logging
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
+import datetime
+import os
+import sys
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+else:
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+sys.path.insert(0, src_dir)
 
-def convert_sequences_to_upper(fasta_file, output_path):
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
 
-    verify_file_is_not_empty(fasta_file)
+def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path):
 
-    header_to_sequence, number_of_sequences, msa_length = load_fasta_to_dict(fasta_file)
-    with open(output_path, 'w') as f:
+    logger.info(f'{datetime.datetime.now()}: upper casing all sequences in {in_fasta_file}')
+
+    verify_file_is_not_empty(in_fasta_file)
+
+    header_to_sequence, number_of_sequences, msa_length = load_fasta_to_dict(in_fasta_file)
+    with open(out_fasta_file, 'w') as f:
         for header in header_to_sequence:
             f.write(f'>{header}\n{header_to_sequence[header].upper()}\n')
 
-    verify_file_is_not_empty(output_path)
+    verify_file_is_not_empty(out_fasta_file)
 
+    with open(done_file_path, 'w'):
+        pass
 
 if __name__ == '__main__':
     from sys import argv
@@ -21,8 +34,9 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('fasta_file', help='A fasta file')
-    parser.add_argument('output_path', help='A fasta file with all the sequences in upper case letters')
+    parser.add_argument('in_fasta_file', help='A fasta file')
+    parser.add_argument('out_fasta_file', help='A fasta file with all the sequences in upper case letters')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the clustering was finished.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -32,4 +46,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    convert_sequences_to_upper(args.fasta_file, args.output_path)
+    convert_sequences_to_upper(args.in_fasta_file, args.out_fasta_file, args.done_file_path)

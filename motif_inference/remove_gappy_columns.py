@@ -1,4 +1,4 @@
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
 import logging
 logger = logging.getLogger('main')
 
