@@ -1,6 +1,13 @@
 import datetime
 import os
-from Auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+import sys
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+else:
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+sys.path.insert(0, src_dir)
+
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 def load_member_prefix_to_record_dict(fasta_file, prefix_length=10):
     # Why 10 by default? see load_clusters_to_members_dict documentation
@@ -46,7 +53,7 @@ def extract_cluster_size_from_records(records_list):
     return sum(extract_sequence_counts_from_record(rec) for rec in records_list)
 
 
-def cluster_sequences(fasta_file, clstr_file, output_dir, max_num_of_sequences_to_keep, file_prefix):
+def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path, max_num_of_sequences_to_keep, file_prefix):
 
     verify_file_is_not_empty(fasta_file)
     verify_file_is_not_empty(clstr_file)
@@ -82,13 +89,13 @@ def cluster_sequences(fasta_file, clstr_file, output_dir, max_num_of_sequences_t
         filename = f'{file_prefix}clusterRank_' \
                    f'{cluster_rank}_uniqueMembers_' \
                    f'{number_of_unique_members}_' \
-                   f'clusterSize_{cluster_counts:.2f}.txt' # take only 2 digits after the floating point
-
-        # from subprocess import call
-        # call(['mv', os.path.join(output_dir, filename), '/Users/Oren/Desktop/clusters/'])
+                   f'clusterSize_{cluster_counts:.2f}.faa'  # take only 2 digits after the floating point
 
         with open(os.path.join(output_dir, filename), 'w') as f:
             f.write(''.join(record for record in cluster_to_members_records[cluster]))
+
+    with open(done_path, 'w'):
+        pass
 
 
 if __name__ == '__main__':
@@ -102,6 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('fasta_file', help='A fasta file to collapse for unique sequences and their counts')
     parser.add_argument('clstr_file', help='A .clstr file that details the cluster in the fasta_file')
     parser.add_argument('output_dir', help='A folder in which each cluster will be written as a separate file.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
     parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=100_000_000,
                         help='How many sequences (at most) to include in each file? (extra sequences will not be '
                              'extracted. A very high number might not extract anything)')
@@ -118,5 +126,5 @@ if __name__ == '__main__':
       logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    cluster_sequences(args.fasta_file, args.clstr_file, args.output_dir,
-                      args.max_num_of_sequences_to_keep, args.file_prefix)
+    extract_clusters_sequences(args.fasta_file, args.clstr_file, args.output_dir, args.done_file_path,
+                               args.max_num_of_sequences_to_keep, args.file_prefix)
