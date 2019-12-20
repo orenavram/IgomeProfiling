@@ -9,7 +9,7 @@ else:
 sys.path.insert(0, src_dir)
 
 # needs $src_dir in path
-from auxiliaries.pipeline_auxiliaries import load_barcode_to_sample_name, fail
+from auxiliaries.pipeline_auxiliaries import load_table, fail
 
 
 def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {str: str}}:
@@ -94,7 +94,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
     right_construct_length = len(right_construct)
 
     logger.info(f'{datetime.datetime.now()}: Loading barcode2samplename file from:\n{barcode2samplename_path}')
-    barcode2samplename = load_barcode_to_sample_name(barcode2samplename_path)
+    barcode2samplename = load_table(barcode2samplename_path, 'Barcode {} belongs to more than one sample!!')
     assert len(barcode2samplename) > 0, f'No barcodes were found in {barcode2samplename_path}'  # TODO: add informative error to log
 
     # get barcode's length by taking the length of an arbitrary barcode
@@ -336,7 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('fastq_path', type=str, help='A fastq file to parse')
     parser.add_argument('parsed_fastq_results', type=str, help='folder output')
     parser.add_argument('logs_dir', type=str, help='logs folder')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the clustering was finished.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')

@@ -21,6 +21,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     first_phase_done_path = f'{logs_dir}/done_filtering_reads.txt'
     if not os.path.exists(first_phase_done_path):
         done_path = f'{logs_dir}/done_demultiplexing.txt'
+        logger.info('_' * 100)
+        logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {first_phase_output_path}')
         if not os.path.exists(done_path):
             # run filter_reads.py
             parameters = [fastq_path, first_phase_output_path, logs_dir,
@@ -42,6 +44,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
         if not os.path.exists(collapsing_done_path):
 
+            logger.info('_' * 100)
+            logger.info(f'{datetime.datetime.now()}: counting and collapsing duplicated sequences for {first_phase_output_path}')
             # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
             num_of_expected_results = 0
             for dir_name in sorted(os.listdir(first_phase_output_path)):
