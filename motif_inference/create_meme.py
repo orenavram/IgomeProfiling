@@ -57,7 +57,8 @@ def create_meme_file(msas_path, meme_path, done_path):
                  f'Background letter frequencies\n'
                  f'{get_background_letters_frequency_str(nnk_table)}\n')
 
-    for msa_name in os.listdir(msas_path):
+    for msa_name in sorted(os.listdir(msas_path)):  # Sorting pssm in meme files by cluster's rank
+        # clusterRank_000_uniqueMembers_72_clusterSize_757849.92.faa
         msa_path = os.path.join(msas_path, msa_name)
         logger.info(f'{datetime.datetime.now()}: writing pssm of {msa_path}')
         # make sure that there are results and the msa file is not empty
