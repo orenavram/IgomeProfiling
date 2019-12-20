@@ -24,7 +24,7 @@ def get_stats(fastq_path, output_path_prefix, upstream_construct,
                         'TTT': 'F',
                         'TGG': 'W',
                         'TAT': 'Y'}
-    libraries = ['6', '8', '10', '12', 'C6C', 'C8C', 'C10C', 'C12C']
+    libraries = ['6', '8', '10', '12', 'C6C', 'C8C', 'C10C', 'C12C', '14']
 
     # count for each random dna fragment its occurrences (for each library)
     library_to_dna_to_count = {library: {} for library in libraries}
@@ -49,7 +49,7 @@ def get_stats(fastq_path, output_path_prefix, upstream_construct,
             f.readline()  # skip third line
             f.readline()  # skip fourth line
             match = regex.match(f'({upstream_construct})' + '{s<=' + f'{mistake_allowed}' + '}' +
-                                '(([ACGT][ACGT][GT])+)' +  # this is an NNK format
+                                '(([ACGT][ACGT][GT]){6,})' +  # this is an NNK format
                                 f'({downstream_construct})' + '{s<=' +f'{mistake_allowed}' +'}', line)
             # An example regex is '(AGGCGGCCAACGTGGC){s<=1}(.+)(GCCGCTGGGGCCGACC){s<=1}'
 
@@ -61,7 +61,7 @@ def get_stats(fastq_path, output_path_prefix, upstream_construct,
                 else:
                     random_dna = regex.match(f'({upstream_construct})' + '{s<=' + f'{mistake_allowed}' + '}' +
                                 '(.+)' + f'({downstream_construct})' + '{s<=' +f'{mistake_allowed}' +'}', line).group(2)
-                    f_filtered_out.write(f'Random dna is not in NNK format (length={len(random_dna)})\t{random_dna}\n')
+                    f_filtered_out.write(f'Random dna is not in legal NNK library format (length={len(random_dna)})\t{random_dna}\n')
                 continue
 
             random_dna = match.group(2) # extract the random sequence between the upstream and downstream constructs
@@ -133,6 +133,7 @@ if __name__ == '__main__':
         parser.add_argument('--upstream_construct', help='upstream sequence construct', default='AGGCGGCCAACGTGGC')
         parser.add_argument('--downstream_construct', help='downstream sequence construct', default='GCCGCTGGGGCCGACC')
         parser.add_argument('--mistake_allowed', help='max num of mismatches tolerance', default=1, type=int)
+        parser.add_argument('--output_path', help='a folder to which the output should be written', default='', type=int)
         parser.add_argument('-gz', '--gz', help='Increase output verbosity', action='store_true')
         parser.add_argument('-v', '--verbose', help='Increase output verbosity', action='store_true')
 
@@ -156,7 +157,10 @@ if __name__ == '__main__':
                     fastq_path = os.path.join(path, file)
                     logger.info(f'Handling fastq at:\n{fastq_path}')
                     sample_name = os.path.split(path.rstrip('/'))[-1]
-                    output_path = os.path.join(path, f'{sample_name}_stats')
+                    if args.output_path:
+                        output_path = os.path.join(args.output_path, f'{sample_name}_stats')
+                    else:
+                        output_path = os.path.join(path, f'{sample_name}_stats')
                     os.makedirs(output_path, exist_ok=True)
                     get_stats(fastq_path, output_path, args.upstream_construct,
                               args.downstream_construct, args.mistake_allowed, args.gz)

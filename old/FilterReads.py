@@ -12,8 +12,10 @@
 # fth1 annealed - anti sense (17 bp) - no mistakes allowed
 
 
-from Auxilaries import *
 from get_args_from_user import *
+
+from old.Auxilaries import *
+
 # sample_barcode_length is defined by the user...
 args.barcode_upstream_sequence_length = len(args.barcode_upstream_sequence)  # upstream sequence  is defined by the user...
 args.domain_barcode_length = 12

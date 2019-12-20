@@ -1,10 +1,3 @@
-import gzip
-from sys import argv
-import os
-import regex
-from collections import Counter
-from time import time
-from ParseFastQ import ParseFastQ
 import logging
 logger = logging.getLogger('main')
 

@@ -1,7 +1,7 @@
 # running example:
 # set exp=Exp26B; python /groups/pupko/orenavr2/gershoni/src/JoinDSSamples.py --domain-name-to-domain-sequence-file /groups/pupko/orenavr2/gershoni/domains_of_interest/HCV-HIV_P3.txt --sample-barcode-to-sample-name-file /groups/pupko/orenavr2/gershoni/Experiments/$exp/data/DS_Samples.txt --lib-name P3 --out-dir ~/gershoni/Experiments/$exp/first_phase_output/
 
-from Auxilaries import *
+from old.Auxilaries import *
 start = time()
 
 logger = logging.getLogger('main')
@@ -47,7 +47,7 @@ parser.add_argument('--correction', help='Pseudo counts for normalization',
                     type=lambda x: x if int(x) >= 0 and int(x) == float(x) else parser.error(
                         f'mistakes_allowed should be a positive integer'), default='50')
 parser.add_argument('--extended-output', help='Extract additional output files (mainly for sanity checks and debugging)',
-                    action = 'store_true')  # false by default
+                    action='store_true')  # false by default
 
 args = parser.parse_args()
 
