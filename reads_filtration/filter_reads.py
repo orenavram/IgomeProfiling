@@ -84,7 +84,7 @@ def write_header(f_handler, txt):
 def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
                  done_path, barcode2samplename_path,
                  left_construct, right_construct, max_mismatches_allowed,
-                 min_sequencing_quality, gz):
+                 min_sequencing_quality, minimal_length_required, gz):
 
     start_time = datetime.datetime.now()
 
@@ -189,7 +189,9 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
                 # all set and documented. We can continue to the next read...
                 continue
 
-            if len(random_peptide) < 3:  # minimum peptides length
+            if (len(random_peptide) < minimal_length_required or
+                (random_peptide.startswith('C') and random_peptide.endswith('C') and
+                 len(random_peptide)-2 < minimal_length_required)):  # check minimum length (excluding flanking Cysteine)
                 barcode2statistics[barcode]['too_short'] += 1
                 barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\trandom peptide is too short\t{random_peptide}\n")
                 # all set and documented. We can continue to the next read...
@@ -323,8 +325,8 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
         logger.info(f'Done Processing! at {end_time}')
         logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
 
-    with open(done_path, 'w'):
-        pass
+    with open(done_path, 'w') as f:
+        f.write(" ".join(argv) + '\n')
 
 
 if __name__ == '__main__':
@@ -348,6 +350,8 @@ if __name__ == '__main__':
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     # more than 12 aa-long random peptide (e.g., C12C) is irrelevant for 51bps-long reads
     # parser.add_argument('--lib_types', type=str.upper, default='6,C6C,8,C8C,10,C10C,12', help='OBSOLETE: Ignore this param. CxC,x')
+    parser.add_argument('--minimal_length_required', default=3, type=int,
+                        help='Shorter peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -361,11 +365,12 @@ if __name__ == '__main__':
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
-    try:
-        filter_reads(argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
-                     args.done_file_path, args.barcode2samplename,
-                     args.left_construct, args.right_construct, args.max_mismatches_allowed,
-                     args.min_sequencing_quality, True if args.gz else False)
-    except Exception as e:
-        fail(error_path, e)
+    # try:
+    filter_reads(argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
+                 args.done_file_path, args.barcode2samplename,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed,
+                 args.min_sequencing_quality, args.minimal_length_required,
+                 True if args.gz else False)
+    # except Exception as e:
+    #     fail(error_path, e)
 
