@@ -12,7 +12,8 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
-def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word_length, throw_sequences_shorter_than):
+def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word_length,
+                      throw_sequences_shorter_than, argv='no argv'):
 
     verify_file_is_not_empty(fasta_file)
 
@@ -30,8 +31,9 @@ def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(f'{output_prefix}.clstr')
 
-    with open(done_file_path, 'w'):
-        pass
+    with open(done_file_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
+
 
 
 if __name__ == '__main__':
@@ -61,4 +63,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     cluster_sequences(args.fasta_file, args.output_prefix, args.done_file_path,
-                      args.threshold, args.word_length, args.discard)
+                      args.threshold, args.word_length, args.discard, argv)

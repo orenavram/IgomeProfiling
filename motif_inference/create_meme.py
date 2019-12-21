@@ -45,32 +45,6 @@ def get_background_letters_frequency_str(nnk_table):
     return result.rstrip()  # remove last redundant space
 
 
-def create_meme_file(msas_path, meme_path, done_path):
-
-    logger.info(f'{datetime.datetime.now()}: generating a new MEME file at {meme_path}')
-    letters = sorted(set(letter.upper() for letter in nnk_table.values()))  # don't differentiate between Q and q...
-
-    meme_f = open(meme_path, 'w')
-    # write meme file header
-    meme_f.write(f'MEME version 4\n\n'
-                 f'ALPHABET= {"".join(letters)}\n\n'
-                 f'Background letter frequencies\n'
-                 f'{get_background_letters_frequency_str(nnk_table)}\n')
-
-    for msa_name in sorted(os.listdir(msas_path)):  # Sorting pssm in meme files by cluster's rank
-        # clusterRank_000_uniqueMembers_72_clusterSize_757849.92.faa
-        msa_path = os.path.join(msas_path, msa_name)
-        logger.info(f'{datetime.datetime.now()}: writing pssm of {msa_path}')
-        # make sure that there are results and the msa file is not empty
-        verify_file_is_not_empty(msa_path)
-        header_to_sequence, number_of_sequences, msa_length = load_fasta_to_dict(msa_path)
-        column_to_letters_frequency_counter = get_pssm(header_to_sequence, msa_length, letters)
-        write_pssm(meme_f, letters, msa_name, column_to_letters_frequency_counter, msa_length, number_of_sequences)
-
-    with open(done_path, 'w'):
-        pass
-
-
 def write_pssm(meme_f, letters, msa_name, column_to_letters_frequency_counter, msa_length, number_of_sequences):
 
     consensus_sequence = ''.join(
@@ -92,6 +66,36 @@ def write_pssm(meme_f, letters, msa_name, column_to_letters_frequency_counter, m
     meme_f.write('\n\n')
 
 
+def create_meme_file(msas_path, meme_path, done_path, minimal_number_of_columns_required, argv='no argv'):
+
+    logger.info(f'{datetime.datetime.now()}: generating a new MEME file at {meme_path}')
+    letters = sorted(set(letter.upper() for letter in nnk_table.values()))  # don't differentiate between Q and q...
+
+    meme_f = open(meme_path, 'w')
+    # write meme file header
+    meme_f.write(f'MEME version 4\n\n'
+                 f'ALPHABET= {"".join(letters)}\n\n'
+                 f'Background letter frequencies\n'
+                 f'{get_background_letters_frequency_str(nnk_table)}\n')
+
+    for msa_name in sorted(os.listdir(msas_path)):  # Sorting pssm in meme files by cluster's rank
+        # clusterRank_000_uniqueMembers_72_clusterSize_757849.92.faa
+        msa_path = os.path.join(msas_path, msa_name)
+        logger.info(f'{datetime.datetime.now()}: writing pssm of {msa_path}')
+        # make sure that there are results and the msa file is not empty
+        verify_file_is_not_empty(msa_path)
+        header_to_sequence, number_of_sequences, msa_length = load_fasta_to_dict(msa_path)
+        if msa_length < minimal_number_of_columns_required:
+            logger.warning(f'{datetime.datetime.now()}: skipping pssm for {msa_path} with only {msa_length} columns '
+                           f'(at least {minimal_number_of_columns_required} is required.')
+            continue
+        column_to_letters_frequency_counter = get_pssm(header_to_sequence, msa_length, letters)
+        write_pssm(meme_f, letters, msa_name, column_to_letters_frequency_counter, msa_length, number_of_sequences)
+
+    with open(done_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
+
+
 if __name__ == '__main__':
     from sys import argv
 
@@ -104,6 +108,8 @@ if __name__ == '__main__':
                         help='A path to a folder with a multiple sequence alignment to be converted to pssms')
     parser.add_argument('meme_path', help='A path to a new/existing MEME file to add the msa PSSM')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('--minimal_number_of_columns_required', default=3, type=int,
+                        help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -113,6 +119,6 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    create_meme_file(args.msas_path, args.meme_path, args.done_file_path)
+    create_meme_file(args.msas_path, args.meme_path, args.done_file_path, args.minimal_number_of_columns_required, argv)
 
 
