@@ -7,7 +7,8 @@ else:
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_count_from
+
 
 def load_member_prefix_to_record_dict(fasta_file, prefix_length=10):
     # Why 10 by default? see load_clusters_to_members_dict documentation
@@ -45,15 +46,17 @@ def load_clusters_to_members_dict(clstr_file, member_prefix_to_record, prefix_le
 
 def extract_sequence_counts_from_record(rec):
     # Example record:
-    # >seq_1_lib_C10C_len_12_counts_297726.6948570172\nHGKTGASFLQ
-    return float(rec.split('\n')[0].split('_')[-1])
+    # >someHeaderInWhichTheCountsReside\nHGKTGASFLQ
+    header = rec.split('\n')[0]
+    return get_count_from(header)
 
 
 def extract_cluster_size_from_records(records_list):
     return sum(extract_sequence_counts_from_record(rec) for rec in records_list)
 
 
-def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path, max_num_of_sequences_to_keep, file_prefix):
+def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
+                               max_num_of_sequences_to_keep, file_prefix, argv='no argv'):
 
     verify_file_is_not_empty(fasta_file)
     verify_file_is_not_empty(clstr_file)
@@ -94,8 +97,8 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path, ma
         with open(os.path.join(output_dir, filename), 'w') as f:
             f.write(''.join(record for record in cluster_to_members_records[cluster]))
 
-    with open(done_path, 'w'):
-        pass
+    with open(done_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
 
 
 if __name__ == '__main__':
@@ -127,4 +130,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     extract_clusters_sequences(args.fasta_file, args.clstr_file, args.output_dir, args.done_file_path,
-                               args.max_num_of_sequences_to_keep, args.file_prefix)
+                               args.max_num_of_sequences_to_keep, args.file_prefix, argv)
