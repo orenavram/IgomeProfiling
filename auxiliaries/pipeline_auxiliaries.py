@@ -43,23 +43,27 @@ def verify_file_is_not_empty(file_path):
             raise RuntimeError(msg)
 
 
-def load_fasta_to_dict(fasta_path):
+def load_fasta_to_dict(fasta_path, reverse=False):
     """
     :param fasta_path: a path to a FASTA file
     :return: a dictionary that maps each header (without ">" and rstriped()) to its corresponding sequence (rstriped())
              an int that represent the number of sequences
              an int that represent the length of the alignment
     """
-    header_to_sequence = {}
+    key2value = {}
     with open(fasta_path) as f:
         for header in f:
             if not header.startswith('>'):
                 raise TypeError('Illegal fasta file')
             # returns header without ">" !
-            header_to_sequence[header[1:].rstrip()] = f.readline().rstrip()
-
-    return header_to_sequence, len(header_to_sequence), len(header_to_sequence[header[1:].rstrip()])
-
+            if not reverse:
+                key2value[header[1:].rstrip()] = f.readline().rstrip()
+            else:
+                key2value[f.readline().rstrip()] = header[1:].rstrip()
+    if not reverse:
+        return key2value, len(key2value), len(key2value[header[1:].rstrip()])
+    else:
+        return key2value, len(key2value)
 
 def measure_time(total):
     hours = total // 3600
@@ -86,6 +90,7 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
     :param start:
     :return: waits until path contains num_of_expected_results $suffix files
     """
+    # if True: return
     if not start:
         start = time()
     logger.info(f'Waiting for {script_name}...\nContinues when {num_of_expected_results} results with suffix="{suffix}" will be in:\n{path}')
@@ -136,39 +141,41 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
     # cmds_as_str += new_line_delimiter
 
     cmds_as_str += '\t' + job_name + '\n'
-    logger.debug(cmds_as_str)
-    cmds_path = os.path.join(tmp_dir, job_name + '.cmds')
+    cmds_path = os.path.join(tmp_dir, f'{job_name}.cmds')
+    if os.path.exists(cmds_path):
+        cmds_path = os.path.join(tmp_dir, f'{job_name}_{time()}.cmds')
     with open(cmds_path, 'w') as f:
         f.write(cmds_as_str)
 
     # process_str = f'{q_submitter_script_path} {cmds_path} {tmp_dir} -q {queue_name} --cpu {num_of_cpus}'
     process = [q_submitter_script_path, cmds_path, tmp_dir, '-q', queue_name, '--cpu', str(num_of_cpus)]
     logger.info(f'Calling:\n{" ".join(process)}')
+    # if True: return
     run(process)
 
 
 def fetch_cmd(script_name, parameters, verbose, error_path):
     cmd = f'python3 {script_name} ' + ' '.join(parameters + (['-v'] if verbose else []))
     logger.info(f'Executing:\n{cmd}')
-    try:
-        run(cmd, shell=True)
-        # logger.info(f'Finished:\n{cmd}')
-    except Exception as e:
-        fail(error_path, e)
+    # try:
+    run(cmd, shell=True)
+    # logger.info(f'Finished:\n{cmd}')
+    # except Exception as e:
+    #     fail(error_path, e)
 
 
 
-def load_barcode_to_sample_name(barcode2samplename_path):
-    barcode_to_samplename = {}
-    with open(barcode2samplename_path) as f:
+def load_table(table_path, error_msg, delimiter ='\t'):
+    table = {}
+    with open(table_path) as f:
         for line in f:
             if line.isspace():  # empty line
                 continue
-            barcode, sample_name = line.strip().split()
-            if barcode in barcode_to_samplename:
-                assert False, f'Barcode {barcode} belongs to more than one sample!!'  # TODO: write to a global error log file
-            barcode_to_samplename[barcode] = sample_name
-    return barcode_to_samplename
+            key, value = line.strip().split(delimiter)
+            if key in table:
+                assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
+            table[key] = value
+    return table
 
 
 def fail(error_path, e):
@@ -177,3 +184,17 @@ def fail(error_path, e):
     with open(error_path, 'w') as f:
         f.write(f'\n{"$"*100}\n\n{fname}: {exc_type}, '
                 f'at line: {exc_tb.tb_lineno}\n\ne.args: {e.args}\n\n{"$"*100}')
+    raise e
+
+
+def get_cluster_rank_from(header):
+    return header.split('clusterRank_')[-1].split('_')[0]
+
+
+def get_cluster_size_from_name(path):
+    return float(os.path.splitext(path)[0].split('clusterSize_')[1])
+
+
+def get_count_from(header):
+    # e.g., >seq_1_lib_C10C_len_12_counts_325350.363668618
+    return float(header.split('_')[-1])
