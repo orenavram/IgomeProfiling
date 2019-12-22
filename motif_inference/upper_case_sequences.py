@@ -10,7 +10,7 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
 
-def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path):
+def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path, argv='no argv'):
 
     logger.info(f'{datetime.datetime.now()}: upper casing all sequences in {in_fasta_file}')
 
@@ -23,8 +23,9 @@ def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path):
 
     verify_file_is_not_empty(out_fasta_file)
 
-    with open(done_file_path, 'w'):
-        pass
+    with open(done_file_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
+
 
 if __name__ == '__main__':
     from sys import argv
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('in_fasta_file', help='A fasta file')
     parser.add_argument('out_fasta_file', help='A fasta file with all the sequences in upper case letters')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the clustering was finished.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -46,4 +47,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    convert_sequences_to_upper(args.in_fasta_file, args.out_fasta_file, args.done_file_path)
+    convert_sequences_to_upper(args.in_fasta_file, args.out_fasta_file, args.done_file_path, argv)
