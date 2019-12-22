@@ -13,7 +13,7 @@ from global_params import src_dir
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose, error_path):
+                    gz, verbose, error_path, argv='no argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -80,13 +80,15 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
             wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
                          error_file_path=error_path, suffix='collapsing.txt')
-            with open(collapsing_done_path, 'w'):
-                pass
+            with open(collapsing_done_path, 'w') as f:
+                f.write(' '.join(argv) + '\n')
+
 
         else:
             logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
-        with open(first_phase_done_path, 'w'):
-            pass
+        with open(first_phase_done_path, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+
 
     else:
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
@@ -129,4 +131,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, error_path)
+                    True if args.verbose else False, error_path, argv)

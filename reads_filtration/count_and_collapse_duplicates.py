@@ -2,7 +2,7 @@ import datetime
 import logging
 logger = logging.getLogger('main')
 
-def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_path):
+def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_path, argv='no argv'):
     """
     :param fasta_file: a fasta file with non unique sequences
     :param out_fasta_file: a fasta file with the sequences from the input file but with summarized counts (of
@@ -41,7 +41,8 @@ def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_p
             f.write(f'>seq_{i+1}_lib_{lib}_len_{len_seq}_counts_{counts}\n{seq}\n')
 
     with open(done_file_path, 'w') as f:
-        pass
+        f.write(' '.join(argv) + '\n')
+
 
 
 def get_sequences_frequency_counter(fasta_file, open_function, mode):
@@ -75,4 +76,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     count_and_collapse(args.fasta_file, args.out_fasta_file,
-                       args.rpm, args.done_file_path)
+                       args.rpm, args.done_file_path, argv)
