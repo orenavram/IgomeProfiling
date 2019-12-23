@@ -188,11 +188,11 @@ def fail(error_path, e):
 
 
 def get_cluster_rank_from(header):
-    return header.split('clusterRank_')[-1].split('_')[0]
+    return int(header.split('clusterRank_')[-1].split('_')[0])
 
 
 def get_unique_members_from(header):
-    return header.split('uniqueMembers_')[-1].split('_')[0]
+    return int(header.split('uniqueMembers_')[-1].split('_')[0])
 
 
 def get_cluster_size_from_name(path):
