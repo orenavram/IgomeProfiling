@@ -28,7 +28,7 @@ def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path, ar
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 

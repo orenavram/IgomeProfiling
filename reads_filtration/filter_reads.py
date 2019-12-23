@@ -330,7 +330,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()

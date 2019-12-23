@@ -35,7 +35,7 @@ def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no a
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()

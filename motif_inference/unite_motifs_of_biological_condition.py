@@ -92,7 +92,7 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
 
 if __name__ == '__main__':
 
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 

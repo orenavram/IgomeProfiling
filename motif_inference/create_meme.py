@@ -97,7 +97,7 @@ def create_meme_file(msas_path, meme_path, done_path, minimal_number_of_columns_
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 

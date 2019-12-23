@@ -37,7 +37,7 @@ def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 

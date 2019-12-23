@@ -23,7 +23,7 @@ def remove_cysteine(fasta_file, out_fasta_file):
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()

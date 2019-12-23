@@ -52,7 +52,7 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
 
 
 if __name__ == '__main__':
-    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()
