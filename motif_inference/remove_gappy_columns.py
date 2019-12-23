@@ -39,9 +39,8 @@ def remove_sparse_columns(msa_path, out_path, done_path, maximal_gap_frequency_a
 
 
 if __name__ == '__main__':
-    from sys import argv
 
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
 
     import argparse
 

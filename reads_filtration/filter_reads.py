@@ -191,7 +191,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
             if (len(random_peptide) < minimal_length_required or
                 (random_peptide.startswith('C') and random_peptide.endswith('C') and
-                 len(random_peptide)-2 < minimal_length_required)):  # check minimum length (excluding flanking Cysteine)
+                 len(random_peptide)-2 < minimal_length_required)):  # minimum required length (excluding flanking Cysteine)
                 barcode2statistics[barcode]['too_short'] += 1
                 barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\trandom peptide is too short\t{random_peptide}\n")
                 # all set and documented. We can continue to the next read...
@@ -330,8 +330,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
 
 if __name__ == '__main__':
-    from sys import argv
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()

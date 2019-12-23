@@ -25,7 +25,7 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
 
     merged_meme_f = open(merged_meme_path, 'w')
     first_meme = True
-    for sample_name in sorted(os.listdir(motif_inference_path)):
+    for sample_name in sorted(os.listdir(motif_inference_path)):  # sorted by sample name
         dir_path = os.path.join(motif_inference_path, sample_name)
         if not os.path.isdir(dir_path) or biological_condition not in sample_name:
             # skip file or folders of non-related biological condition
@@ -52,8 +52,7 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
 
 
 if __name__ == '__main__':
-    from sys import argv
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(argv)}')
 
     import argparse
     parser = argparse.ArgumentParser()
