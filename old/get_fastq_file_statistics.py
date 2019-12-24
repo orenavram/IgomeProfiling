@@ -120,8 +120,7 @@ def get_stats(fastq_path, output_path_prefix, upstream_construct,
 
 
 if __name__ == '__main__':
-        from sys import argv
-        print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+        print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
         import os
 

@@ -91,9 +91,7 @@ def add_pssm_to_meme_file(msa_path, meme_path, add_header):
 
 
 if __name__ == '__main__':
-    from sys import argv
-
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 
