@@ -96,8 +96,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
 
 if __name__ == '__main__':
-    from sys import argv
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}', flush=True)
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -131,4 +130,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, error_path, argv)
+                    True if args.verbose else False, error_path, sys.argv)

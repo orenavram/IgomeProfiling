@@ -365,7 +365,7 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     # try:
-    filter_reads(argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
+    filter_reads(sys.argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                  args.done_file_path, args.barcode2samplename,
                  args.left_construct, args.right_construct, args.max_mismatches_allowed,
                  args.min_sequencing_quality, args.minimal_length_required,

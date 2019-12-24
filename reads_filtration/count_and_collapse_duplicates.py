@@ -1,4 +1,5 @@
 import datetime
+import sys
 import logging
 logger = logging.getLogger('main')
 
@@ -75,4 +76,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     count_and_collapse(args.fasta_file, args.out_fasta_file,
-                       args.rpm, args.done_file_path, argv)
+                       args.rpm, args.done_file_path, sys.argv)
