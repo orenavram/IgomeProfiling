@@ -1,4 +1,5 @@
 import datetime
+import subprocess
 import logging
 import os
 import sys
@@ -25,7 +26,7 @@ def get_clusters_sequences(motif_inference_output_path, biological_condition, sa
                 cluster_file_path = os.path.join(sample_folder, cluster_file_name)
                 break
         else:
-            raise ValueError(f'No cluster named {cluster_file_name}.faa was found in the following dirs:\n' +
+            raise ValueError(f'No cluster named {cluster_file_name} was found in the following dirs:\n' +
                              '\n'.join(sample_paths))
         sequence2header = load_fasta_to_dict(cluster_file_path, reverse=True)[0]  # don't need the other returned objects
         for sequence, header in sequence2header.items():
@@ -55,36 +56,40 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
                    unite_pssm_script_path='/groups/pupko/orenavr2/gershoni/src/UnitePSSMs/UnitePSSMs', argv='no argv'):
 
     clusters_to_combine_path = os.path.join(output_path, 'cluster_to_combine.csv')
-    # TODO: any modules to load?
-    cmd = f'{unite_pssm_script_path} -pssm {meme_file} -out {clusters_to_combine_path} ' \
-          f'-aln_cutoff {aln_cutoff} -pcc_cutoff {pcc_cutoff}'
-    logger.fatal(f'{datetime.datetime.now()}: starting UnitePSSMs. Executed command is:\n{cmd}')
-    # subprocess.run(cmd, shell=True)
+    if not os.path.exists(clusters_to_combine_path):
+        # TODO: any modules to load?
+        cmd = f'{unite_pssm_script_path} -pssm {meme_file} -out {clusters_to_combine_path} ' \
+              f'-aln_cutoff {aln_cutoff} -pcc_cutoff {pcc_cutoff}'
+        logger.info(f'{datetime.datetime.now()}: starting UnitePSSMs. Executed command is:\n{cmd}')
+        subprocess.run(cmd, shell=True)
 
+    # make sure that there are results and the file is not empty
+    verify_file_is_not_empty(clusters_to_combine_path)
+
+    logger.info(f'Result file is at {clusters_to_combine_path}')
     clusters_to_combine = []
     with open(clusters_to_combine_path) as f:
         for line in f:
             cluster_names = line.rstrip().split(',')
-            # remove consensus sequence (or any other irrelevant prefix) so we have the exact cluster (file) name
-            cluster_without_prefix = [cluster[cluster.index('clusterRank'):] for cluster in cluster_names]
+            # remove consensus sequence so we have the exact cluster (file) name
+            cluster_without_prefix = [cluster[cluster.index('_')+1:] for cluster in cluster_names]
             clusters_to_combine.append(cluster_without_prefix)
 
+    logger.info(f'Sorting clusters by rank...')
     # sort the sublist such that the first one will contain the highest copy number, etc...
     clusters_to_combine.sort(key=lambda clusters: sum(get_cluster_size_from_name(cluster) for cluster in clusters), reverse=True)
 
     unaligned_sequences_path = os.path.join(output_path, 'unaligned_sequences')
     os.makedirs(unaligned_sequences_path, exist_ok=True)
 
-    cluster_rank = 0
-    for cluster_names in clusters_to_combine:
+    for cluster_rank in range(len(clusters_to_combine)):
+        if cluster_rank % 25 == 0:
+            logger.info(f'Merging sequences of the cluster ranked {cluster_rank}')
+
         clusters_sequences, cluster_file_name = get_clusters_sequences(motif_inference_output_path, biological_condition,
-                                                                       sample_names, cluster_names, cluster_rank)
+                                                                       sample_names, clusters_to_combine[cluster_rank], cluster_rank)
         with open(os.path.join(unaligned_sequences_path, cluster_file_name), 'w') as f:
             f.write(clusters_sequences)
-        cluster_rank += 1
-
-    # make sure that there are results and the file is not empty
-    verify_file_is_not_empty(output_path)
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -119,4 +124,4 @@ if __name__ == '__main__':
 
     unite_clusters(args.motif_inference_output_path, args.meme_file_path, args.biological_condition,
                    args.sample_names.split(','), args.output_path, args.done_file_path,
-                   args.aln_cutoff, args.pcc_cutoff, argv=argv)
+                   args.aln_cutoff, args.pcc_cutoff, argv=sys.argv)
