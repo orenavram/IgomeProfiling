@@ -52,7 +52,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    reconstruct_msa(args.sequences_file_path, args.output_file_path, args.done_file_path, argv)
+    reconstruct_msa(args.sequences_file_path, args.output_file_path, args.done_file_path, sys.argv)
 
 
 

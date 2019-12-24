@@ -75,4 +75,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     merge_meme_files(args.motif_inference_path, args.biological_condition, args.merged_meme_path,
-                     args.done_file_path, args.skip_sample.split(','), argv)
+                     args.done_file_path, args.skip_sample.split(','), sys.argv)

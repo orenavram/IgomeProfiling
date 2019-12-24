@@ -61,4 +61,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     cluster_sequences(args.fasta_file, args.output_prefix, args.done_file_path,
-                      args.threshold, args.word_length, args.discard, argv)
+                      args.threshold, args.word_length, args.discard, sys.argv)

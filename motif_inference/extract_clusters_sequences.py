@@ -81,14 +81,15 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
     sorted_clusters_by_size = sorted(cluster_to_members_records, reverse=True,
                                      key=lambda cluster: extract_cluster_size_from_records(cluster_to_members_records[cluster]))
 
+    if file_prefix != '':
+        file_prefix += '_'
+
     for i, cluster in enumerate(sorted_clusters_by_size):
 
         cluster_rank = str(i).zfill(max_number_of_leading_zeros)
         number_of_unique_members = min(len(cluster_to_members_records[cluster]), max_num_of_sequences_to_keep)
         cluster_counts = extract_cluster_size_from_records(cluster_to_members_records[cluster])
 
-        if file_prefix != '':
-            file_prefix += '_'
         filename = f'{file_prefix}clusterRank_' \
                    f'{cluster_rank}_uniqueMembers_' \
                    f'{number_of_unique_members}_' \
@@ -102,9 +103,7 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
 
 
 if __name__ == '__main__':
-    from sys import argv
-
-    print(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}')
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
 
     import argparse
 
@@ -130,4 +129,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     extract_clusters_sequences(args.fasta_file, args.clstr_file, args.output_dir, args.done_file_path,
-                               args.max_num_of_sequences_to_keep, args.file_prefix, argv)
+                               args.max_num_of_sequences_to_keep, args.file_prefix, sys.argv)

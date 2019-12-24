@@ -117,6 +117,6 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    create_meme_file(args.msas_path, args.meme_path, args.done_file_path, args.minimal_number_of_columns_required, argv)
+    create_meme_file(args.msas_path, args.meme_path, args.done_file_path, args.minimal_number_of_columns_required, sys.argv)
 
 

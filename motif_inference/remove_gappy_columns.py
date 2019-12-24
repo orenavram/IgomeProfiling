@@ -61,6 +61,6 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     remove_sparse_columns(args.msa_path, args.cleaned_msa_path, args.done_file_path,
-                          args.maximal_gap_frequency_allowed_per_column, argv)
+                          args.maximal_gap_frequency_allowed_per_column, sys.argv)
 
 

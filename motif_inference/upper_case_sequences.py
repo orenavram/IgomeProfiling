@@ -45,4 +45,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    convert_sequences_to_upper(args.in_fasta_file, args.out_fasta_file, args.done_file_path, argv)
+    convert_sequences_to_upper(args.in_fasta_file, args.out_fasta_file, args.done_file_path, sys.argv)
