@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 if os.path.exists('/groups/pupko/orenavr2/'):
@@ -6,13 +7,119 @@ else:
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
 sys.path.insert(0, src_dir)
 
-import datetime
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, load_table, wait_for_results, submit_pipeline_step, \
-    get_cluster_rank_from, get_unique_members_from
+from auxiliaries.pipeline_auxiliaries import *
+
+
+def align_clean_pssm_weblogo(folder_names_to_handle, motif_inference_output_path, logs_dir, error_path, queue_name, verbose):
+    # For each sample, align each cluster
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: aligning clusters in each sample')
+    script_name = 'align_sequences.py'
+    num_of_expected_results = 0
+    msas_paths = []  # keep all msas' paths for the next step
+    num_of_cmds_per_job = 100
+    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
+    for folder in folder_names_to_handle:
+        path = os.path.join(motif_inference_output_path, folder, 'unaligned_sequences')
+        sample_motifs_dir = os.path.split(path)[0]
+        sample_name = os.path.split(sample_motifs_dir)[-1]
+        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+        aligned_sequences_path = path.replace('unaligned_sequences', 'aligned_sequences')
+        msas_paths.append(aligned_sequences_path)
+        os.makedirs(aligned_sequences_path, exist_ok=True)
+        for faa_filename in sorted(os.listdir(path)):  # sorted by clusters rank
+            unaligned_cluster_path = os.path.join(path, faa_filename)
+            number_of_unique_members = get_unique_members_from(faa_filename)
+            if number_of_unique_members < 2:
+                logger.info(f'{datetime.datetime.now()}: skipping alignment for a cluster with a single member!\n'
+                            f'{unaligned_cluster_path}')
+                continue
+            cluster_rank = get_cluster_rank_from(faa_filename)
+            aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
+            done_path = f'{logs_dir}/04_{sample_name}_{cluster_rank}_done_msa.txt'
+            all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
+
+    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+        sample_name = current_batch[0][1].split('/')[-3]
+        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+        cluster_rank = get_cluster_rank_from(current_batch[-1][1])
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             current_batch,
+                             logs_dir, f'{sample_name}_{cluster_rank}_msa',
+                             queue_name, verbose)
+
+        num_of_expected_results += len(current_batch)
+
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='msa.txt')
+
+    # For each sample, clean alignments from gappy columns
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: cleaning alignments from gappy columns')
+    script_name = 'remove_gappy_columns.py'
+    num_of_expected_results = 0
+    cleaned_msas_paths = []  # keep all cleaned msas' paths for the next step
+    num_of_cmds_per_job = 100
+    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for msas_path in msas_paths:
+        sample_motifs_dir = os.path.split(msas_path)[0]
+        sample_name = os.path.split(sample_motifs_dir)[-1]
+        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+        cleaned_msas_path = os.path.join(sample_motifs_dir, 'cleaned_aligned_sequences')
+        cleaned_msas_paths.append(cleaned_msas_path)
+        os.makedirs(cleaned_msas_path, exist_ok=True)
+        for msa_name in sorted(os.listdir(msas_path)):  # sorted by clusters rank
+            msa_path = os.path.join(msas_path, msa_name)
+            cleaned_msa_path = os.path.join(cleaned_msas_path, msa_name)
+            done_path = f'{logs_dir}/05_{sample_name}_{msa_name}_done_cleaning_msa.txt'
+            all_cmds_params.append([msa_path, cleaned_msa_path, done_path])
+    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+        sample_name = current_batch[0][1].split('/')[-3]
+        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+        cluster_rank = get_cluster_rank_from(current_batch[-1][0])
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             current_batch,
+                             logs_dir, f'{sample_name}_{cluster_rank}_clean',
+                             queue_name, verbose)
+        num_of_expected_results += len(current_batch)
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='_done_cleaning_msa.txt')
+
+
+    # For each sample, generate a meme file with a corresponding pssm for each alignment
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: generating meme files for each sample from cleaned alignments')
+    script_name = 'create_meme.py'
+    num_of_expected_results = 0
+    num_of_cmds_per_job = 4
+    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for cleaned_msas_path in cleaned_msas_paths:
+        sample_motifs_dir = os.path.split(cleaned_msas_path)[0]
+        sample_name = os.path.split(sample_motifs_dir)[-1]
+        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+        meme_path = os.path.join(sample_motifs_dir, 'meme.txt')
+        done_path = f'{logs_dir}/06_{sample_name}_done_meme.txt'
+        all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
+    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             current_batch,
+                             logs_dir, f'{i//num_of_cmds_per_job}_meme',
+                             queue_name, verbose)
+        num_of_expected_results += len(current_batch)
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='_done_meme.txt')
+
+    # TODO: generate web logo HERE weblogo sequence logo
 
 
 def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
-                 samplename2biologicalcondition_path, queue_name, verbose, error_path):
+                 samplename2biologicalcondition_path, queue_name, verbose, error_path, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -169,116 +276,9 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(os.path.join(logs_dir, 'infer_motifs_done.txt'), 'w'):
-        pass
+    with open(os.path.join(logs_dir, 'infer_motifs_done.txt'), 'w') as f:
+        f.write(' '.join(argv) + '\n')
 
-
-def align_clean_pssm_weblogo(folder_names_to_handle, motif_inference_output_path, logs_dir, error_path, queue_name, verbose):
-    # For each sample, align each cluster
-    logger.info('_' * 100)
-    logger.info(f'{datetime.datetime.now()}: aligning clusters in each sample')
-    script_name = 'align_sequences.py'
-    num_of_expected_results = 0
-    msas_paths = []  # keep all msas' paths for the next step
-    num_of_cmds_per_job = 100
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
-    for folder in folder_names_to_handle:
-        path = os.path.join(motif_inference_output_path, folder, 'unaligned_sequences')
-        sample_motifs_dir = os.path.split(path)[0]
-        sample_name = os.path.split(sample_motifs_dir)[-1]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        aligned_sequences_path = path.replace('unaligned_sequences', 'aligned_sequences')
-        msas_paths.append(aligned_sequences_path)
-        os.makedirs(aligned_sequences_path, exist_ok=True)
-        for faa_filename in sorted(os.listdir(path)):  # sorted by clusters rank
-            unaligned_cluster_path = os.path.join(path, faa_filename)
-            number_of_unique_members = get_unique_members_from(faa_filename)
-            if number_of_unique_members < 2:
-                logger.info(f'{datetime.datetime.now()}: skipping alignment for a cluster with a single member!\n'
-                            f'{unaligned_cluster_path}')
-                continue
-            cluster_rank = get_cluster_rank_from(faa_filename)
-            aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
-            done_path = f'{logs_dir}/04_{sample_name}_{cluster_rank}_done_msa.txt'
-            all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
-
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        sample_name = current_batch[0][1].split('/')[-3]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        cluster_rank = get_cluster_rank_from(current_batch[-1][1])
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_{cluster_rank}_msa',
-                             queue_name, verbose)
-
-        num_of_expected_results += len(current_batch)
-
-
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='msa.txt')
-
-    # For each sample, clean alignments from gappy columns
-    logger.info('_' * 100)
-    logger.info(f'{datetime.datetime.now()}: cleaning alignments from gappy columns')
-    script_name = 'remove_gappy_columns.py'
-    num_of_expected_results = 0
-    cleaned_msas_paths = []  # keep all cleaned msas' paths for the next step
-    num_of_cmds_per_job = 100
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for msas_path in msas_paths:
-        sample_motifs_dir = os.path.split(msas_path)[0]
-        sample_name = os.path.split(sample_motifs_dir)[-1]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        cleaned_msas_path = os.path.join(sample_motifs_dir, 'cleaned_aligned_sequences')
-        cleaned_msas_paths.append(cleaned_msas_path)
-        os.makedirs(cleaned_msas_path, exist_ok=True)
-        for msa_name in sorted(os.listdir(msas_path)):  # sorted by clusters rank
-            msa_path = os.path.join(msas_path, msa_name)
-            cleaned_msa_path = os.path.join(cleaned_msas_path, msa_name)
-            done_path = f'{logs_dir}/05_{sample_name}_{msa_name}_done_cleaning_msa.txt'
-            all_cmds_params.append([msa_path, cleaned_msa_path, done_path])
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        sample_name = current_batch[0][1].split('/')[-3]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        cluster_rank = get_cluster_rank_from(current_batch[-1][0])
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_{cluster_rank}_clean',
-                             queue_name, verbose)
-        num_of_expected_results += len(current_batch)
-
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='_done_cleaning_msa.txt')
-
-
-    # For each sample, generate a meme file with a corresponding pssm for each alignment
-    logger.info('_' * 100)
-    logger.info(f'{datetime.datetime.now()}: generating meme files for each sample from cleaned alignments')
-    script_name = 'create_meme.py'
-    num_of_expected_results = 0
-    num_of_cmds_per_job = 4
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for cleaned_msas_path in cleaned_msas_paths:
-        sample_motifs_dir = os.path.split(cleaned_msas_path)[0]
-        sample_name = os.path.split(sample_motifs_dir)[-1]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        meme_path = os.path.join(sample_motifs_dir, 'meme.txt')
-        done_path = f'{logs_dir}/06_{sample_name}_done_meme.txt'
-        all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{i//num_of_cmds_per_job}_meme',
-                             queue_name, verbose)
-        num_of_expected_results += len(current_batch)
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='_done_meme.txt')
-
-    # TODO: generate web logo HERE weblogo sequence logo
 
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
@@ -306,4 +306,4 @@ if __name__ == '__main__':
 
     infer_motifs(args.parsed_fastq_results, args.motif_inference_results, args.logs_dir,
                  args.samplename2biologicalcondition_path,
-                 args.queue, True if args.verbose else False, error_path)
+                 args.queue, True if args.verbose else False, error_path, sys.argv)
