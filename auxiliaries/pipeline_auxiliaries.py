@@ -52,9 +52,9 @@ def load_fasta_to_dict(fasta_path, reverse=False):
     """
     key2value = {}
     with open(fasta_path) as f:
-        for header in f:
+        for i, header in enumerate(f):
             if not header.startswith('>'):
-                raise TypeError('Illegal fasta file')
+                raise TypeError(f'Illegal fasta file. Illegal record is record number {i} is\n{header}')
             # returns header without ">" !
             if not reverse:
                 key2value[header[1:].rstrip()] = f.readline().rstrip()
@@ -78,7 +78,7 @@ def measure_time(total):
 
 
 def wait_for_results(script_name, path, num_of_expected_results, error_file_path, suffix='done',
-                     remove=False, time_to_wait=10, start=0):
+                     remove=False, time_to_wait=10, start=0, done_files_list=[]):
     """
     :param script_name:
     :param path:
@@ -108,6 +108,8 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
         i += 1
         if i % 5 == 0:  # print status every 5 cycles of $time_to_wait
             logger.info(f'\t{measure_time(total_time)} have passed since started waiting ({num_of_expected_results} - {current_num_of_results} = {jobs_left} more files are still missing)')
+            if done_files_list:
+                logger.info(f'This are the files the are still missing:\n{[file for file in done_files_list if not os.path.exists(file)]}')
         assert not os.path.exists(error_file_path), f'An error occurred. For further details see: {error_file_path}'
 
     if remove:
@@ -202,3 +204,29 @@ def get_cluster_size_from_name(path):
 def get_count_from(header):
     # e.g., >seq_1_lib_C10C_len_12_counts_325350.363668618
     return float(header.split('_')[-1])
+
+
+def remove_redundant_newlines_from_fasta(input_file_path, output_file_path):
+    # remove redundant newlines (MAFFT puts only 100 chars per line), i.e., this:
+    #>seq_1_lib_C10C_len_12_counts_297739.4827131018
+    #----------------------C--------------H------GKTGASFL----Q---
+    #C---------------------
+    # will turn into this:
+    #>seq_1_lib_C10C_len_12_counts_297739.4827131018
+    #----------------------C--------------H------GKTGASFL----Q---C---------------------
+    result = ''
+    sequence = ''
+    with open(input_file_path) as f:
+        for line in f:
+            line = line.rstrip()
+            if line.startswith('>'):
+                if sequence != '':  # not the first header
+                    result += f'{sequence}\n'
+                sequence = ''
+                result += f'{line}\n'
+            else:
+                sequence += line
+    result += f'{sequence}\n'
+
+    with open(output_file_path, 'w') as f:
+        f.write(result)
