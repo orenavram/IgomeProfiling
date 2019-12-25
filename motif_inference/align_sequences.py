@@ -7,7 +7,7 @@ else:
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, remove_redundant_newlines_from_fasta
 
 
 def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no argv'):
@@ -26,6 +26,12 @@ def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no a
     logger.fatal(f'{datetime.datetime.now()}: Starting MAFFT. Executed command is:\n{cmd}')
     print(f'{datetime.datetime.now()}: Starting MAFFT. Executed command is:\n{cmd}')
     subprocess.run(cmd, shell=True)
+
+    # make sure that there are results and the file is not empty
+    verify_file_is_not_empty(output_file_path)
+
+    # override the results with clean ones (no redundant new lines. For further details see function's doc)
+    remove_redundant_newlines_from_fasta(output_file_path, output_file_path)
 
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(output_file_path)
