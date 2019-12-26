@@ -69,12 +69,15 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
 
     logger.info(f'{datetime.datetime.now()}: Writing clusters sequences...')
 
+    trimmed_clusters = set()
     # sort records of each cluster by their size and keep only first $max_num_of_sequences_to_keep records
     for cluster in cluster_to_members_records:
         # sort cluster members by their "strength", i.e., counts
         cluster_to_members_records[cluster].sort(key=extract_sequence_counts_from_record, reverse=True)
-        # discard (in-place) all sequences above the maximum required number
-        cluster_to_members_records[cluster][max_num_of_sequences_to_keep:] = []
+        if len(cluster_to_members_records[cluster])>max_num_of_sequences_to_keep:
+            # discard (in-place) all sequences above the maximum required number
+            cluster_to_members_records[cluster][max_num_of_sequences_to_keep:] = []
+            trimmed_clusters.add(cluster)
 
     max_number_of_leading_zeros = len(str(len(cluster_to_members_records)))
 
@@ -92,6 +95,7 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
 
         filename = f'{file_prefix}clusterRank_' \
                    f'{cluster_rank}_uniqueMembers_' \
+                   f'{"top" if cluster in trimmed_clusters else ""}' \
                    f'{number_of_unique_members}_' \
                    f'clusterSize_{cluster_counts:.2f}.faa'  # take only 2 digits after the floating point
 
@@ -112,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('clstr_file', help='A .clstr file that details the cluster in the fasta_file')
     parser.add_argument('output_dir', help='A folder in which each cluster will be written as a separate file.')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
-    parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=100_000_000,
+    parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=1000,
                         help='How many sequences (at most) to include in each file? (extra sequences will not be '
                              'extracted. A very high number might not extract anything)')
     parser.add_argument('--file_prefix', default='',

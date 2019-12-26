@@ -194,7 +194,10 @@ def get_cluster_rank_from(header):
 
 
 def get_unique_members_from(header):
-    return int(header.split('uniqueMembers_')[-1].split('_')[0])
+    unique_members = header.split('uniqueMembers_')[-1].split('_')[0]
+    if unique_members.startswith('top'):
+        unique_members = unique_members[3:]
+    return int(unique_members)
 
 
 def get_cluster_size_from_name(path):
