@@ -7,25 +7,34 @@ else:
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, remove_redundant_newlines_from_fasta
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, remove_redundant_newlines_from_fasta, \
+    get_unique_members_from
 
 
 def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no argv'):
-    import subprocess
-
-    # TODO: module load mafft..
-    # --auto Automatically selects an appropriate strategy from L-INS-i, FFT-NS-i and FFT-NS-2, according to data size.
-    # --amino tells mafft that's an amino acid msa. If you let it decide by itself, it might wrong on small data sets
-    # as they might look like dna but they are NOT! e.g.,
-    # [orenavr2@powerlogin-be2 test]$ cat /groups/pupko/orenavr2/igomeProfilingPipeline/experiments/test/analysis/motif_inference/17b_03/unaligned_sequences/17b_03_clusterRank_215_uniqueMembers_2_clusterSize_252.81.faa
-    # >seq_235_lib_12_len_12_counts_126.40626975097965
-    # CNTDVACAAPGN
-    # >seq_1112_lib_C8C_len_10_counts_126.40626975097965
-    # CTTACAPVNC
-    cmd = f'mafft --auto --amino {sequences_file_path} > {output_file_path}'
-    logger.fatal(f'{datetime.datetime.now()}: Starting MAFFT. Executed command is:\n{cmd}')
-    print(f'{datetime.datetime.now()}: Starting MAFFT. Executed command is:\n{cmd}')
-    subprocess.run(cmd, shell=True)
+    number_of_unique_members = get_unique_members_from(sequences_file_path)
+    if number_of_unique_members > 1:
+        import subprocess
+        # TODO: module load mafft..
+        # --auto Automatically selects an appropriate strategy from L-INS-i, FFT-NS-i and FFT-NS-2, according to data size.
+        # --amino tells mafft that's an amino acid msa. If you let it decide by itself, it might wrong on small data sets
+        # as they might look like dna but they are NOT! e.g.,
+        # [orenavr2@powerlogin-be2 test]$ cat /groups/pupko/orenavr2/igomeProfilingPipeline/experiments/test/analysis/motif_inference/17b_03/unaligned_sequences/17b_03_clusterRank_215_uniqueMembers_2_clusterSize_252.81.faa
+        # >seq_235_lib_12_len_12_counts_126.40626975097965
+        # CNTDVACAAPGN
+        # >seq_1112_lib_C8C_len_10_counts_126.40626975097965
+        # CTTACAPVNC
+        cmd = f'mafft --auto --amino {sequences_file_path} > {output_file_path}'
+        logger.info(f'{datetime.datetime.now()}: Starting MAFFT. Executed command is:\n{cmd}')
+        subprocess.run(cmd, shell=True)
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping alignment for a cluster with a single member. '
+                    f'Writing the output file as is to\n'
+                    f'{output_file_path}')
+        with open(sequences_file_path) as unaligned_f:
+            content = unaligned_f.read()
+        with open(output_file_path, 'w') as aligned_f:
+            aligned_f.write(content)
 
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(output_file_path)

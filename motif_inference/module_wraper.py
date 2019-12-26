@@ -32,10 +32,12 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         os.makedirs(aligned_sequences_path, exist_ok=True)
         for i, faa_filename in enumerate(sorted(os.listdir(path))):  # sorted by clusters rank
             unaligned_cluster_path = os.path.join(path, faa_filename)
-            cluster_rank = str(get_cluster_rank_from(faa_filename)).zfill(max_number_of_leading_zeros)
-            tokens = faa_filename.split('_')
-            tokens[tokens.index('clusterRank')+1] = cluster_rank  # update cluster rank with respect to biological condition (and not with respect to sample)
-            aligned_cluster_path = os.path.join(aligned_sequences_path, '_'.join(tokens))
+            cluster_rank = get_cluster_rank_from(faa_filename)
+            # cluster_rank = str(get_cluster_rank_from(faa_filename)).zfill(max_number_of_leading_zeros)
+            # tokens = faa_filename.split('_')
+            # tokens[tokens.index('clusterRank')+1] = cluster_rank  # update cluster rank with respect to biological condition (and not with respect to sample)
+            # aligned_cluster_path = os.path.join(aligned_sequences_path, '_'.join(tokens))
+            aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
             done_path = f'{logs_dir}/04_{sample_name}_{cluster_rank}_done_msa.txt'
             all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
             if i == max_clusters_to_align:
