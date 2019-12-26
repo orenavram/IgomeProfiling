@@ -18,80 +18,80 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    first_phase_done_path = f'{logs_dir}/done_filtering_reads.txt'
-    if not os.path.exists(first_phase_done_path):
-        done_path = f'{logs_dir}/done_demultiplexing.txt'
+    first_phase_done_path = f'{logs_dir}/filter_reads_done.txt'
+    if os.path.exists(first_phase_done_path):
+        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
+        return
+
+    done_path = f'{logs_dir}/done_demultiplexing.txt'
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {first_phase_output_path}')
+    if not os.path.exists(done_path):
+        # run filter_reads.py
+        parameters = [fastq_path, first_phase_output_path, logs_dir,
+                      done_path, barcode2samplename,
+                      f'--error_path {error_path}',
+                      f'--left_construct {left_construct}',
+                      f'--right_construct {right_construct}',
+                      f'--max_mismatches_allowed {max_mismatches_allowed}',
+                      f'--min_sequencing_quality {min_sequencing_quality}'] + (['--gz'] if gz else [])
+
+        fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
+                  parameters, verbose, error_path)
+        num_of_expected_results = 1
+        wait_for_results('filter_reads.py', logs_dir, num_of_expected_results,
+                         error_file_path=error_path, suffix='demultiplexing.txt')
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
+
+    collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
+    if not os.path.exists(collapsing_done_path):
         logger.info('_' * 100)
-        logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {first_phase_output_path}')
-        if not os.path.exists(done_path):
-            # run filter_reads.py
-            parameters = [fastq_path, first_phase_output_path, logs_dir,
-                          done_path, barcode2samplename,
-                          f'--error_path {error_path}',
-                          f'--left_construct {left_construct}',
-                          f'--right_construct {right_construct}',
-                          f'--max_mismatches_allowed {max_mismatches_allowed}',
-                          f'--min_sequencing_quality {min_sequencing_quality}'] + (['--gz'] if gz else [])
-
-            fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
-                      parameters, verbose, error_path)
-            num_of_expected_results = 1
-            wait_for_results('filter_reads.py', logs_dir, num_of_expected_results,
-                             error_file_path=error_path, suffix='demultiplexing.txt')
-        else:
-            logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
-
-        collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
-        if not os.path.exists(collapsing_done_path):
-
-            logger.info('_' * 100)
-            logger.info(f'{datetime.datetime.now()}: counting and collapsing duplicated sequences for {first_phase_output_path}')
-            # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
-            num_of_expected_results = 0
-            for dir_name in sorted(os.listdir(first_phase_output_path)):
-                dir_path = os.path.join(first_phase_output_path, dir_name)
-                if not os.path.isdir(dir_path):
+        logger.info(f'{datetime.datetime.now()}: counting and collapsing duplicated sequences for {first_phase_output_path}')
+        # run count_and_collapse_duplicates.py and remove_cysteine_loop.py
+        num_of_expected_results = 0
+        for dir_name in sorted(os.listdir(first_phase_output_path)):
+            dir_path = os.path.join(first_phase_output_path, dir_name)
+            if not os.path.isdir(dir_path):
+                continue
+            for file in os.listdir(dir_path):
+                # look for faa files to collapse
+                if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
                     continue
-                for file in os.listdir(dir_path):
-                    # look for faa files to collapse
-                    if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
-                        continue
 
-                    sample_name = file.split('.faa')[0]
-                    file_path = f'{dir_path}/{file}'
-                    output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
-                    done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
+                sample_name = file.split('.faa')[0]
+                file_path = f'{dir_path}/{file}'
+                output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
+                done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
 
-                    parameters = [file_path, output_file_path, done_path,
-                                  '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
-                    fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
-                              parameters, verbose, error_path)
+                parameters = [file_path, output_file_path, done_path,
+                              '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
+                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
+                          parameters, verbose, error_path)
 
-                    # file_path = output_file_path
-                    # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-                    # parameters = [file_path, output_file_path]
-                    # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py',
-                    #             parameters, verbose, error_path)
-                    # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
-                    # E.g.: CAAAAC and AAAA are the same after removing Cys
+                # file_path = output_file_path
+                # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
+                # parameters = [file_path, output_file_path]
+                # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py',
+                #             parameters, verbose, error_path)
+                # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
+                # E.g.: CAAAAC and AAAA are the same after removing Cys
 
-                    num_of_expected_results += 1
-                    break
+                num_of_expected_results += 1
+                break
 
-            wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
-                         error_file_path=error_path, suffix='collapsing.txt')
-            with open(collapsing_done_path, 'w') as f:
-                f.write(' '.join(argv) + '\n')
-
-
-        else:
-            logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
-        with open(first_phase_done_path, 'w') as f:
+        wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='collapsing.txt')
+        with open(collapsing_done_path, 'w') as f:
             f.write(' '.join(argv) + '\n')
 
 
     else:
-        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
+        logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
+    with open(first_phase_done_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
+
+
 
 
 

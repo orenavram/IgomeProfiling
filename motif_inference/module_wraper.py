@@ -130,14 +130,16 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
+
     motif_inference_done_path = f'{logs_dir}/infer_motifs_done.txt'
-    if os.path.exists(motif_inference_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
-        return
 
     samplename2biologicalcondition = load_table(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+
+    if os.path.exists(motif_inference_done_path):
+        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
+        return
 
     # Make sure all sequences are in upper case letters (for example, no need to differentiate between Q and q)
     logger.info('_'*100)
@@ -159,7 +161,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         upper_faa_paths.append(out_faa_path)
         done_path = f'{logs_dir}/01_{sample_name}_done_uppering.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
-                 [in_faa_path, out_faa_path, done_path], verbose, error_path)
+                  [in_faa_path, out_faa_path, done_path], verbose, error_path)
         num_of_expected_results += 1
 
     wait_for_results(script_name, logs_dir, num_of_expected_results,
@@ -309,6 +311,28 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     wait_for_results(script_name, logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
 
+    # Split memes and cutoffs
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: splitting pssms and cuttoffs for paralellizing p-values step:\n'
+                f'{biological_conditions}')
+    script_name = 'split_meme_and_cutoff_files.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for bc in biological_conditions:
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
+        done_path = f'{logs_dir}/11_{bc}_done_split.txt'
+        all_cmds_params.append([meme_path, cutoff_path, done_path])
+
+    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_split',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='_done_split.txt')
 
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
