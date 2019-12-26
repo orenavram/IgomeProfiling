@@ -20,7 +20,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
     msas_paths = []  # keep all msas' paths for the next step
     num_of_cmds_per_job = 100
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    max_number_of_leading_zeros = len(str(max_clusters_to_align))
+    # max_number_of_leading_zeros = len(str(max_clusters_to_align))
     logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
     for folder in folder_names_to_handle:
         path = os.path.join(motif_inference_output_path, folder, 'unaligned_sequences')
@@ -31,6 +31,8 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         msas_paths.append(aligned_sequences_path)
         os.makedirs(aligned_sequences_path, exist_ok=True)
         for i, faa_filename in enumerate(sorted(os.listdir(path))):  # sorted by clusters rank
+            if i == max_clusters_to_align:
+                break
             unaligned_cluster_path = os.path.join(path, faa_filename)
             cluster_rank = get_cluster_rank_from(faa_filename)
             # cluster_rank = str(get_cluster_rank_from(faa_filename)).zfill(max_number_of_leading_zeros)
@@ -40,8 +42,6 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
             aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
             done_path = f'{logs_dir}/04_{sample_name}_{cluster_rank}_done_msa.txt'
             all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
-            if i == max_clusters_to_align:
-                break
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
@@ -130,6 +130,10 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
+    motif_inference_done_path = f'{logs_dir}/infer_motifs_done.txt'
+    if os.path.exists(motif_inference_done_path):
+        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
+        return
 
     samplename2biologicalcondition = load_table(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
@@ -277,15 +281,39 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     wait_for_results(script_name, logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
 
-
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc,
                              motif_inference_output_path, logs_dir, error_path, queue_name, verbose)
 
+    # Compute pssm cutoffs for each bc
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: computing pssms cuttoffs for the following biological conditions:\n'
+                f'{biological_conditions}')
+    script_name = 'calculate_pssm_cutoffs.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        output_path = os.path.join(bc_folder, 'cutoffs.txt')
+        done_path = f'{logs_dir}/10_{bc}_done_compute_cutoffs.txt'
+        all_cmds_params.append([meme_path, output_path, done_path])
+
+    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_cutoffs',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+
+
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(os.path.join(logs_dir, 'infer_motifs_done.txt'), 'w') as f:
+    with open(motif_inference_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 
@@ -301,9 +329,9 @@ if __name__ == '__main__':
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
-    parser.add_argument('--max_msas_per_sample', default=10, type=int,
+    parser.add_argument('--max_msas_per_sample', default=100, type=int,
                         help='For each sample, align only the biggest $max_msas_per_sample')
-    parser.add_argument('--max_msas_per_bc', default=12, type=int,
+    parser.add_argument('--max_msas_per_bc', default=400, type=int,
                         help='For each biological condition, align only the biggest $max_msas_per_bc')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
