@@ -20,6 +20,8 @@ def calculate_pssm_thresholds(meme_path, output_path, done_path, argv='no argv',
         cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {output_path} -CalcPSSM_Cutoff'
         logger.info(f'{datetime.datetime.now()}: starting PSSM_score_Peptide. Executed command is:\n{cmd}')
         subprocess.run(cmd, shell=True)
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping cutoffs calculation as it is already exist at:\n{output_path}')
 
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(output_path)
