@@ -130,7 +130,6 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-
     motif_inference_done_path = f'{logs_dir}/infer_motifs_done.txt'
 
     samplename2biologicalcondition = load_table(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
