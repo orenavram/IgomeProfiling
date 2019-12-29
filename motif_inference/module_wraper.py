@@ -318,6 +318,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     num_of_expected_results = 0
     all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
         meme_path = os.path.join(bc_folder, 'meme.txt')
         cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/11_{bc}_done_split.txt'
