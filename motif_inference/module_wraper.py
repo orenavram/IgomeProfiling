@@ -95,12 +95,11 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
     wait_for_results(script_name, logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='_done_cleaning_msa.txt') #, done_files_list=done_files_list)
 
-
     # For each sample, generate a meme file with a corresponding pssm for each alignment
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: generating meme files for each sample from cleaned alignments')
     script_name = 'create_meme.py'
-    num_of_expected_results = 0
+    num_of_expected_memes = 0
     num_of_cmds_per_job = 4
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for cleaned_msas_path in cleaned_msas_paths:
@@ -116,11 +115,34 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
                              current_batch,
                              logs_dir, f'{i//num_of_cmds_per_job}_meme',
                              queue_name, verbose)
-        num_of_expected_results += len(current_batch)
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='_done_meme.txt')
+        num_of_expected_memes += len(current_batch)
 
-    # TODO: generate web logo HERE weblogo sequence logo
+    # instead of waiting here, submit the weblogos first..
+
+    # For each cleaned msa, generate a web logo. No need to wait with the analysis.
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: generating weblogos for each cleaned alignment')
+    script_name = 'generate_weblogo.py'
+    num_of_cmds_per_job = 100
+    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for cleaned_msas_path in cleaned_msas_paths:
+        weblogos_path = cleaned_msas_path.replace('cleaned_aligned_sequences', 'weblogos')
+        os.makedirs(weblogos_path, exist_ok=True)
+        for msa_name in os.listdir(cleaned_msas_path):
+            msa_path = os.path.join(cleaned_msas_path, msa_name)
+            weblogo_prefix_path = os.path.join(weblogos_path, os.path.splitext(msa_name)[0])
+            all_cmds_params.append([msa_path, weblogo_prefix_path])
+
+    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             current_batch,
+                             logs_dir, f'weblogo_{i}th_batch',
+                             queue_name, verbose)
+
+    # wait for the memes!! (previous logical block!)
+    wait_for_results(script_name, logs_dir, num_of_expected_memes,
+                     error_file_path=error_path, suffix='_done_meme.txt')
 
 
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
