@@ -40,7 +40,7 @@ def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_fi
                     add_meta_info = False
             if line.startswith("MOTIF"):
                 if motif_number == motifs_per_file:
-                    with open(f'{splitted_meme_dir}/{split_number}.txt', 'w') as f:
+                    with open(f'{splitted_meme_dir}/{str(split_number).zfill(2)}.txt', 'w') as f:
                         f.write(meta_info + data)
                     data = ''
                     motif_number = 0
@@ -48,7 +48,7 @@ def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_fi
                 motif_number += 1
             data += line
         # don't forget last batch!!
-        with open(f'{splitted_meme_dir}/{split_number}.txt', 'w') as f:
+        with open(f'{splitted_meme_dir}/{str(split_number).zfill(2)}.txt', 'w') as f:
             f.write(meta_info + data)
 
     with open(cutoffs_file_path) as cutoffs_f:
@@ -58,7 +58,7 @@ def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_fi
         for line in cutoffs_f:
             if line.startswith("###"):
                 if motif_number == motifs_per_file:
-                    with open(f'{splitted_cutoffs_dir}/{split_number}.txt', 'w') as f:
+                    with open(f'{splitted_cutoffs_dir}/{str(split_number).zfill(2)}.txt', 'w') as f:
                         f.write(data)
                     data = ''
                     motif_number = 0
@@ -66,7 +66,7 @@ def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_fi
                 motif_number += 1
             data += line
         # don't forget last batch!!
-        with open(f'{splitted_cutoffs_dir}/{split_number}.txt', 'w') as f:
+        with open(f'{splitted_cutoffs_dir}/{str(split_number).zfill(2)}.txt', 'w') as f:
             f.write(data)
 
     with open(done_path, 'w') as f:
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('meme_file_path', help='A path to a meme file')
     parser.add_argument('cutoffs_file_path', help='A path to a cutoffs file')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
-    parser.add_argument('--motifs_per_file', type=int, default=10, help='How many motifs will be in each splitted file')
+    parser.add_argument('--motifs_per_file', type=int, default=5, help='How many motifs will be in each splitted file')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
