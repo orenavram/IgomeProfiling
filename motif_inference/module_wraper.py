@@ -18,7 +18,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
     script_name = 'align_sequences.py'
     num_of_expected_results = 0
     msas_paths = []  # keep all msas' paths for the next step
-    num_of_cmds_per_job = 100
+    num_of_cmds_per_job = 33
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     # max_number_of_leading_zeros = len(str(max_clusters_to_align))
     logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
@@ -65,7 +65,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
     script_name = 'remove_gappy_columns.py'
     num_of_expected_results = 0
     cleaned_msas_paths = []  # keep all cleaned msas' paths for the next step
-    num_of_cmds_per_job = 100
+    num_of_cmds_per_job = 50
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     # done_files_list = []
     for msas_path in msas_paths:
@@ -308,6 +308,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc,
                              motif_inference_output_path, logs_dir, error_path, queue_name, verbose)
 
+    # TODO: do the split BEFORE the cutoffs computation so the cutoff computation can be parallelized!!
     # Compute pssm cutoffs for each bc
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: computing pssms cuttoffs for the following biological conditions:\n'
