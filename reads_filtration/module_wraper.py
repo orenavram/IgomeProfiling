@@ -88,6 +88,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
+
     with open(first_phase_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 

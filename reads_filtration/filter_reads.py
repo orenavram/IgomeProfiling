@@ -9,7 +9,7 @@ else:
 sys.path.insert(0, src_dir)
 
 # needs $src_dir in path
-from auxiliaries.pipeline_auxiliaries import load_table, fail
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, fail
 
 
 def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {str: str}}:
@@ -94,7 +94,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
     right_construct_length = len(right_construct)
 
     logger.info(f'{datetime.datetime.now()}: Loading barcode2samplename file from:\n{barcode2samplename_path}')
-    barcode2samplename = load_table(barcode2samplename_path, 'Barcode {} belongs to more than one sample!!')
+    barcode2samplename = load_table_to_dict(barcode2samplename_path, 'Barcode {} belongs to more than one sample!!')
     assert len(barcode2samplename) > 0, f'No barcodes were found in {barcode2samplename_path}'  # TODO: add informative error to log
 
     # get barcode's length by taking the length of an arbitrary barcode
