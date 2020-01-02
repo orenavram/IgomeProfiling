@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('faa_file_path', help='A path to a faa file with peptides to scan against the pssms in the meme file')
     parser.add_argument('number_of_random_pssms', type=int, help='Number of pssm permutations')
     parser.add_argument('output_path', help='A path to which the Pvalues will be written to')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
