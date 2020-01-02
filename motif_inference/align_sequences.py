@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('sequences_file_path', help='A path to a file with unaligned sequences')
     parser.add_argument('output_file_path', help='A path to a file in which the aligned sequences will be written')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity', action='store_true')
     args = parser.parse_args()
 

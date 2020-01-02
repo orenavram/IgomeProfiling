@@ -105,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('msas_path',
                         help='A path to a folder with a multiple sequence alignment to be converted to pssms')
     parser.add_argument('meme_path', help='A path to a new/existing MEME file to add the msa PSSM')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--minimal_number_of_columns_required', default=3, type=int,
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

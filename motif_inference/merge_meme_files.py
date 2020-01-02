@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('motif_inference_path', help='A path in which each folder corresponds to a sample and contains a meme file for the motifs in this sample.')
     parser.add_argument('biological_condition', help='A biological condition to merge its samples meme files')
     parser.add_argument('merged_meme_path', help='A path to the output file')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--skip_sample', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped, e.g., for testing purposes. More than one sample '
                              'name should be separated by commas but no spaces. '

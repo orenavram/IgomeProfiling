@@ -167,7 +167,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path):
 
 
 
-def load_table(table_path, error_msg, delimiter ='\t'):
+def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
     table = {}
     with open(table_path) as f:
         for line in f:

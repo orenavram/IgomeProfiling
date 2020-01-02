@@ -110,7 +110,7 @@ if __name__ == '__main__':
                                                  'sample name should be separated by commas but no spaces. '
                                                  'For example: 17b_01,17b_03,17b_05')
     parser.add_argument('output_path', help='A path in which a new subfolder with the united motifs will be written to')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--aln_cutoff', default='20', help='TODO')  # TODO: what do this param do?
     parser.add_argument('--pcc_cutoff', default='0.6', help='TODO')  # TODO: what do this param do?
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

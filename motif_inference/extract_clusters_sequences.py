@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('fasta_file', help='A fasta file to collapse for unique sequences and their counts')
     parser.add_argument('clstr_file', help='A .clstr file that details the cluster in the fasta_file')
     parser.add_argument('output_dir', help='A folder in which each cluster will be written as a separate file.')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=1000,
                         help='How many sequences (at most) to include in each file? (extra sequences will not be '
                              'extracted. A very high number might not extract anything)')

@@ -147,14 +147,12 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
 
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 queue_name, verbose, error_path, argv):
+                 motif_inference_done_path, queue_name, verbose, error_path, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    motif_inference_done_path = f'{logs_dir}/infer_motifs_done.txt'
-
-    samplename2biologicalcondition = load_table(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
+    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
@@ -372,8 +370,9 @@ if __name__ == '__main__':
     parser.add_argument('parsed_fastq_results', type=str, help='A path in which each subfolder corresponds to a samplename and contains a collapsed faa file')
     parser.add_argument('motif_inference_results', type=str, help='output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
-    # parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
@@ -394,5 +393,5 @@ if __name__ == '__main__':
 
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.motif_inference_results, args.logs_dir,
-                 args.samplename2biologicalcondition_path,
+                 args.samplename2biologicalcondition_path, args.done_file_path,
                  args.queue, True if args.verbose else False, error_path, sys.argv)

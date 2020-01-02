@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('msa_path', help='A path to a meme file with motifs against which a set of random peptides will be scanned')
     parser.add_argument('output_prefix', help='A prefix (without file extension) to a path in which the weblogo saved')
-    parser.add_argument('--title', default="NO TITLE", help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('--title', default="NO TITLE", help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
