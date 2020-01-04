@@ -12,8 +12,8 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name
 
 
-def calculate_pssm_thresholds(meme_path, output_path, done_path, argv='no argv',
-                              pssm_score_peptide='/groups/pupko/orenavr2/gershoni/src/PSSM_score_Peptide_Jan2018.NonVerbose/PSSM_score_Peptide.verbose'):
+def calculate_pssm_cutoffs(meme_path, output_path, done_path, argv='no argv',
+                           pssm_score_peptide='/groups/pupko/orenavr2/gershoni/src/PSSM_score_Peptide_Jan2018.NonVerbose/PSSM_score_Peptide.verbose'):
 
     if not os.path.exists(output_path):
         # TODO: any modules to load?
@@ -49,5 +49,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    calculate_pssm_thresholds(args.meme_file_path, args.output_path, args.done_file_path , argv=sys.argv)
+    calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, argv=sys.argv)
 

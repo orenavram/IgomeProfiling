@@ -48,7 +48,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         sample_name = current_batch[0][1].split('/')[-3]
         assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
         cluster_rank = get_cluster_rank_from(current_batch[-1][1])
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'{sample_name}_{cluster_rank}_msa',
                              queue_name, verbose)
@@ -56,7 +56,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         num_of_expected_results += len(current_batch)
 
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='msa.txt')
 
     # For each sample, clean alignments from gappy columns
@@ -65,7 +65,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
     script_name = 'remove_gappy_columns.py'
     num_of_expected_results = 0
     cleaned_msas_paths = []  # keep all cleaned msas' paths for the next step
-    num_of_cmds_per_job = 50
+    num_of_cmds_per_job = 50  # a super fast script. No point to put less than 50 (as the overhead will take longer)..
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     # done_files_list = []
     for msas_path in msas_paths:
@@ -86,13 +86,13 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         sample_name = current_batch[0][1].split('/')[-3]
         assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
         cluster_rank = get_cluster_rank_from(current_batch[-1][0])
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'{sample_name}_{cluster_rank}_clean',
                              queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_cleaning_msa.txt') #, done_files_list=done_files_list)
 
     # For each sample, generate a meme file with a corresponding pssm for each alignment
@@ -111,7 +111,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        memes_cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'{i//num_of_cmds_per_job}_meme',
                              queue_name, verbose)
@@ -138,10 +138,10 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'weblogo_{i}th_batch',
-                             queue_name, verbose)
+                             queue_name='pupkolab', verbose=verbose)
 
     # wait for the memes!! (previous logical block!)
-    wait_for_results(script_name, logs_dir, num_of_expected_memes,
+    wait_for_results(script_name, logs_dir, num_of_expected_memes, example_cmd=memes_cmd,
                      error_file_path=error_path, suffix='_done_meme.txt')
 
 
@@ -152,13 +152,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
-    sample_names = sorted(samplename2biologicalcondition)
-    biological_conditions = sorted(set(samplename2biologicalcondition.values()))
-
     if os.path.exists(motif_inference_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
         return
+
+    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
+    sample_names = sorted(samplename2biologicalcondition)
+    biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
     # Make sure all sequences are in upper case letters (for example, no need to differentiate between Q and q)
     logger.info('_'*100)
@@ -207,12 +207,12 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
         sample_name = os.path.split(current_batch[0][1])[-1]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'{sample_name}_cluster', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='clustering.txt')
 
     # For each sample, split the faa file to the clusters inferred in the previous step
@@ -239,12 +239,12 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         clusters_sequences_path = current_batch[0][2]
         sample_name = clusters_sequences_path.split('/')[-2]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              current_batch,
                              logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='extracting_sequences.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
@@ -268,13 +268,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              [cmds_params],
                              logs_dir, f'{bc}_merge_meme',
                              queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_meme_merge.txt')
 
 
@@ -293,13 +293,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples, output_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              [cmds_params],
                              logs_dir, f'{bc}_detect_similar_pssms',
                              queue_name, verbose)
         num_of_expected_results += 1   # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
@@ -322,13 +322,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         all_cmds_params.append([meme_path, output_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              [cmds_params],
                              logs_dir, f'{bc}_cutoffs',
                              queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
 
     # Split memes and cutoffs
@@ -346,13 +346,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         all_cmds_params.append([meme_path, cutoff_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                              [cmds_params],
                              logs_dir, f'{bc}_split',
                              queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results,
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_split.txt')
 
 
@@ -371,14 +371,14 @@ if __name__ == '__main__':
     parser.add_argument('motif_inference_results', type=str, help='output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
+    parser.add_argument('max_msas_per_sample', type=int,
+                        help='For each sample, align only the biggest $max_msas_per_sample')
+    parser.add_argument('max_msas_per_bc', type=int,
+                        help='For each biological condition, align only the biggest $max_msas_per_bc')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
-    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
-    parser.add_argument('--max_msas_per_sample', default=100, type=int,
-                        help='For each sample, align only the biggest $max_msas_per_sample')
-    parser.add_argument('--max_msas_per_bc', default=400, type=int,
-                        help='For each biological condition, align only the biggest $max_msas_per_bc')
+    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 

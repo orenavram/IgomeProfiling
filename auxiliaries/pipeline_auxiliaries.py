@@ -77,23 +77,27 @@ def measure_time(total):
         return f'{seconds} seconds'
 
 
-def wait_for_results(script_name, path, num_of_expected_results, error_file_path, suffix='done',
-                     remove=False, time_to_wait=10, start=0, done_files_list=[]):
+def wait_for_results(script_name, path, num_of_expected_results, error_file_path, example_cmd='', suffix='done',
+                     remove=False, time_to_wait=10, start=0, done_files_list=None):
     """
     :param script_name:
     :param path:
     :param num_of_expected_results:
     :param error_file_path:
+    :param example_cmd:
     :param suffix:
     :param remove:
     :param time_to_wait:
     :param start:
+    :param done_files_list:
     :return: waits until path contains num_of_expected_results $suffix files
     """
     # if True: return
     if not start:
         start = time()
     logger.info(f'Waiting for {script_name}...\nContinues when {num_of_expected_results} results with suffix="{suffix}" will be in:\n{path}')
+    if example_cmd:
+        logger.info(f'An example command looks like this:\n{example_cmd}\n\n')
     if num_of_expected_results==0:
         logger.fatal(f'\n{"#"*100}\nnum_of_expected_results in {path} is {num_of_expected_results}!\nSomething went wrong in the previous step...\n{"#"*100}')
         #raise ValueError(f'\n{"#"*100}\nnum_of_expected_results is {num_of_expected_results}! Something went wrong in the previous step...\n{"#"*100}')
@@ -134,8 +138,10 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
     cmds_as_str += new_line_delimiter
 
     for params in params_lists:
-        cmds_as_str += ' '.join(['python', script_path, *params] + (['-v'] if verbose else [])) + ';'
+        cmds_as_str += ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])) + ';'
         cmds_as_str += new_line_delimiter
+
+    example_cmd = ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])) + ';'
 
     # GENERATE DONE FILE
     # write an empty string (like "touch" command)
@@ -154,6 +160,7 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
     logger.info(f'Calling:\n{" ".join(process)}')
     # if True: return
     run(process)
+    return example_cmd
 
 
 def fetch_cmd(script_name, parameters, verbose, error_path):

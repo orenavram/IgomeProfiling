@@ -337,7 +337,7 @@ if __name__ == '__main__':
     parser.add_argument('fastq_path', type=str, help='A fastq file to parse')
     parser.add_argument('parsed_fastq_results', type=str, help='folder output')
     parser.add_argument('logs_dir', type=str, help='logs folder')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script was finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')

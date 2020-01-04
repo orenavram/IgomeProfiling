@@ -11,14 +11,13 @@ from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from global_params import src_dir
 
 
-def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename,
+def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose, error_path, argv='no argv'):
+                    gz, verbose, error_path, queue, argv='no argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    first_phase_done_path = f'{logs_dir}/filter_reads_done.txt'
     if os.path.exists(first_phase_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
         return
@@ -93,9 +92,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         f.write(' '.join(argv) + '\n')
 
 
-
-
-
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
 
@@ -105,16 +101,18 @@ if __name__ == '__main__':
     parser.add_argument('parsed_fastq_results', type=str, help='output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
-
-    parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
-    parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')
-    parser.add_argument('--right_construct', type=str, default="GCCT", help='right constant sequence')
-    parser.add_argument('--max_mismatches_allowed', type=int, default=1,
+    parser.add_argument('left_construct', default='CAACGTGGC', help='The (constant) sequence from the LEFT of the random sequence') # in exp12: "CAACGTGGC"
+    parser.add_argument('right_construct', default='GCCT', help='The (constant) sequence from the RIGHT of the random sequence') # in exp12: "GCCT"
+    parser.add_argument('max_mismatches_allowed', type=int, default=1,
                         help='number of mismatches allowed together in both constructs')
-    parser.add_argument('--min_sequencing_quality', type=int, default=38,
+    parser.add_argument('min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+
+    parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
+    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -128,7 +126,7 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
-                    args.barcode2samplename, args.left_construct,
+                    args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, error_path, sys.argv)
+                    True if args.verbose else False, error_path, args.queue, sys.argv)

@@ -72,7 +72,7 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
         logging.info('Preparing output path...')
         csv_folder, csv_file_name = os.path.split(csv_file_path)
         csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
-        output_path = os.path.join(csv_folder, csv_file_prefix, str(i))
+        output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model', str(i))
         if not os.path.exists(output_path):
             logging.info('Creating output path...')
             os.makedirs(output_path)
