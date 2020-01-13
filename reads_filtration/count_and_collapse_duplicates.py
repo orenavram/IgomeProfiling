@@ -3,7 +3,7 @@ import sys
 import logging
 logger = logging.getLogger('main')
 
-def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_path, argv='no argv'):
+def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_path, argv='no_argv'):
     """
     :param fasta_file: a fasta file with non unique sequences
     :param out_fasta_file: a fasta file with the sequences from the input file but with summarized counts (of
@@ -30,7 +30,9 @@ def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_p
     if rpm_factors_file:
         factor = 1_000_000 / total_sequences_count
         with open(rpm_factors_file, 'a') as f:
-            f.write(f'{fasta_file}\t{total_sequences_count}\t{factor}\n')
+            # exmaple fasta_file:
+            # /groups/pupko/orenavr2/igomeProfilingPipeline/experiments/exp12/analysis/reads_filtration/Herceptin_04/Herceptin_04.faa.gz
+            f.write(f'{fasta_file.split("/")[-2]}\t{total_sequences_count}\t{factor}\n')
 
     with open(out_fasta_file, 'w') as f:
         for i, seq in enumerate(sorted_sequences):
