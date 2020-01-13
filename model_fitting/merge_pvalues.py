@@ -40,7 +40,7 @@ def get_results(path):
 
 
 def aggregate_pvalues_results(meme_path, scanning_results_dir_path, samplename2biologicalcondition_path,
-                              aggregated_pvalues_path, aggregated_hits_path, done_path, argv='no argv'):
+                              aggregated_pvalues_path, aggregated_hits_path, done_path, argv='no_argv'):
 
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path,
                                                 'Barcode {} belongs to more than one sample_name!!')

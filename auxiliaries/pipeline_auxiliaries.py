@@ -213,7 +213,10 @@ def get_cluster_size_from_name(path):
 
 def get_count_from(header):
     # e.g., >seq_1_lib_C10C_len_12_counts_325350.363668618
-    return float(header.split('_')[-1])
+    if 'Type' not in header:
+        return float(header.split('_')[-1])
+    # e.g., >1_Length_12_Repeats_318612.4098079804_Type_C10C
+    return float(header.split('_')[-3])
 
 
 def remove_redundant_newlines_from_fasta(input_file_path, output_file_path):
