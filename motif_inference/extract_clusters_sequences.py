@@ -10,18 +10,23 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_count_from
 
 
-def load_member_prefix_to_record_dict(fasta_file, prefix_length=10):
+def load_member_prefix_to_record_dict(fasta_file, prefix_length):
     # Why 10 by default? see load_clusters_to_members_dict documentation
     member_prefix_to_record = {}  # short header to seq
     with open(fasta_file) as f:
         for header in f:
             sequence = f.readline()
-            member_prefix_to_record[header[:prefix_length]] = f'{header}{sequence}'
+            member_prefix = header[:prefix_length]
+            if member_prefix in member_prefix_to_record:
+                raise ValueError(f'\n{member_prefix} already exists!!\n'
+                                 f'{member_prefix_to_record[member_prefix]}\n'
+                                 f'This is its record:\n{header}{sequence}')
+            member_prefix_to_record[member_prefix] = f'{header}{sequence}'
 
     return member_prefix_to_record
 
 
-def load_clusters_to_members_dict(clstr_file, member_prefix_to_record, prefix_length=10):
+def load_clusters_to_members_dict(clstr_file, member_prefix_to_record, prefix_length):
     cluster_to_members_records = {}  # short header to header
     with open(clstr_file) as f:
         for line in f:
@@ -56,16 +61,16 @@ def extract_cluster_size_from_records(records_list):
 
 
 def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
-                               max_num_of_sequences_to_keep, file_prefix, argv='no argv'):
+                               max_num_of_sequences_to_keep, cluster_prefix_length_in_clstr_file, file_prefix, argv='no_argv'):
 
     verify_file_is_not_empty(fasta_file)
     verify_file_is_not_empty(clstr_file)
 
     os.makedirs(output_dir, exist_ok=True)
 
-    member_prefix_to_record = load_member_prefix_to_record_dict(fasta_file)
+    member_prefix_to_record = load_member_prefix_to_record_dict(fasta_file, cluster_prefix_length_in_clstr_file)
 
-    cluster_to_members_records = load_clusters_to_members_dict(clstr_file, member_prefix_to_record)
+    cluster_to_members_records = load_clusters_to_members_dict(clstr_file, member_prefix_to_record, cluster_prefix_length_in_clstr_file)
 
     logger.info(f'{datetime.datetime.now()}: Writing clusters sequences...')
 
@@ -100,7 +105,7 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
                    f'clusterSize_{cluster_counts:.2f}.faa'  # take only 2 digits after the floating point
 
         with open(os.path.join(output_dir, filename), 'w') as f:
-            f.write(''.join(record for record in cluster_to_members_records[cluster]))
+            f.write(''.join(record for i, record in enumerate(cluster_to_members_records[cluster])))# if i<100))
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -119,6 +124,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=1000,
                         help='How many sequences (at most) to include in each file? (extra sequences will not be '
                              'extracted. A very high number might not extract anything)')
+    parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
+                        help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
     parser.add_argument('--file_prefix', default='',
                         help='An optional prefix str to add to each of the extracted clusters. For example, sample name')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -133,4 +140,5 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     extract_clusters_sequences(args.fasta_file, args.clstr_file, args.output_dir, args.done_file_path,
-                               args.max_num_of_sequences_to_keep, args.file_prefix, sys.argv)
+                               args.max_num_of_sequences_to_keep, args.prefix_length_in_clstr,
+                               args.file_prefix, sys.argv)
