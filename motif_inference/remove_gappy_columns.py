@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger('main')
 
 
-def remove_sparse_columns(msa_path, out_path, done_path, maximal_gap_frequency_allowed_per_column, argv='no argv'):
+def remove_sparse_columns(msa_path, out_path, done_path, maximal_gap_frequency_allowed_per_column, argv='no_argv'):
     logger.info(f'{datetime.datetime.now()}: Removing sparse columns from {msa_path} (allowing columns with gap frequency lower than {maximal_gap_frequency_allowed_per_column})')
     verify_file_is_not_empty(msa_path)
 

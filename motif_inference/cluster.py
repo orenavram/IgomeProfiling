@@ -13,7 +13,7 @@ from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
 def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word_length,
-                      throw_sequences_shorter_than, argv='no argv'):
+                      throw_sequences_shorter_than, argv='no_argv'):
 
     verify_file_is_not_empty(fasta_file)
 

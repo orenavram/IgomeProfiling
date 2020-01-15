@@ -11,7 +11,7 @@ from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, remove_re
     get_unique_members_from
 
 
-def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no argv'):
+def reconstruct_msa(sequences_file_path, output_file_path, done_path, argv='no_argv'):
     number_of_unique_members = get_unique_members_from(sequences_file_path)
     if number_of_unique_members > 1:
         import subprocess

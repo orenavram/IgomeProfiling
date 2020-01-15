@@ -10,7 +10,7 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, load_fasta_to_dict
 
-def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path, argv='no argv'):
+def convert_sequences_to_upper(in_fasta_file, out_fasta_file, done_file_path, argv='no_argv'):
 
     logger.info(f'{datetime.datetime.now()}: upper casing all sequences in {in_fasta_file}')
 

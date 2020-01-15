@@ -66,7 +66,7 @@ def write_pssm(meme_f, letters, msa_name, column_to_letters_frequency_counter, m
     meme_f.write('\n\n')
 
 
-def create_meme_file(msas_path, meme_path, done_path, minimal_number_of_columns_required, argv='no argv'):
+def create_meme_file(msas_path, meme_path, done_path, minimal_number_of_columns_required, argv='no_argv'):
 
     logger.info(f'{datetime.datetime.now()}: generating a new MEME file at {meme_path}')
     letters = sorted(set(letter.upper() for letter in nnk_table.values()))  # don't differentiate between Q and q...
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                         help='A path to a folder with a multiple sequence alignment to be converted to pssms')
     parser.add_argument('meme_path', help='A path to a new/existing MEME file to add the msa PSSM')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--minimal_number_of_columns_required', default=3, type=int,
+    parser.add_argument('--minimal_number_of_columns_required', default=1, type=int,
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()

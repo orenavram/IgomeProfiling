@@ -13,7 +13,7 @@ logger = logging.getLogger('main')
 
 #TODO: consider writing pssm sorted accross (biological condition) by their cluster size (currently it's sorted within sample)
 
-def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samples_to_skip, argv='no argv'):
+def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samples_to_skip, argv='no_argv'):
     """
     :param motif_inference_path: A path in which each folder corresponds to a sample and contains a meme file for the
     motifs in this sample.

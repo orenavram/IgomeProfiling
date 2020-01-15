@@ -53,7 +53,7 @@ def get_clusters_sequences(motif_inference_output_path, biological_condition, sa
 
 def unite_clusters(motif_inference_output_path, meme_file, biological_condition, sample_names,
                    output_path, done_path, aln_cutoff, pcc_cutoff,
-                   unite_pssm_script_path='/groups/pupko/orenavr2/gershoni/src/UnitePSSMs/UnitePSSMs', argv='no argv'):
+                   unite_pssm_script_path='/groups/pupko/orenavr2/gershoni/src/UnitePSSMs/UnitePSSMs', argv='no_argv'):
 
     clusters_to_combine_path = os.path.join(output_path, 'cluster_to_combine.csv')
     if not os.path.exists(clusters_to_combine_path):

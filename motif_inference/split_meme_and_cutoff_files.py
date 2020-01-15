@@ -10,7 +10,7 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
-def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_file, done_path, argv='no argv'):
+def split_meme_and_cutoff_files(meme_file_path, cutoffs_file_path, motifs_per_file, done_path, argv='no_argv'):
 
     verify_file_is_not_empty(meme_file_path)
     verify_file_is_not_empty(cutoffs_file_path)
