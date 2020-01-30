@@ -23,7 +23,8 @@ def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_p
 
     sequences_to_counts = get_sequences_frequency_counter(fasta_file, open_function, mode)
 
-    sorted_sequences = sorted(sequences_to_counts, key=sequences_to_counts.get, reverse=True)
+    # sort sequences descending order by counts. If there's a tie, sort ascending order by ABC
+    sorted_sequences = sorted(sequences_to_counts, key=(lambda seq: (-sequences_to_counts.get(seq), seq)))
     total_sequences_count = sum(sequences_to_counts.values())
 
     factor = 1
