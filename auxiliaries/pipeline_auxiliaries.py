@@ -17,7 +17,7 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "CCT": "P", "CCG": "P",
                          "ACT": "T", "ACG": "T",
                          "CAG": "Q",
-                         "TAG": "q",
+                         "TAG": "Q",  # rather than q
                          "GTT": "V", "GTG": "V",
                          "AAT": "N",
                          "GAT": "D",
@@ -43,7 +43,7 @@ def verify_file_is_not_empty(file_path):
             raise RuntimeError(msg)
 
 
-def load_fasta_to_dict(fasta_path, reverse=False):
+def load_fasta_to_dict(fasta_path, reverse=False, upper_keys=False, upper_values=False):
     """
     :param fasta_path: a path to a FASTA file
     :return: a dictionary that maps each header (without ">" and rstriped()) to its corresponding sequence (rstriped())
@@ -57,9 +57,21 @@ def load_fasta_to_dict(fasta_path, reverse=False):
                 raise TypeError(f'Illegal fasta file. Illegal record is record number {i} is\n{header}')
             # returns header without ">" !
             if not reverse:
-                key2value[header[1:].rstrip()] = f.readline().rstrip()
+                key = header[1:].rstrip()
+                value = f.readline().rstrip()
+                if key in key2value:
+                    raise ValueError(f'{key} already appears in dict!!\n'
+                                     f'old entry: {key}:{key2value[key]}\n'
+                                     f'new entry: {key}:{value}')
+                key2value[key] = value
             else:
-                key2value[f.readline().rstrip()] = header[1:].rstrip()
+                key = f.readline().rstrip()
+                value = header[1:].rstrip()
+                if key in key2value:
+                    raise ValueError(f'{key} already appears in dict!!\n'
+                                     f'old entry: {key}:{key2value[key]}\n'
+                                     f'new entry: {key}:{value}')
+                key2value[key] = value
     if not reverse:
         return key2value, len(key2value), len(key2value[header[1:].rstrip()])
     else:
@@ -217,6 +229,14 @@ def get_count_from(header):
         return float(header.split('_')[-1])
     # e.g., >1_Length_12_Repeats_318612.4098079804_Type_C10C
     return float(header.split('_')[-3])
+
+
+def get_configuration_from(header):
+    if 'Type' not in header:
+        # e.g., >seq_1_lib_C10C_len_12_counts_325350.363668618
+        return header.split('_')[3]
+    # e.g., >1_Length_12_Repeats_318612.4098079804_Type_C10C
+    return header.split('_')[-1]
 
 
 def remove_redundant_newlines_from_fasta(input_file_path, output_file_path):

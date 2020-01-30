@@ -158,6 +158,7 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
             random_peptide = ''
             has_stop_codon = False
+            q_in_peptide = False
             i = 0
             for i in range(0, len(rest_of_read), 3):
                 codon = rest_of_read[i: i+3]
@@ -173,6 +174,8 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
                 if codon[2] not in 'GT':  # K group (of NNK) = G or T
                     break
                 random_peptide += nnk_table[codon]
+                if codon == 'TAG':
+                    q_in_peptide = True
 
             if has_stop_codon:
                 # all set and documented. We can continue to the next read...
@@ -199,6 +202,8 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
 
             # reached here? read is valid!! woohoo
             barcode2statistics[barcode]['total_translated_sequences'] += 1
+            if q_in_peptide:
+                barcode2statistics[barcode]['uag'] += 1
 
             # update library counts
             current_lib_type = f'{len(random_peptide)}'
@@ -217,8 +222,6 @@ def filter_reads(argv, fastq_file, parsed_fastq_results, logs_dir,
             # add peptide (translated dna) to a dedicated faa file
             barcode2filehandlers[barcode]['faa'].write(
                 f">Seq_{barcode2statistics[barcode]['legal_barcode']}_Lib_{current_lib_type}\n{random_peptide}\n")
-            if 'q' in random_peptide:
-                barcode2statistics[barcode]['uag'] += 1
 
     for barcode in barcode2samplename:
         barcode2filehandlers[barcode]['fastq'].close()
