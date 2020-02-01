@@ -11,8 +11,6 @@ import logging
 logger = logging.getLogger('main')
 
 
-#TODO: consider writing pssm sorted accross (biological condition) by their cluster size (currently it's sorted within sample)
-
 def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samples_to_skip, argv='no_argv'):
     """
     :param motif_inference_path: A path in which each folder corresponds to a sample and contains a meme file for the
@@ -23,7 +21,7 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
     """
     logger.info(f'{datetime.datetime.now()}: merging meme files of {biological_condition}')
 
-    merged_meme_f = open(merged_meme_path, 'w')
+    memes = []
     first_meme = True
     for sample_name in sorted(os.listdir(motif_inference_path)):  # sorted by sample name
         dir_path = os.path.join(motif_inference_path, sample_name)
@@ -36,15 +34,26 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
             continue
         try:
             with open(os.path.join(dir_path, 'meme.txt')) as f:
-                if not first_meme:
-                    # skip meme header (6 rows) and add space before next pssm
+                if first_meme:
+                    meme_header = ''.join(f.readline() for i in range(6))  # header's length is 6 lines
+                    first_meme = False
+                else:
+                    # skip meme header (6 rows)
                     for i in range(6):
                         f.readline()
-                merged_meme_f.write(f.read())
-                first_meme = False
+                # add current memes to memes list
+                memes.extend(f.read().rstrip().split('\n\n\n'))
         except:
             logger.error(f'{datetime.datetime.now()}: no meme file in {dir_path}\n'
                          f'This is its content:\n{os.listdir(dir_path)}')
+
+    # sort memes accross (biological condition) by their cluster size
+    memes.sort(key=lambda meme: float(meme.split('.faa')[0].split('clusterSize_')[-1]), reverse=True)
+
+    with open(merged_meme_path, 'w') as f:
+        f.write(meme_header)
+        f.write('\n\n\n'.join(memes))
+        f.write('\n\n\n')
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
