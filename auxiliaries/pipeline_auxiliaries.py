@@ -133,7 +133,8 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
         call(f'rm {path}/*{suffix}', shell=True)
 
     end = time()
-    logger.info(f'Done waiting for:\n{script_name}\n(took {measure_time(int(end-start))}).\n')
+    logger.info(f'{path} contains {current_num_of_results} done files!')
+    logger.info(f'Done waiting for: {script_name}\n(took {measure_time(int(end-start))}).\n')
     assert not os.path.exists(error_file_path), f'An error occurred. For further details see: {error_file_path}'
 
 
