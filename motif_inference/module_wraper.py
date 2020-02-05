@@ -10,17 +10,18 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import *
 
 
-def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose):
+def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
+                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, data_type):
     # For each sample, align each cluster
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: aligning clusters in each sample')
     script_name = 'align_sequences.py'
+    done_path_suffix = f'done_msa_{data_type}.txt'
     num_of_expected_results = 0
     msas_paths = []  # keep all msas' paths for the next step
     num_of_cmds_per_job = 33
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    # max_number_of_leading_zeros = len(str(max_clusters_to_align))
+    max_number_of_leading_zeros = len(str(max_clusters_to_align))
     logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
     for folder in folder_names_to_handle:
         path = os.path.join(motif_inference_output_path, folder, 'unaligned_sequences')
@@ -35,12 +36,8 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
                 break
             unaligned_cluster_path = os.path.join(path, faa_filename)
             cluster_rank = get_cluster_rank_from(faa_filename)
-            # cluster_rank = str(get_cluster_rank_from(faa_filename)).zfill(max_number_of_leading_zeros)
-            # tokens = faa_filename.split('_')
-            # tokens[tokens.index('clusterRank')+1] = cluster_rank  # update cluster rank with respect to biological condition (and not with respect to sample)
-            # aligned_cluster_path = os.path.join(aligned_sequences_path, '_'.join(tokens))
             aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
-            done_path = f'{logs_dir}/04_{sample_name}_{cluster_rank}_done_msa.txt'
+            done_path = f'{logs_dir}/05_{sample_name}_{cluster_rank}_{done_path_suffix}'
             all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -57,12 +54,14 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
 
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='msa.txt')
+                     error_file_path=error_path, suffix=done_path_suffix)
+
 
     # For each sample, clean alignments from gappy columns
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: cleaning alignments from gappy columns')
     script_name = 'remove_gappy_columns.py'
+    done_path_suffix = f'done_cleaning_msa_{data_type}.txt'
     num_of_expected_results = 0
     cleaned_msas_paths = []  # keep all cleaned msas' paths for the next step
     num_of_cmds_per_job = 50  # a super fast script. No point to put less than 50 (as the overhead will take longer)..
@@ -78,9 +77,11 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         for msa_name in sorted(os.listdir(msas_path)):  # sorted by clusters rank
             msa_path = os.path.join(msas_path, msa_name)
             cleaned_msa_path = os.path.join(cleaned_msas_path, msa_name)
-            done_path = f'{logs_dir}/05_{sample_name}_{msa_name}_done_cleaning_msa.txt'
+            done_path = f'{logs_dir}/06_{sample_name}_{msa_name}_{done_path_suffix}'
             # done_files_list.append(done_path)
-            all_cmds_params.append([msa_path, cleaned_msa_path, done_path])
+            all_cmds_params.append([msa_path, cleaned_msa_path, done_path,
+                                    '--maximal_gap_frequency_allowed_per_column', gap_frequency])
+
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
         sample_name = current_batch[0][1].split('/')[-3]
@@ -93,12 +94,14 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         num_of_expected_results += len(current_batch)
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_cleaning_msa.txt') #, done_files_list=done_files_list)
+                     error_file_path=error_path, suffix=done_path_suffix) #, done_files_list=done_files_list)
+
 
     # For each sample, generate a meme file with a corresponding pssm for each alignment
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: generating meme files for each sample from cleaned alignments')
     script_name = 'create_meme.py'
+    meme_done_path_suffix = f'done_meme_{data_type}.txt'
     num_of_expected_memes = 0
     num_of_cmds_per_job = 4
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
@@ -107,7 +110,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
         sample_name = os.path.split(sample_motifs_dir)[-1]
         assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
         meme_path = os.path.join(sample_motifs_dir, 'meme.txt')
-        done_path = f'{logs_dir}/06_{sample_name}_done_meme.txt'
+        done_path = f'{logs_dir}/07_{sample_name}_{meme_done_path_suffix}'
         all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
@@ -141,12 +144,14 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align,
                              queue_name='pupkolab', verbose=verbose)
 
     # wait for the memes!! (previous logical block!)
+    # (no need to wait for weblogos..)
     wait_for_results(script_name, logs_dir, num_of_expected_memes, example_cmd=memes_cmd,
-                     error_file_path=error_path, suffix='_done_meme.txt')
+                     error_file_path=error_path, suffix=meme_done_path_suffix)
 
 
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
-                 motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
+                 max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
+                 gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
                  motif_inference_done_path, queue_name, verbose, error_path, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
@@ -168,15 +173,22 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     upper_faa_paths = [] # keep all faas' paths for the next step
     for sample_name in sample_names:
         dir_path = os.path.join(first_phase_output_path, sample_name)
-        assert(os.path.exists(dir_path))
+        assert os.path.exists(dir_path), f'reads filtration directory does not exist!\n{dir_path}'
         if not os.path.isdir(dir_path):
             # skip files or folders of non-related biological condition
             continue
-        faa_filename = f'{sample_name}_unique_rpm.faa'
+
+        for file_name in os.listdir(dir_path):
+            if file_name.endswith('faa'):
+                faa_filename = file_name
+                break
+        else:
+            raise ValueError(f'No faa file at {dir_path}')
+
         in_faa_path = os.path.join(first_phase_output_path, sample_name, faa_filename)
         out_faa_dir = os.path.join(motif_inference_output_path, sample_name)
         os.makedirs(out_faa_dir, exist_ok=True)
-        out_faa_path = os.path.join(out_faa_dir, f'{sample_name}_upper{faa_filename.split(sample_name)[-1]}')
+        out_faa_path = os.path.join(out_faa_dir, f'{sample_name}_upper{faa_filename.split("unique")[-1]}') # not unique anymore (q->Q)
         upper_faa_paths.append(out_faa_path)
         done_path = f'{logs_dir}/01_{sample_name}_done_uppering.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
@@ -186,6 +198,25 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     wait_for_results(script_name, logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='uppering.txt')
 
+    # Remove flanking Cysteines before clustering
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: removing flanking Cysteines from faa files')
+    script_name = 'remove_cysteine_loop.py'
+    num_of_expected_results = 0
+    no_cys_faa_paths = []  # keep all faas' paths for the next step
+    for upper_faa_path in upper_faa_paths:
+        no_cys_faa_path = upper_faa_path.replace('_upper', '_upper_cysteineless')
+        no_cys_faa_paths.append(no_cys_faa_path)
+        # ~/igomeProfilingPipeline/experiments/exp12/analysis/motif_inference/17b_01/17b_01_upper_unique_rpm.faa
+        sample_name = upper_faa_path.split('/')[-1].split('_upper_')[0]
+        done_path = f'{logs_dir}/02_{sample_name}_remove_cysteines.txt'
+        fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
+                  [upper_faa_path, no_cys_faa_path, done_path], verbose, error_path)
+        num_of_expected_results += 1
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results,
+                     error_file_path=error_path, suffix='remove_cysteines.txt')
+
     # Clustering sequences within each sample
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: clustering sequences in each sample')
@@ -194,14 +225,14 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     clstr_paths = [] # keep all clusters' paths for the next step
     num_of_cmds_per_job = 1
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for upper_faa_path in upper_faa_paths:
-        faa_dir, faa_filename = os.path.split(upper_faa_path)
+    for no_cys_faa_path in no_cys_faa_paths:
+        faa_dir, faa_filename = os.path.split(no_cys_faa_path)
         sample_name = os.path.split(faa_dir)[-1]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         output_prefix = os.path.join(faa_dir, sample_name)
         clstr_paths.append(f'{output_prefix}.clstr')
-        done_path = f'{logs_dir}/02_{sample_name}_done_clustering.txt'
-        all_cmds_params.append([upper_faa_path, output_prefix, done_path])
+        done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
+        all_cmds_params.append([no_cys_faa_path, output_prefix, done_path])
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
@@ -216,6 +247,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                      error_file_path=error_path, suffix='clustering.txt')
 
     # For each sample, split the faa file to the clusters inferred in the previous step
+    # this step uses the sequences WITH THE FLANKING CYSTEINE so the msa will use these Cs
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: extracting clusters sequences for each sample')
     script_name = 'extract_clusters_sequences.py'
@@ -230,13 +262,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         clusters_sequences_path = os.path.join(faa_dir, 'unaligned_sequences')
         unaligned_clusters_folders.append(clusters_sequences_path)
         os.makedirs(clusters_sequences_path, exist_ok=True)
-        done_path = f'{logs_dir}/03_{sample_name}_done_extracting_sequences.txt'
-        all_cmds_params.append([upper_faa_path, clstr_path, clusters_sequences_path, done_path,
+        done_path = f'{logs_dir}/04_{sample_name}_done_extracting_sequences.txt'
+        all_cmds_params.append([upper_faa_path, clstr_path, max_number_of_cluster_members_per_sample, clusters_sequences_path, done_path,
                                 f'--file_prefix {sample_name}'])
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        clusters_sequences_path = current_batch[0][2]
+        clusters_sequences_path = current_batch[0][3]
         sample_name = clusters_sequences_path.split('/')[-2]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
@@ -248,8 +280,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                      error_file_path=error_path, suffix='extracting_sequences.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
-    align_clean_pssm_weblogo(sample_names, max_msas_per_sample,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose)
+    align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap_frequency,
+                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, 'samples')
 
     # Merge memes of the same biological condition
     logger.info('_'*100)
@@ -260,10 +292,10 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     biological_condition_memes = []
     all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
-        done_path = f'{logs_dir}/07_{bc}_done_meme_merge.txt'
+        done_path = f'{logs_dir}/08_{bc}_done_meme_merge.txt'
         bc_folder = os.path.join(motif_inference_output_path, bc)
         os.makedirs(bc_folder, exist_ok=True)
-        output_path = os.path.join(bc_folder, 'merged_meme.txt')
+        output_path = os.path.join(bc_folder, 'merged_meme_sorted.txt')
         biological_condition_memes.append(output_path)
         all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
 
@@ -289,8 +321,10 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
     for merged_meme_path, bc in zip(biological_condition_memes, biological_conditions):
         relevant_samples = ','.join([sample for sample in samplename2biologicalcondition if samplename2biologicalcondition[sample] == bc])
         output_path = os.path.split(merged_meme_path)[0]
-        done_path = f'{logs_dir}/08_{bc}_done_detecting_similar_pssms.txt'
-        all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples, output_path, done_path])
+        done_path = f'{logs_dir}/09_{bc}_done_detecting_similar_pssms.txt'
+        all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples,
+                                max_number_of_cluster_members_per_bc,
+                                output_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
@@ -303,8 +337,9 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                      error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
-    align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose)
+    align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap_frequency,
+                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, 'biological_conditions')
+
 
     # TODO: do the split BEFORE the cutoffs computation so the cutoff computation can be parallelized!!
     # Compute pssm cutoffs for each bc
@@ -318,7 +353,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         bc_folder = os.path.join(motif_inference_output_path, bc)
         meme_path = os.path.join(bc_folder, 'meme.txt')
         output_path = os.path.join(bc_folder, 'cutoffs.txt')
-        done_path = f'{logs_dir}/10_{bc}_done_compute_cutoffs.txt'
+        done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
         all_cmds_params.append([meme_path, output_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -342,7 +377,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         bc_folder = os.path.join(motif_inference_output_path, bc)
         meme_path = os.path.join(bc_folder, 'meme.txt')
         cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
-        done_path = f'{logs_dir}/11_{bc}_done_split.txt'
+        done_path = f'{logs_dir}/14_{bc}_done_split.txt'
         all_cmds_params.append([meme_path, cutoff_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -375,6 +410,15 @@ if __name__ == '__main__':
                         help='For each sample, align only the biggest $max_msas_per_sample')
     parser.add_argument('max_msas_per_bc', type=int,
                         help='For each biological condition, align only the biggest $max_msas_per_bc')
+    parser.add_argument('max_number_of_cluster_members_per_sample', type=int,
+                        help='How many members (at most) should be taken to each cluster in each sample')
+    parser.add_argument('max_number_of_cluster_members_per_bc', type=int,
+                        help='How many members (at most) should be taken to each cluster after motif unification')
+    parser.add_argument('allowed_gap_frequency',
+                        help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
+                        type=lambda x: float(x) if 0 < float(x) < 1
+                                                else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
+
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
@@ -392,6 +436,6 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
-                 args.motif_inference_results, args.logs_dir,
-                 args.samplename2biologicalcondition_path, args.done_file_path,
-                 args.queue, True if args.verbose else False, error_path, sys.argv)
+                 args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
+                 args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
+                 args.done_file_path, args.queue, True if args.verbose else False, error_path, sys.argv)
