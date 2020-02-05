@@ -68,18 +68,23 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
     X = np.array(train_data)  # saving an array of the variables
     is_hits_data = 'hits' in csv_file_path
 
+    logging.info('Preparing output path...')
+    csv_folder, csv_file_name = os.path.split(csv_file_path)
+    csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
+    output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model')
+    feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
     for i in range(num_of_iterations):
-        logging.info('Preparing output path...')
-        csv_folder, csv_file_name = os.path.split(csv_file_path)
-        csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
-        output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model', str(i))
-        if not os.path.exists(output_path):
+        output_path_i = os.path.join(output_path, str(i))
+        if not os.path.exists(output_path_i):
             logging.info('Creating output path...')
-            os.makedirs(output_path)
+            os.makedirs(output_path_i)
 
-        errors, features = train(X, y, is_hits_data, train_data, output_path)
+        errors, features = train(X, y, is_hits_data, train_data, output_path_i)
 
-        plot_error_rate(errors, features, output_path)
+        plot_error_rate(errors, features, output_path_i)
+
+        with open(feature_selection_summary_path, 'w' if i == 0 else 'a') as f:  # override only on first iteration
+            f.write(f'{i}\t{features[-1]}\n')
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -148,7 +153,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--num_of_iterations', default=5, help='How many should the RF run?')
+    parser.add_argument('--num_of_iterations', default=10, help='How many should the RF run?')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
