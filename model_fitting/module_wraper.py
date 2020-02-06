@@ -88,7 +88,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-        all_cmds_params.append([meme_path, scanning_dir_path, aggregated_pvalues_path,
+        all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
                                 aggregated_hits_path, samplename2biologicalcondition_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):

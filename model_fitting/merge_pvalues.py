@@ -39,7 +39,7 @@ def get_results(path):
     return pvalues, hits
 
 
-def aggregate_pvalues_results(meme_path, scanning_results_dir_path, samplename2biologicalcondition_path,
+def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplename2biologicalcondition_path,
                               aggregated_pvalues_path, aggregated_hits_path, done_path, argv='no_argv'):
 
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path,
@@ -51,18 +51,19 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, samplename2b
 
     #header
     pvalues_result = hits_result = f'sample_name,label,{",".join(all_consensuses)}'
-    # consensus2pvalues_column = {consensus:[] for consensus in all_consensuses}
-    # consensus2hits_column = {consensus:[] for consensus in all_consensuses}
     for file_name in sorted(os.listdir(scanning_results_dir_path)):
         if file_name.endswith('100.txt'):
-            raise TypeError
+            raise TypeError  # why?
 
         if file_name.endswith('00.txt'):
             # next sample is starting
             pvalues_f.write(f'{pvalues_result.rstrip(",")}\n')
             hits_f.write(f'{hits_result.rstrip(",")}\n')
             sample_name = file_name.split('_peptides')[0]
-            label = samplename2biologicalcondition[sample_name]
+            if bc in sample_name:
+                label = samplename2biologicalcondition[sample_name]
+            else:
+                label = 'other'
             pvalues_result = hits_result = f'{sample_name},{label},'
 
         pvalues, hits = get_results(os.path.join(scanning_results_dir_path, file_name))
@@ -93,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('meme_path', help='A path to a (MEME) file with the motifs against which the random peptides were scanned (in silico)')
     parser.add_argument('scanning_results_dir_path', help='A path in which each file contains a hits/pvals computation. '
                                                          'These files will be aggregated into one table.')
+    parser.add_argument('biological_condition', help='Positive class\' label. All samples of another biological condition will be labeled as "other"')
     parser.add_argument('aggregated_pvalues_path', help='A path to which the Pvalues table will be written to')
     parser.add_argument('aggregated_hits_path', help='A path to which the hits table will be written to')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
@@ -107,7 +109,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     aggregate_pvalues_results(args.meme_path, args.scanning_results_dir_path,
-                              args.samplename2biologicalcondition_path,
+                              args.biological_condition, args.samplename2biologicalcondition_path,
                               args.aggregated_pvalues_path, args.aggregated_hits_path,
                               args.done_file_path, argv=sys.argv)
 
