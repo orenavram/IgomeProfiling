@@ -68,9 +68,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
+        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
+                                   logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -89,7 +88,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-        all_cmds_params.append([meme_path, scanning_dir_path, aggregated_pvalues_path,
+        all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
                                 aggregated_hits_path, samplename2biologicalcondition_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -120,12 +119,12 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
                              [cmds_params],
-                             logs_dir, f'{bc}_aggregate_scores',
+                             logs_dir, f'{bc}_model',
                              queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_aggregate_scores.txt')
+                     error_file_path=error_path, suffix='_done_fitting.txt')
 
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path

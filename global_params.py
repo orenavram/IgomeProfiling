@@ -11,7 +11,7 @@ gcc = "gcc/gcc-8.2.0"
 mafft = "mafft/7.123"
 
 # external scripts
-pssm_score_peptide_script = "/groups/pupko/orenavr2/gershoni/src/PSSM_score_Peptide_Jan2018.NonVerbose/PSSM_score_Peptide.verbose"
+pssm_score_peptide_script = "/groups/pupko/orenavr2/igomeProfilingPipeline/src/PSSM_score_Peptide/PSSM_score_Peptide"
 qsub_script = "/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py"
 
 biggest_cluster = 100

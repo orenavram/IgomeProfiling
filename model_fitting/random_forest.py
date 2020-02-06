@@ -1,6 +1,5 @@
 import sys
 import os
-import argparse
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -35,12 +34,6 @@ def parse_data(file_path):
 
 def plot_heat_map(df, number_of_features, output_path, hits, number_of_samples):
     #plt.figure(dpi=3000)
-    # transform the data for better contrast in the visualization
-    if hits:  # hits data
-        df = np.log2(df+1)  # pseudo counts
-        # df = df
-    else:  # p-values data
-        df = -np.log2(df)
     cm = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -68,18 +61,23 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
     X = np.array(train_data)  # saving an array of the variables
     is_hits_data = 'hits' in csv_file_path
 
+    logging.info('Preparing output path...')
+    csv_folder, csv_file_name = os.path.split(csv_file_path)
+    csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
+    output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model')
+    feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
     for i in range(num_of_iterations):
-        logging.info('Preparing output path...')
-        csv_folder, csv_file_name = os.path.split(csv_file_path)
-        csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
-        output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model', str(i))
-        if not os.path.exists(output_path):
+        output_path_i = os.path.join(output_path, str(i))
+        if not os.path.exists(output_path_i):
             logging.info('Creating output path...')
-            os.makedirs(output_path)
+            os.makedirs(output_path_i)
 
-        errors, features = train(X, y, is_hits_data, train_data, output_path)
+        errors, features = train(X, y, is_hits_data, train_data, output_path_i)
 
-        plot_error_rate(errors, features, output_path)
+        plot_error_rate(errors, features, output_path_i)
+
+        with open(feature_selection_summary_path, 'w' if i == 0 else 'a') as f:  # override only on first iteration
+            f.write(f'{i}\t{features[-1]}\n')
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -87,32 +85,47 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
 
 def train(X, y, hits_data, train_data, output_path):
     logging.info('Training...')
-    rf = RandomForestClassifier(n_estimators=100)
+    rf = RandomForestClassifier(n_estimators=1000)  # number of trees
     model = rf.fit(X, y)
-    importances = model.feature_importances_
-    indexes = list(np.argsort(-importances))  # negate to sort in decreasing order
-    number_of_samples, number_of_features = X.shape
-    error = previous_error = 1
-    errors = []
-    features = []
-    while error <= previous_error and number_of_features >= 1:
-        logger.info(f'Number of features is {number_of_features}')
-        features.append(number_of_features)
+    importance = model.feature_importances_
+    indexes = np.argsort(importance)[::-1]  # decreasing order of importance
+    train_data = train_data.iloc[:, indexes]  # sort features by their importance
 
-        # save previous error to make sure the performances do not deteriorate
-        previous_error = error
+    with open(f'{output_path}/feature_importance.txt', 'w') as f:
+        importance=importance[indexes]
+        features = train_data.columns.tolist()
+        for i in range(len(importance)):
+            f.write(f'{features[i]}\t{importance[i]}\n')
+
+    # transform the data for better contrast in the visualization
+    if hits_data:  # hits data
+        train_data = np.log2(train_data+1)  # pseudo counts
+        # df = df
+    else:  # p-values data
+        train_data = -np.log2(train_data)
+
+    number_of_samples, number_of_features = X.shape
+    error_rate = previous_error_rate = 1
+    error_rates = []
+    number_of_features_per_model = []
+    while error_rate <= previous_error_rate and number_of_features >= 1:
+        logger.info(f'Number of features is {number_of_features}')
+        number_of_features_per_model.append(number_of_features)
+
+        # save previous error_rate to make sure the performances do not deteriorate
+        previous_error_rate = error_rate
 
         # compute current model accuracy for each fold of the cross validation
         cv_score = cross_val_score(rf, X, y, cv=3, n_jobs=-1)
 
-        # current model error rate
-        error = 1 - cv_score.mean()
-        errors.append(error)
-        logger.info(f'Error rate is {error}')
+        # current model error_rate rate
+        error_rate = 1 - cv_score.mean()
+        error_rates.append(error_rate)
+        logger.info(f'Error rate is {error_rate}')
 
         # save current model features to a csv file
-        df = train_data.iloc[:, indexes[:number_of_features]]
-        if error <= previous_error:
+        df = train_data.iloc[:, :number_of_features]
+        if error_rate <= previous_error_rate:
             df.to_csv(f"{output_path}/Top_{number_of_features}_features.csv")
 
             plot_heat_map(df, number_of_features, output_path, hits_data, number_of_samples)
@@ -127,16 +140,16 @@ def train(X, y, hits_data, train_data, output_path):
             continue
 
         # extract only the (new) half most important features
-        X = np.array(train_data.iloc[:, indexes[:number_of_features]])
+        X = np.array(train_data.iloc[:, :number_of_features])
 
         # re-evaluate
         rf = RandomForestClassifier(n_estimators=100)
         model = rf.fit(X, y)
 
         # Sanity check for debugging: predicting the test data
-        # change the logging level (line 10) to logging.DEBUG to get the predictions
+        # change the logging level (line 12) to logging.DEBUG to get the predictions
         # logger.debug(model.predict(test_data.iloc[:, indexes[:number_of_features]]))
-    return errors, features
+    return error_rates, number_of_features_per_model
 
 
 if __name__ == '__main__':
@@ -148,7 +161,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--num_of_iterations', default=5, help='How many should the RF run?')
+    parser.add_argument('--num_of_iterations', default=10, help='How many should the RF run?')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
