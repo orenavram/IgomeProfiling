@@ -138,10 +138,9 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
     assert not os.path.exists(error_file_path), f'An error occurred. For further details see: {error_file_path}'
 
 
-def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+def submit_pipeline_step_to_cluster(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1):
-
     required_modules_as_str = 'python/python-anaconda3.6.5-orenavr2'
     if required_modules_as_list:
         # don't forget a space after the python module!!
@@ -174,6 +173,41 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
     # if True: return
     run(process)
     return example_cmd
+
+
+def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+                         q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
+                         required_modules_as_list=None, num_of_cpus=1):
+    new_line_delimiter = '\n'
+    cmds_as_str = ''
+    
+    for params in params_lists:
+        cmds_as_str += ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else []))
+        cmds_as_str += new_line_delimiter
+
+    example_cmd = ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else []))
+
+    cmds_path = os.path.join(tmp_dir, f'{job_name}.cmds')
+    if os.path.exists(cmds_path):
+        cmds_path = os.path.join(tmp_dir, f'{job_name}_{time()}.cmds')
+    with open(cmds_path, 'w') as f:
+        f.write(cmds_as_str)
+
+    if global_params.local_command_prefix:
+        process = f'{global_params.local_command_prefix} {cmds_path}'
+    else:
+        process = cmds_path
+    logger.info(f'Calling:\n{process}')
+    run(process, shell=True)
+    return example_cmd
+
+def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+                         q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
+                         required_modules_as_list=None, num_of_cpus=1):
+    if global_params.is_run_on_cluster:
+        return submit_pipeline_step_to_cluster(**locals())
+    
+    return run_step_locally(**locals())
 
 
 def fetch_cmd(script_name, parameters, verbose, error_path):

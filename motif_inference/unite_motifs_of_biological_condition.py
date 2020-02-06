@@ -5,8 +5,10 @@ import os
 import sys
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
-else:
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name, load_fasta_to_dict, \

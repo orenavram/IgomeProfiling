@@ -1,9 +1,15 @@
 import os
 
+is_run_on_cluster = True
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
-else:
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+    is_run_on_cluster = False
+
+local_command_prefix = "bash"
 
 # modules to load
 python = "python/python-anaconda3.6.5"

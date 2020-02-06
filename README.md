@@ -1,0 +1,123 @@
+# IgOme Profiling pipeline
+
+## Overview
+IgOme Profiling pipeline is ...
+
+## Getting started
+
+### OS
+The pipeline runs on Linux environment only.  
+For Windows the pipeline can run using [WSL and Visual Studio Code](https://code.visualstudio.com/remote-tutorials/wsl/getting-started).
+
+Tested on Ubuntu 18.04 via Windows.
+
+### Prerequisites
+The following are required in order to run the code:  
+* git, e.g.:
+  ```bash
+  sudo apt install git
+  ```
+* Python 3.6+, .e.g:
+  ```bash
+  sudo apt install python3 python3-pip python3-venv
+  ```
+* g++, e.g.:
+  ```
+  sudo apt install g++
+  ```
+* CD-HIT:
+  * Install using instructions: http://weizhongli-lab.org/cd-hit/
+  * Make sure cd-hit is installed globally, e.g. /usr/local/bin
+  * Test by running:
+    ```bash
+    # From project directory
+    cd-hit -h
+    ```
+* MAFFT:
+  * Install using instructions: https://mafft.cbrc.jp/alignment/software/
+  * Make sure mafft is installed globally, e.g. /usr/bin
+  * Test by running:
+    ```bash
+    # From project directory
+    mafft -h
+    ```
+
+It is advised to update the packages manager before installing, e.g.:
+```bash
+sudo apt update
+```
+
+## Repository
+Configure git user and email (if not done yet):
+```bash
+git config --global user.name "FIRST_NAME LAST_NAME"
+git config --global user.email "you@mail.com"
+```
+
+Clone the repository:
+```bash
+# From projects/workspace directory
+git clone https://github.com/Webiks/IgomeProfiling.git
+cd IgomeProfiling
+```
+
+### Compile
+Most of the code is in Python but some of the code is in C++ and requires compilation:
+* UnitePSSMs:
+  ```bash
+  # From project directory
+  cd UnitePSSMs
+  g++ *.cpp -std=c++11 -O3 -o UnitePSSMs
+  ```
+* PSSM_score_Peptide:
+  ```bash
+  # From project directory
+  cd PSSM_score_Peptide
+  g++ *.cpp -std=c++11 -O3 -o PSSM_score_Peptide
+  ```
+
+### Python 
+Python3 should be installed in previous steps.  
+Use the following to install the required packages:
+* Create a virtual environment for the project:
+  ```bash
+  # From project directory
+  python3 -m venv .venv
+  source .venv/bin/activate
+  ```
+* Install the dependencies:
+  ```bash
+  pip3 install
+  ```
+
+## Running
+The pipeline is modular, each step is a python file which can be run by itself by passing command line arguments.  
+To run the entire pipeline the entry point is ```IgOmeProfiling_pipeline.py```.  
+Run the pipeline using the following:  
+```bash
+python3 IgOmeProfiling_pipeline.py fastq_file_path barcodes_to_samples_path samples_to_biological_conditions_path analysis_results_directory run_logs_directory
+```
+
+For more information and options run the following:
+```bash
+python3 IgOmeProfiling_pipeline.py -h
+```
+
+The code assumes existence of ```bash``` in order to run.  
+This can be changed via ```local_command_prefix``` variable in ```global_params.py```.
+
+## Testing
+The code contains mock data for testing.
+
+Run the following:
+```bash
+# From project directory
+mkdir output && mkdir output/analysis && mkdir output/logs
+python3 IgOmeProfiling_pipeline.py mock_data/exp12_10M_rows.fastq.gz mock_data/barcode2samplename.txt mock_data/samplename2biologicalcondition.txt output/analysis output/logs
+```
+
+The entire pipeline might run a few minutes? (TBD).  
+The output of the pipeline is (TBD)
+
+## License
+TBD
