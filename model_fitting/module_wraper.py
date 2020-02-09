@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 else:
@@ -165,6 +166,8 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
+    write_running_configuration(sys.argv, args, args.classification_output_path)
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,

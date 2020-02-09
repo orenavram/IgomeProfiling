@@ -7,7 +7,7 @@ else:
     src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, write_running_configuration
 from global_params import src_dir
 
 
@@ -124,6 +124,8 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
+    write_running_configuration(sys.argv, args, args.parsed_fastq_results)
 
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,

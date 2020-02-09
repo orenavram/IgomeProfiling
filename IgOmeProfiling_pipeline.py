@@ -134,7 +134,7 @@ if __name__ == '__main__':
                         help='How many members (at most) should be taken to each cluster')
     parser.add_argument('--max_number_of_cluster_members_per_bc', default=100, type=int,
                         help='How many members (at most) should be taken to each cluster')
-    parser.add_argument('--allowed_gap_frequency', default=0.9,
+    parser.add_argument('--allowed_gap_frequency', default=0.5,
                         help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    run_summary_path = args.error_path if args.error_path else os.path.join(args.analysis_dir, 'run_summary_path.txt')
+    run_summary_path = args.error_path if args.error_path else os.path.join(args.analysis_dir, 'run_summary.txt')
     error_path = args.error_path if args.error_path else os.path.join(args.logs_dir, 'error.txt')
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,

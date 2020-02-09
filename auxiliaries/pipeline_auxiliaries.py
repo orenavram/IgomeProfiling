@@ -264,3 +264,11 @@ def remove_redundant_newlines_from_fasta(input_file_path, output_file_path):
 
     with open(output_file_path, 'w') as f:
         f.write(result)
+
+
+def write_running_configuration(argv, args, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    with open(f'{output_dir}/summary_log.txt', 'w') as f:
+        f.write(f'{" ".join(argv)}\n\n')
+        for k, v in args._get_kwargs():
+            f.write(f'{k}: {v}\n')
