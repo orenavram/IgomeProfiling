@@ -34,6 +34,12 @@ def parse_data(file_path):
 
 def plot_heat_map(df, number_of_features, output_path, hits, number_of_samples):
     #plt.figure(dpi=3000)
+    # transform the data for better contrast in the visualization
+    if hits:  # hits data
+        df = np.log2(df+1)  # pseudo counts
+        # df = df
+    else:  # p-values data
+        df = -np.log2(df)
     cm = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -96,13 +102,6 @@ def train(X, y, hits_data, train_data, output_path):
         features = train_data.columns.tolist()
         for i in range(len(importance)):
             f.write(f'{features[i]}\t{importance[i]}\n')
-
-    # transform the data for better contrast in the visualization
-    if hits_data:  # hits data
-        train_data = np.log2(train_data+1)  # pseudo counts
-        # df = df
-    else:  # p-values data
-        train_data = -np.log2(train_data)
 
     number_of_samples, number_of_features = X.shape
     error_rate = previous_error_rate = 1
