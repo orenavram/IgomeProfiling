@@ -61,7 +61,8 @@ def extract_cluster_size_from_records(records_list):
 
 
 def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
-                               max_num_of_sequences_to_keep, cluster_prefix_length_in_clstr_file, file_prefix, argv='no_argv'):
+                               max_number_of_members_per_cluster, cluster_prefix_length_in_clstr_file,
+                               file_prefix, argv='no_argv'):
 
     verify_file_is_not_empty(fasta_file)
     verify_file_is_not_empty(clstr_file)
@@ -79,9 +80,9 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
     for cluster in cluster_to_members_records:
         # sort cluster members by their "strength", i.e., counts
         cluster_to_members_records[cluster].sort(key=extract_sequence_counts_from_record, reverse=True)
-        if len(cluster_to_members_records[cluster])>max_num_of_sequences_to_keep:
+        if len(cluster_to_members_records[cluster])>max_number_of_members_per_cluster:
             # discard (in-place) all sequences above the maximum required number
-            cluster_to_members_records[cluster][max_num_of_sequences_to_keep:] = []
+            cluster_to_members_records[cluster][max_number_of_members_per_cluster:] = []
             trimmed_clusters.add(cluster)
 
     max_number_of_leading_zeros = len(str(len(cluster_to_members_records)))
@@ -94,8 +95,8 @@ def extract_clusters_sequences(fasta_file, clstr_file, output_dir, done_path,
 
     for i, cluster in enumerate(sorted_clusters_by_size):
 
-        cluster_rank = str(i).zfill(max_number_of_leading_zeros)
-        number_of_unique_members = min(len(cluster_to_members_records[cluster]), max_num_of_sequences_to_keep)
+        cluster_rank = str(i).zfill(4) #max_number_of_leading_zeros)
+        number_of_unique_members = min(len(cluster_to_members_records[cluster]), max_number_of_members_per_cluster)
         cluster_counts = extract_cluster_size_from_records(cluster_to_members_records[cluster])
 
         filename = f'{file_prefix}clusterRank_' \
@@ -119,11 +120,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('fasta_file', help='A fasta file to collapse for unique sequences and their counts')
     parser.add_argument('clstr_file', help='A .clstr file that details the cluster in the fasta_file')
-    parser.add_argument('output_dir', help='A folder in which each cluster will be written as a separate file.')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--max_num_of_sequences_to_keep', type=int, default=1000,
+    parser.add_argument('max_number_of_members_per_cluster', type=int,
                         help='How many sequences (at most) to include in each file? (extra sequences will not be '
                              'extracted. A very high number might not extract anything)')
+    parser.add_argument('output_dir', help='A folder in which each cluster will be written as a separate file.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
     parser.add_argument('--file_prefix', default='',
@@ -140,5 +141,5 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     extract_clusters_sequences(args.fasta_file, args.clstr_file, args.output_dir, args.done_file_path,
-                               args.max_num_of_sequences_to_keep, args.prefix_length_in_clstr,
+                               args.max_number_of_members_per_cluster, args.prefix_length_in_clstr,
                                args.file_prefix, sys.argv)
