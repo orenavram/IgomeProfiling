@@ -27,19 +27,22 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
+    bc_to_scores_paths = {}
     for bc in biological_conditions:
         bc_dir_path = os.path.join(classification_output_path, bc)
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
-
+        scores_dir_path = os.path.join(bc_dir_path, 'hits_scores')
+        os.makedirs(scores_dir_path, exist_ok=True)
+        bc_to_scores_paths[bc] = scores_dir_path
 
     # compute scanning scores (hits and pvalues)
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: upper casing all sequences in the faa files')
     script_name = 'scan_peptides_vs_motifs.py'
     num_of_expected_results = 0
-    num_of_cmds_per_job = 5
+    num_of_cmds_per_job = 10
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         # get current biological condition (splitted) motifs folder
@@ -73,8 +76,15 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
+
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_scan.txt')
+
+
+    # Concatenating hits scores. No need to wait for this.
+    logger.info(submit_pipeline_step(f'{src_dir}/model_fitting/merge_scores.py',
+                                     [[bc_to_scores_paths[bc], bc] for bc in bc_to_scores_paths],
+                                     logs_dir, f'merge_hits_scores', queue_name, verbose))
 
 
     # aggragate scanning scores (hits and pvalues)
@@ -94,9 +104,9 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_aggregate_scores',
-                             queue_name, verbose)
+                                   [cmds_params],
+                                   logs_dir, f'{bc}_aggregate_scores',
+                                   queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -119,16 +129,14 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_model',
-                             queue_name, verbose)
+                                   [cmds_params],
+                                   logs_dir, f'{bc}_model',
+                                   queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_fitting.txt')
 
-
-    # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
     with open(fitting_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
