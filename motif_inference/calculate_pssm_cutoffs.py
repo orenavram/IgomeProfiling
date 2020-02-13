@@ -15,7 +15,7 @@ from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_clust
 
 
 def calculate_pssm_cutoffs(meme_path, output_path, done_path, argv='no_argv',
-                           pssm_score_peptide='/groups/pupko/orenavr2/igomeProfilingPipeline/src/PSSM_score_Peptide/PSSM_score_Peptide'):
+                           pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
         # TODO: any modules to load?

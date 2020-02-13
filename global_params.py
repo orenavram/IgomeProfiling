@@ -9,6 +9,8 @@ else:
     src_dir = '.'
     is_run_on_cluster = False
 
+run_local_in_parallel_mode = True
+
 local_command_prefix = "bash"
 
 # modules to load
@@ -17,7 +19,7 @@ gcc = "gcc/gcc-8.2.0"
 mafft = "mafft/7.123"
 
 # external scripts
-pssm_score_peptide_script = "/groups/pupko/orenavr2/igomeProfilingPipeline/src/PSSM_score_Peptide/PSSM_score_Peptide"
+pssm_score_peptide_script = "./PSSM_score_Peptide/PSSM_score_Peptide"
 qsub_script = "/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py"
 
 biggest_cluster = 100

@@ -140,10 +140,10 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'weblogo_{i}th_batch',
-                             queue_name='pupkolab', verbose=verbose)
+        # submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+        #                      current_batch,
+        #                      logs_dir, f'weblogo_{i}th_batch',
+        #                      queue_name='pupkolab', verbose=verbose)
 
     # wait for the memes!! (previous logical block!)
     # (no need to wait for weblogos..)
@@ -181,7 +181,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
             continue
 
         for file_name in os.listdir(dir_path):
-            if file_name.endswith('faa'):
+            if file_name.endswith('faa') and 'unique' in file_name:
                 faa_filename = file_name
                 break
         else:
@@ -265,12 +265,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         unaligned_clusters_folders.append(clusters_sequences_path)
         os.makedirs(clusters_sequences_path, exist_ok=True)
         done_path = f'{logs_dir}/04_{sample_name}_done_extracting_sequences.txt'
-        all_cmds_params.append([upper_faa_path, clstr_path, max_number_of_cluster_members_per_sample, clusters_sequences_path, done_path,
+        all_cmds_params.append([upper_faa_path, clstr_path, clusters_sequences_path, done_path,
+                                f'--max_num_of_sequences_to_keep {max_number_of_cluster_members_per_sample}',
                                 f'--file_prefix {sample_name}'])
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        clusters_sequences_path = current_batch[0][3]
+        clusters_sequences_path = current_batch[0][2]
         sample_name = clusters_sequences_path.split('/')[-2]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',

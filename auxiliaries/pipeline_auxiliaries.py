@@ -1,6 +1,6 @@
 import os
 import sys
-from subprocess import call, run
+from subprocess import call, run, Popen
 from time import time, sleep
 import global_params
 import logging
@@ -198,7 +198,10 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
     else:
         process = cmds_path
     logger.info(f'Calling:\n{process}')
-    run(process, shell=True)
+    if global_params.run_local_in_parallel_mode:
+        Popen(process, shell=True)
+    else:
+        run(process, shell=True)
     return example_cmd
 
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',

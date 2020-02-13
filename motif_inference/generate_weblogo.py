@@ -1,5 +1,5 @@
-from weblogolib import *
-from corebio.seq import unambiguous_protein_alphabet
+from weblogo import *
+from weblogo.seq import unambiguous_protein_alphabet
 import sys
 import logging
 logger = logging.getLogger('main')
