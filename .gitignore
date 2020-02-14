@@ -1,8 +1,8 @@
 .venv
 .vscode
 __pycache__
-tests
-output
+test*
+output*
 
 UnitePSSMs/UnitePSSMs
 PSSM_score_Peptide/PSSM_score_Peptide
