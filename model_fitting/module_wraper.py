@@ -12,6 +12,13 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import *
 
 
+def repeat_items(list):
+    output = []
+    for x in list:
+        output.append(x)
+        output.append(x)
+    return output
+
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
@@ -112,13 +119,15 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+        pvalues_done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        done_path = os.path.join(logs_dir, f'{bc}_done_fitting.txt')
-        all_cmds_params.append([aggregated_pvalues_path, done_path,
-                                f'!@#python3 {src_dir}/model_fitting/{script_name}',
-                                aggregated_hits_path, done_path])
+        hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
+        
+        all_cmds_params.append([aggregated_pvalues_path, pvalues_done_path])
+        all_cmds_params.append([aggregated_hits_path, hits_done_path])
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+    doubled_bc = repeat_items(biological_conditions)
+    for cmds_params, bc in zip(all_cmds_params, doubled_bc):
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
                              [cmds_params],
                              logs_dir, f'{bc}_model',
