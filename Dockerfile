@@ -23,7 +23,7 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY requirements.txt /app
-RUN RUN python3 -m venv .venv && \
+RUN python3 -m venv .venv && \
     . .venv/bin/activate && \
     pip install -r requirements.txt
 

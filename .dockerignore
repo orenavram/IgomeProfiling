@@ -1,5 +1,6 @@
 .*
 __pycache_
 docker
+test*
 output*
 # mock_data
