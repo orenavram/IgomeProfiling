@@ -1,3 +1,4 @@
 seaborn == 0.10.0
 scikit-learn == 0.22.1
 weblogo == 3.7.1
+celery[librabbitmq,eventlet] == 4.4.0

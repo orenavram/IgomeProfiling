@@ -10,6 +10,7 @@ else:
     is_run_on_cluster = False
 
 run_local_in_parallel_mode = True
+run_using_celery = True
 
 local_command_prefix = "bash"
 

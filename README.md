@@ -87,7 +87,7 @@ Use the following to install the required packages:
   ```
 * Install the dependencies:
   ```bash
-  pip3 install
+  pip3 install -r requirements.txt
   ```
 
 ## Running
@@ -152,6 +152,15 @@ docker pull 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest
 mkdir test && mkdir test/analysis && mkdir test/logs
 docker run --name igome --rm -v ./test:/output 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
+
+## Running on multiple machines
+TODO allow to set run_using_celery and run_local_in_parallel_mode using env vars
+TODO: requirement shared mount at same path, using celery+configuration via env vars, rabbitmq (show how to setup using docker+monitoring using flower). how to run worker (+run using docker)
+docker run -d --name rabbit -p 5672:5672 -p 15672:15672 rabbitmq:management
+docker run -d --link rabbit:rabbit --name flower -p 5555:5555 mher/flower flower --broker=pyamqp://guest@rabbit//
+
+docker run -d --link rabbit:rabbit -e CELERY_BROKER_URL="pyamqp://guest@rabbit//" -v ./test3:/test3 --name igomeworker --rm webiks/igome-profile-worker
+docker run --name igome --rm --link rabbit:rabbit -e CELERY_BROKER_URL="pyamqp://guest@rabbit//" -v ./test3:/test3 webiks/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /test3/analysis /test3/logs
 
 ## License
 TBD

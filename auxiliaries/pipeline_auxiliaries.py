@@ -175,9 +175,9 @@ def submit_pipeline_step_to_cluster(script_path, params_lists, tmp_dir, job_name
     return example_cmd
 
 
-def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
-                         q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1):
+def create_command(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+                   q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
+                   required_modules_as_list=None, num_of_cpus=1):
     new_line_delimiter = '\n'
     cmds_as_str = ''
     
@@ -197,6 +197,23 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
         process = f'{global_params.local_command_prefix} {cmds_path}'
     else:
         process = cmds_path
+    return process, example_cmd
+
+
+def submit_pipeline_step_to_celery(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+                         q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
+                         required_modules_as_list=None, num_of_cpus=1):
+    process, example_cmd = create_command(**locals())
+    from worker import submit
+    logger.info(f'Calling using celery:\n{process}')
+    submit.delay(process, shell=True)
+    return example_cmd
+
+
+def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
+                         q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
+                         required_modules_as_list=None, num_of_cpus=1):
+    process, example_cmd = create_command(**locals())
     logger.info(f'Calling:\n{process}')
     if global_params.run_local_in_parallel_mode:
         Popen(process, shell=True)
@@ -207,6 +224,8 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1):
+    if global_params.run_using_celery:
+        return submit_pipeline_step_to_celery(**locals())
     if global_params.is_run_on_cluster:
         return submit_pipeline_step_to_cluster(**locals())
     

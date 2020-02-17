@@ -1,0 +1,6 @@
+FROM webiks/igome-profile:latest
+
+ENV CELERY_TASK_ACKS_LATE True
+ENV CELERY_WORKER_PREFETCH_MULTIPLIER 1
+
+ENTRYPOINT ["./worker_entrypoint.sh"]
