@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import pandas as pd
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 else:
@@ -54,6 +55,9 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
     for file_name in sorted(os.listdir(scanning_results_dir_path)):
         if file_name.endswith('100.txt'):
             raise TypeError  # why?
+        if file_name.startswith('.'):
+            # system file...
+            continue
 
         if file_name.endswith('00.txt'):
             # next sample is starting
@@ -75,6 +79,13 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
 
     pvalues_f.close()
     hits_f.close()
+
+    # remove insignificant features:
+    df = pd.read_csv(aggregated_pvalues_path)
+    # features with at least one significant score, across positive-labeled samples
+    significant_features = (df[df['label'] != 'other'] < 0.05).sum()>0
+    df = df.loc[:, significant_features]
+    df.to_csv(aggregated_pvalues_path, index=False)
 
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(aggregated_pvalues_path)
