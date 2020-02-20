@@ -14,7 +14,8 @@ from auxiliaries.pipeline_auxiliaries import *
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, queue_name, verbose, error_path, argv):
+                     fitting_done_path, number_of_random_pssms, num_of_hyperparam_configurations_to_sample,
+                     queue_name, verbose, error_path, argv):
 
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -96,7 +97,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     for bc in biological_conditions:
         meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
         scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
-        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_insignificant_pvalues.csv')
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
         all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
@@ -121,18 +122,30 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+        done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
+        all_cmds_params.append([aggregated_pvalues_path,
+                                num_of_hyperparam_configurations_to_sample,
+                                done_path])
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        done_path = os.path.join(logs_dir, f'{bc}_done_fitting.txt')
-        all_cmds_params.append([aggregated_pvalues_path, done_path,
-                                f'!@#python3 {src_dir}/model_fitting/{script_name}',
-                                aggregated_hits_path, done_path])
+        done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
+        all_cmds_params.append([aggregated_hits_path,
+                                num_of_hyperparam_configurations_to_sample,
+                                done_path])
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+    for i, bc in enumerate(biological_conditions):
+        cmds_params = all_cmds_params[2*i]
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
                                    [cmds_params],
-                                   logs_dir, f'{bc}_model',
+                                   logs_dir, f'{bc}_pvalues_model',
                                    queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+
+        cmds_params = all_cmds_params[2*i+1]
+        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                   [cmds_params],
+                                   logs_dir, f'{bc}_hits_model',
+                                   queue_name, verbose)
+
+        num_of_expected_results += 2  # 2 jobs (1 hits + 1 pvalues) for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                      error_file_path=error_path, suffix='_done_fitting.txt')
@@ -158,7 +171,8 @@ if __name__ == '__main__':
     parser.add_argument('classification_output_path', type=str, help='output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
-    parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
+    parser.add_argument('number_of_random_pssms', type=int, help='Number of pssm permutations')
+    parser.add_argument('num_of_hyperparam_configurations_to_sample', type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
@@ -179,4 +193,5 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.queue, True if args.verbose else False, error_path, sys.argv)
+                     args.number_of_random_pssms, args.num_of_hyperparam_configurations_to_sample,
+                     args.queue, True if args.verbose else False, error_path, sys.argv)

@@ -13,8 +13,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, number_of_random_pssms,
-                 run_summary_path, error_path, queue, verbose, argv):
+                 allowed_gap_frequency, number_of_hyperparams_configuration_to_sample,
+                 number_of_random_pssms, run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -80,6 +80,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
+                             number_of_hyperparams_configuration_to_sample,
                              third_phase_done_path, f'--error_path {error_path}', '-v' if verbose else '',
                              f'-q {queue}']
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/module_wraper.py',
@@ -141,6 +142,8 @@ if __name__ == '__main__':
 
     # optional parameters for the modelling step
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
+    parser.add_argument('--number_of_hyperparams_configuration_to_sample', default=1000, type=int,
+                        help='How many random configurations of hyperparameters should be sampled for choosing the RF model?')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -166,6 +169,6 @@ if __name__ == '__main__':
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, True if args.gz else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.number_of_random_pssms,
+                 args.allowed_gap_frequency, args.number_of_random_pssms, args.number_of_hyperparams_configuration_to_sample,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
 
