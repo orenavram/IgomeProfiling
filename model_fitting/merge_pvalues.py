@@ -83,9 +83,13 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
     # remove insignificant features:
     df = pd.read_csv(aggregated_pvalues_path)
     # features with at least one significant score, across positive-labeled samples
-    significant_features = (df[df['label'] != 'other'] < 0.05).sum()>0
-    df = df.loc[:, significant_features]
-    df.to_csv(aggregated_pvalues_path, index=False)
+    positive_class_df = df[df['label'] != 'other']
+    significant_features = (positive_class_df.drop(['sample_name', 'label'], axis=1) < 0.05).sum()>0
+    mask = pd.concat([pd.Series([True, True], index=['sample_name', 'label']),
+                    significant_features])
+    df = df.loc[:, mask]
+    # df = pd.concat([df.loc[:, ['sample_name', 'label']], df.drop(['sample_name', 'label'], axis=1).loc[:, significant_features]], axis=1)
+    df.to_csv(aggregated_pvalues_path.replace('_insignificant', ''), index=False)
 
     # make sure that there are results and the file is not empty
     verify_file_is_not_empty(aggregated_pvalues_path)
