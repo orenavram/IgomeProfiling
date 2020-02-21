@@ -33,14 +33,26 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
 
 def verify_file_is_not_empty(file_path):
     import logging
+    from time import sleep
     logger = logging.getLogger('main')
+    total_retries = 2 # +1 including first try
+    retries_count = 0
+    sleep_time = 2
+    sleep_factor = 2
     # make sure that there are results and the file is not empty
     with open(file_path) as f:
         if len(f.read(10).strip()) == 0:
             # TODO: write error to a global error file
-            msg = f'Input file is empty {file_path}'
-            logger.error(msg)
-            raise RuntimeError(msg)
+            if retries_count == total_retries:
+                msg = f'Input file is empty {file_path}'
+                logger.error(msg)
+                raise RuntimeError(msg)
+            else:
+                logger.warn(f'Input file is empty {file_path}, retrying in {sleep_time} seconds ({retries_count}/{total_retries})')
+                retries_count += 1
+                sleep(sleep_time)
+                sleep_time *= sleep_factor
+        return
 
 
 def load_fasta_to_dict(fasta_path, reverse=False, upper_keys=False, upper_values=False):

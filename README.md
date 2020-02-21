@@ -109,6 +109,11 @@ This can be changed via ```local_command_prefix``` variable in ```global_params.
 ## Testing
 The code contains mock data for testing.
 
+Set configuration in ```global_params.py```.
+To run local set:
+* run_using_celery to False
+* run_local_in_parallel_mode to True
+
 Run the following:
 ```bash
 # From project directory
@@ -116,11 +121,17 @@ mkdir output && mkdir output/analysis && mkdir output/logs
 python3 IgOmeProfiling_pipeline.py mock_data/exp12_10M_rows.fastq.gz mock_data/barcode2samplename.txt mock_data/samplename2biologicalcondition.txt output/analysis output/logs
 ```
 
-The entire pipeline might run a few minutes? (TBD).  
-The output of the pipeline is (TBD)
+The entire pipeline might run a few hours on mock data on 96 cores.  
+The output of the pipeline are heatmaps of most important motifs per biological condition va all samples.
 
 ## Docker
 The code can be containerized using Docker:
+
+Set configuration in ```global_params.py```.
+To run local set:
+* run_using_celery to True if using multiple machines
+* run_local_in_parallel_mode to True
+
 ```bash
 # From project directory
 ./build_docker.sh
@@ -154,13 +165,48 @@ docker run --name igome --rm -v ./test:/output 223455578796.dkr.ecr.us-west-2.am
 ```
 
 ## Running on multiple machines
-TODO allow to set run_using_celery and run_local_in_parallel_mode using env vars
-TODO: requirement shared mount at same path, using celery+configuration via env vars, rabbitmq (show how to setup using docker+monitoring using flower). how to run worker (+run using docker)
-docker run -d --name rabbit -p 5672:5672 -p 15672:15672 rabbitmq:management
-docker run -d --link rabbit:rabbit --name flower -p 5555:5555 mher/flower flower --broker=pyamqp://guest@rabbit//
+Running on multiple machines is support via [Celery](http://www.celeryproject.org/) and [RabbitMQ](https://www.rabbitmq.com/).  
+Pipeline steps synchronize via files. Therefore, the same paths must be mounted on all machines. For example if using AWS mount an EFS to /data on all machines.  
 
-docker run -d --link rabbit:rabbit -e CELERY_BROKER_URL="pyamqp://guest@rabbit//" -v ./test3:/test3 --name igomeworker --rm webiks/igome-profile-worker
-docker run --name igome --rm --link rabbit:rabbit -e CELERY_BROKER_URL="pyamqp://guest@rabbit//" -v ./test3:/test3 webiks/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /test3/analysis /test3/logs
+Run RabbitMQ + Flower via docker-compose:
+```yaml
+version: '3'
+
+services:
+  rabbit:
+    image: rabbitmq:management
+    restart: always
+    ports:
+     - 5672:5672
+     - 15672:15672
+  flower:
+    image: mher/flower
+    restart: always
+    command: flower --broker=pyamqp://guest@rabbit//
+    ports:
+     - 5555:5555
+```
+Open [RabbitMQ Management](http://localhost:15672) and/or [Flower](http://localhost:5555) to monitor the pipeline tasks.  
+
+On a worker instance:
+* Mount shared drive to directory, e.g. /data
+* Pull worker image from repository
+* Run the worker
+  ```bash
+  docker run -d --restart always -e CELERY_BROKER_URL="pyamqp://guest@[broker-ip]//" -v /data:/data --name igomeworker 686447933053.dkr.ecr.us-west-2.amazonaws.com/igome-profile-worker:latest
+  ```
+  * Replace [broker-ip] and guest with RabbitMQ host and user/password (if defined).
+  * Change volume mount to shared drive
+
+Run the pipeline of some machine:
+* Mount shared drive, e.g. /data
+* Pull pipeline image from repository
+* Run the pipeline, e.g.
+  ```bash
+  docker run --name igome --rm -e CELERY_BROKER_URL="pyamqp://guest@[broker-ip]//" -d -v /data:/data 686447933053.dkr.ecr.us-west-2.amazonaws.com/igome-profile /data/mock_data/exp12_10M_rows.fastq.gz /data/mock_data/barcode2samplename.txt /data/mock_data/samplename2biologicalcondition.txt /data/output/analysis /data/output/logs
+  ```
+* Use ```docker logs --tail 10 -f igome``` to see over all progress
+
 
 ## License
 TBD
