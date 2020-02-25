@@ -48,7 +48,8 @@ if __name__ == '__main__':
     parser.add_argument('msa_path', help='A path fasta file with a multiple sequence alignment')
     parser.add_argument('cleaned_msa_path', help='A path to a file in which the filtered MSA will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the clustering finished')
-    parser.add_argument('--maximal_gap_frequency_allowed_per_column', default=0.1, help='Minimal sequence similarity threshold required',
+    parser.add_argument('--maximal_gap_frequency_allowed_per_column', default=0.5,
+                        help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

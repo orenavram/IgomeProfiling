@@ -13,8 +13,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, number_of_hyperparams_configuration_to_sample,
-                 number_of_random_pssms, run_summary_path, error_path, queue, verbose, argv):
+                 allowed_gap_frequency, number_of_random_pssms,
+                 number_of_hyperparams_configuration_to_sample,
+                 run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
