@@ -54,10 +54,10 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
     #header
     pvalues_result = hits_result = f'sample_name,label,{",".join(all_consensuses)}'
     for file_name in sorted(os.listdir(scanning_results_dir_path)):
-        if file_name.endswith('100.txt'):
-            raise TypeError  # why?
+        # if file_name.endswith('100.txt'):
+        #     raise TypeError  # why?
 
-        if file_name.endswith('00.txt'):
+        if file_name.endswith('_00.txt'):
             # next sample is starting
             pvalues_f.write(f'{pvalues_result.rstrip(",")}\n')
             hits_f.write(f'{hits_result.rstrip(",")}\n')

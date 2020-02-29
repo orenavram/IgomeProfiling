@@ -105,7 +105,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
     script_name = 'create_meme.py'
     meme_done_path_suffix = f'done_meme_{data_type}.txt'
     num_of_expected_memes = 0
-    num_of_cmds_per_job = 4
+    num_of_cmds_per_job = 1
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for cleaned_msas_path in cleaned_msas_paths:
         sample_motifs_dir = os.path.split(cleaned_msas_path)[0]
@@ -381,7 +381,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         meme_path = os.path.join(bc_folder, 'meme.txt')
         cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/14_{bc}_done_split.txt'
-        all_cmds_params.append([meme_path, cutoff_path, done_path])
+        split_size = 1
+        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', split_size])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',

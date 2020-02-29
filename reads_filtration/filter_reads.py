@@ -102,6 +102,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
         logger.info(f'{total_files} fastq files found: {fastq_files}')
     else:
         fastq_files = [fastq_path]
+        total_files = 1
 
     barcode2samplename = load_table_to_dict(barcode2samplename_path, 'Barcode {} belongs to more than one sample!!')
     assert len(barcode2samplename) > 0, f'No barcodes were found in {barcode2samplename_path}'  # TODO: add informative error to log

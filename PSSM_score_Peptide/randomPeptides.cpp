@@ -10,13 +10,16 @@
 using namespace std;
 
 #include "randomPeptides.h"
-randomPeptides::randomPeptides(vector<double> &characterFrequencies, size_t numberOfSeqToSimulate, size_t sequenceLength) : _characterFrequencies(characterFrequencies), _numberOfSeqToSimulate(numberOfSeqToSimulate), _sequenceLength(sequenceLength),_CysLoop (0) { // deafualt constroctor - NoCysLoop
-     srand(static_cast<unsigned int>(time(NULL)));
+randomPeptides::randomPeptides(vector<double> &characterFrequencies, size_t numberOfSeqToSimulate, size_t sequenceLength) : 
+	_characterFrequencies(characterFrequencies), _numberOfSeqToSimulate(numberOfSeqToSimulate), _sequenceLength(sequenceLength),_CysLoop (0) { // deafualt constroctor - NoCysLoop
+     // srand(static_cast<unsigned int>(time(NULL))); // srand is set using seed at a higher level
 }
 	
-randomPeptides::randomPeptides(vector<double> &characterFrequencies, size_t numberOfSeqToSimulate, size_t sequenceLength,bool CysLoop) : _characterFrequencies(characterFrequencies), _numberOfSeqToSimulate(numberOfSeqToSimulate), _sequenceLength(sequenceLength),_CysLoop (CysLoop) {
-     srand(static_cast<unsigned int>(time(NULL)));
+randomPeptides::randomPeptides(vector<double> &characterFrequencies, size_t numberOfSeqToSimulate, size_t sequenceLength,bool CysLoop) :
+	_characterFrequencies(characterFrequencies), _numberOfSeqToSimulate(numberOfSeqToSimulate), _sequenceLength(sequenceLength),_CysLoop (CysLoop) {
+     // srand(static_cast<unsigned int>(time(NULL))); // srand is set using seed at a higher level
 }	
+
 void randomPeptides::generateRandomSequences() {
 //	std::mt19937 Seq_eng;  // a core engine class
 //	std::random_device dev_random;

@@ -75,7 +75,7 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
             logging.info('Creating output path...')
             os.makedirs(output_path_i)
 
-        errors, features = train(X, y, is_hits_data, train_data, output_path_i)
+        errors, features = train(X, y, is_hits_data, train_data, output_path_i, 3481 + i)
 
         plot_error_rate(errors, features, output_path_i)
 
@@ -86,9 +86,9 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
         f.write(' '.join(argv) + '\n')
 
 
-def train(X, y, hits_data, train_data, output_path):
+def train(X, y, hits_data, train_data, output_path, seed):
     logging.info('Training...')
-    rf = RandomForestClassifier(n_estimators=1000)  # number of trees
+    rf = RandomForestClassifier(n_estimators=1000, random_state=np.random.seed(seed))  # number of trees
     model = rf.fit(X, y)
     importance = model.feature_importances_
     indexes = np.argsort(importance)[::-1]  # decreasing order of importance
@@ -146,8 +146,8 @@ def train(X, y, hits_data, train_data, output_path):
         X = np.array(train_data.iloc[:, :number_of_features])
 
         # re-evaluate
-        rf = RandomForestClassifier(n_estimators=100)
-        model = rf.fit(X, y)
+        # rf = RandomForestClassifier(n_estimators=100)
+        # model = rf.fit(X, y)
 
         # Sanity check for debugging: predicting the test data
         # change the logging level (line 12) to logging.DEBUG to get the predictions

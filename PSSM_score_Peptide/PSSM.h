@@ -9,6 +9,7 @@
 #include <algorithm>    // std::min_element, std::max_element
 #include <iostream>
 #include <cmath>  // because of unix
+#include <random>
 
 using namespace std;
 #include "alphabet.h"
@@ -43,7 +44,7 @@ public:
 		return PSSMmatrix.size();
 	
 	}
-	PSSM randomize();
+	PSSM randomize(default_random_engine &gen);
 	//int integerOfChar(const char s) const;
 
 	//members:

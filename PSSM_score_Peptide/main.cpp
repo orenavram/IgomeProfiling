@@ -6,6 +6,7 @@
 #include <limits>
 #include <cfloat> // eli because of unix
 #include <cmath>  // because of unix
+#include <random>
 using namespace std;
 
 #include "PSSM.h"
@@ -461,8 +462,9 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	//for (size_t i = 0; i < 1; ++i) {
 		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array,1);
 		vector<double> numSigPeptides;
+		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
-			PSSM randomPSSM = rpif._PSSM_array[i].randomize(); //1 generate a random PPSM.
+			PSSM randomPSSM = rpif._PSSM_array[i].randomize(gen); //1 generate a random PPSM.
 			double sum = numberOfTotalHitsPerPSSM(randomPSSM, Seq_array,0);
 			numSigPeptides.push_back(sum);// store the number
 		}

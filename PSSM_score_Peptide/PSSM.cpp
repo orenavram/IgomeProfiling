@@ -2,6 +2,7 @@
 #include "SEQ.h"
 
 #include <algorithm>
+#include <random>
 using namespace std;
 
 void PSSM::setMatrix(const vector<string> & PSSMLines)
@@ -179,8 +180,8 @@ double PSSM::computeScoreExacrPos(size_t posInPSSM, const size_t charInSeq) cons
 }// end of function
 */
 
-PSSM PSSM::randomize() {
+PSSM PSSM::randomize(default_random_engine &gen) {
 	PSSM res(*this);
-	random_shuffle(res.PSSMmatrix.begin(), res.PSSMmatrix.end());
+	shuffle(res.PSSMmatrix.begin(), res.PSSMmatrix.end(), gen);
 	return res;
 }

@@ -23,6 +23,7 @@ string SizetToString(size_t sz) {
 
 void computePSSM_cutoffs::generateRandomPeptides() {
 	size_t NumberOfRandoSeq = _totalNumberOfRandoSeq;  
+	srand(931); // Set srand for generating random pepties // TODO set srand from input argument
 	map<string, randomPeptides>::iterator it = _randomPeptideDataSet.begin(); // use iteration and insert to add values to map
 	for (size_t length = 5; length <= 12; length++)
 	{
