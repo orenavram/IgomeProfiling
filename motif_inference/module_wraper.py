@@ -151,10 +151,127 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
                      error_file_path=error_path, suffix=meme_done_path_suffix)
 
 
+def compute_cutoffs_then_split(biological_conditions, meme_split_size,
+    motif_inference_output_path, logs_dir, queue_name, verbose):
+    # Compute pssm cutoffs for each bc
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: computing pssms cutoffs for the following biological conditions:\n'
+                f'{biological_conditions}')
+    script_name = 'calculate_pssm_cutoffs.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        output_path = os.path.join(bc_folder, 'cutoffs.txt')
+        done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
+        all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0])
+
+    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_cutoffs',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+
+    # Split memes and cutoffs
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: splitting pssms and cutoffs for paralellizing p-values step:\n'
+                f'{biological_conditions}')
+    script_name = 'split_meme_and_cutoff_files.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
+        done_path = f'{logs_dir}/14_{bc}_done_split.txt'
+        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+
+    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_split',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                     error_file_path=error_path, suffix='_done_split.txt')
+
+
+def split_then_compute_cutoffs(biological_conditions, meme_split_size,
+    motif_inference_output_path, logs_dir, queue_name, verbose):
+    # Count memes per BC (synchrnous)
+    memes_per_bc = {}
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        memes_count = count_memes(meme_path)
+        memes_per_bc[bc] = memes_count
+
+    # Split memes and cutoffs
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: splitting pssms and cutoffs for paralellizing p-values step:\n'
+                f'{biological_conditions}')
+    script_name = 'split_meme_and_cutoff_files.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        meme_path = os.path.join(bc_folder, 'meme.txt')
+        cutoff_path = 'skip'
+        done_path = f'{logs_dir}/13_{bc}_done_split.txt'
+        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+
+    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_split',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                     error_file_path=error_path, suffix='_done_split.txt')
+    
+    # Compute pssm cutoffs for each bc
+    # TODO change to read to cut files (read directory)
+    logger.info('_'*100)
+    logger.info(f'{datetime.datetime.now()}: computing pssms cutoffs for the following biological conditions:\n'
+                f'{biological_conditions}')
+    script_name = 'calculate_pssm_cutoffs.py'
+    num_of_expected_results = 0
+    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+    cutoffs_bcs = []
+    for bc in biological_conditions:
+        bc_folder = os.path.join(motif_inference_output_path, bc)
+        bc_memes_folder = os.path.join(bc_folder, 'memes')
+        bc_cutoffs_folder = os.path.join(bc_folder, 'cutoffs')
+        os.makedirs(bc_cutoffs_folder, exist_ok=True)
+        for file_name in sorted(os.listdir(bc_memes_folder)):
+            meme_path = os.path.join(bc_memes_folder, file_name)
+            output_path = os.path.join(bc_cutoffs_folder, file_name)
+            done_path = f'{logs_dir}/14_{bc}_{file_name}_done_compute_cutoffs.txt'
+            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc]])
+            cutoffs_bcs.append(bc)
+
+    for cmds_params, bc in zip(all_cmds_params, cutoffs_bcs):
+        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                             [cmds_params],
+                             logs_dir, f'{bc}_cutoffs',
+                             queue_name, verbose)
+        num_of_expected_results += 1  # a single job for each biological condition
+
+    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+
+
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, error_path, argv):
+                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -194,11 +311,11 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         upper_faa_paths.append(out_faa_path)
         done_path = f'{logs_dir}/01_{sample_name}_done_uppering.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
-                  [in_faa_path, out_faa_path, done_path], verbose, error_path)
+                [in_faa_path, out_faa_path, done_path], verbose, error_path)
         num_of_expected_results += 1
 
     wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='uppering.txt')
+                    error_file_path=error_path, suffix='uppering.txt')
 
     # Remove flanking Cysteines before clustering
     logger.info('_'*100)
@@ -213,11 +330,11 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         sample_name = upper_faa_path.split('/')[-1].split('_upper_')[0]
         done_path = f'{logs_dir}/02_{sample_name}_remove_cysteines.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
-                  [upper_faa_path, no_cys_faa_path, done_path], verbose, error_path)
+                [upper_faa_path, no_cys_faa_path, done_path], verbose, error_path)
         num_of_expected_results += 1
 
     wait_for_results(script_name, logs_dir, num_of_expected_results,
-                     error_file_path=error_path, suffix='remove_cysteines.txt')
+                    error_file_path=error_path, suffix='remove_cysteines.txt')
 
     # Clustering sequences within each sample
     logger.info('_'*100)
@@ -241,12 +358,12 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         sample_name = os.path.split(current_batch[0][1])[-1]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_cluster', queue_name, verbose)
+                            current_batch,
+                            logs_dir, f'{sample_name}_cluster', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='clustering.txt')
+                    error_file_path=error_path, suffix='clustering.txt')
 
     # For each sample, split the faa file to the clusters inferred in the previous step
     # this step uses the sequences WITH THE FLANKING CYSTEINE so the msa will use these Cs
@@ -275,12 +392,12 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         sample_name = clusters_sequences_path.split('/')[-2]
         assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
+                            current_batch,
+                            logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
         num_of_expected_results += len(current_batch)
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='extracting_sequences.txt')
+                    error_file_path=error_path, suffix='extracting_sequences.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap_frequency,
@@ -304,13 +421,13 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_merge_meme',
-                             queue_name, verbose)
+                            [cmds_params],
+                            logs_dir, f'{bc}_merge_meme',
+                            queue_name, verbose)
         num_of_expected_results += 1  # a single job for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_meme_merge.txt')
+                    error_file_path=error_path, suffix='_done_meme_merge.txt')
 
 
     # Unite motifs based on their correlation using UnitePSSMs.cpp
@@ -331,69 +448,24 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_detect_similar_pssms',
-                             queue_name, verbose)
+                            [cmds_params],
+                            logs_dir, f'{bc}_detect_similar_pssms',
+                            queue_name, verbose)
         num_of_expected_results += 1   # a single job for each biological condition
 
     wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
+                    error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap_frequency,
                              motif_inference_output_path, logs_dir, error_path, queue_name, verbose, 'biological_conditions')
 
-
-    # TODO: do the split BEFORE the cutoffs computation so the cutoff computation can be parallelized!!
-    # Compute pssm cutoffs for each bc
-    logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: computing pssms cuttoffs for the following biological conditions:\n'
-                f'{biological_conditions}')
-    script_name = 'calculate_pssm_cutoffs.py'
-    num_of_expected_results = 0
-    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        bc_folder = os.path.join(motif_inference_output_path, bc)
-        meme_path = os.path.join(bc_folder, 'meme.txt')
-        output_path = os.path.join(bc_folder, 'cutoffs.txt')
-        done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
-        all_cmds_params.append([meme_path, output_path, done_path])
-
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_cutoffs',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
-
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
-
-    # Split memes and cutoffs
-    logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: splitting pssms and cuttoffs for paralellizing p-values step:\n'
-                f'{biological_conditions}')
-    script_name = 'split_meme_and_cutoff_files.py'
-    num_of_expected_results = 0
-    all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        bc_folder = os.path.join(motif_inference_output_path, bc)
-        meme_path = os.path.join(bc_folder, 'meme.txt')
-        cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
-        done_path = f'{logs_dir}/14_{bc}_done_split.txt'
-        split_size = 1
-        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', split_size])
-
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_split',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
-
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_split.txt')
-
+    if concurrent_cutoffs:
+        split_then_compute_cutoffs(biological_conditions, meme_split_size,
+            motif_inference_output_path, logs_dir, queue_name, verbose)
+    else:
+        compute_cutoffs_then_split(biological_conditions, meme_split_size,
+            motif_inference_output_path, logs_dir, queue_name, verbose)
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
@@ -425,6 +497,10 @@ if __name__ == '__main__':
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
+    parser.add_argument('--concurrent_cutoffs', action='store_true',
+                        help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
+    parser.add_argument('--meme_split_size', type=int, default=1,
+                        help='Split size, how many meme per files for calculations')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -438,8 +514,9 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+    concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, error_path, sys.argv)
+                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)

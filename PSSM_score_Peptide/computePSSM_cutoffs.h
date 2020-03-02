@@ -14,10 +14,11 @@ using namespace std;
 
 class computePSSM_cutoffs{
 public:
-	computePSSM_cutoffs(	vector<PSSM> & PSSM_array,
-									size_t TotalNumberOfRandoSeq,
-									alphabet & alph,
-									const string & CutofsPerPSSM_FileName);
+	computePSSM_cutoffs(vector<PSSM> & PSSM_array,
+						size_t TotalNumberOfRandoSeq,
+						alphabet & alph,
+						const string & CutofsPerPSSM_FileName,
+						int totalMemes);
 
 private:
 	void generateRandomPeptides();
@@ -32,6 +33,7 @@ private:
 	string const & _CutofsPerPSSM_FileName;
 	const double PercentOfRandomHitsPerPSSM = 0.05;
 	alphabet& _alph;
+	int _totalMemes;
 
 
 

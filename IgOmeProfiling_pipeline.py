@@ -15,7 +15,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, number_of_random_pssms,
+                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, number_of_random_pssms,
                  run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
@@ -63,7 +63,10 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                              allowed_gap_frequency, second_phase_done_path,
+                             f'--meme_split_size {meme_split_size}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
+        if concurrent_cutoffs:
+            module_parameters.append('--concurrent_cutoffs')
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
                              [module_parameters],
                              logs_dir, f'{exp_name}_motif_inference',
@@ -140,6 +143,10 @@ if __name__ == '__main__':
                         help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
+    parser.add_argument('--concurrent_cutoffs', action='store_true',
+                        help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
+    parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
+                        help='Split size, how many meme per files for calculations')
 
     # optional parameters for the modelling step
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
@@ -163,11 +170,13 @@ if __name__ == '__main__':
     run_summary_path = args.error_path if args.error_path else os.path.join(args.analysis_dir, 'run_summary_path.txt')
     error_path = args.error_path if args.error_path else os.path.join(args.logs_dir, 'error.txt')
 
+    concurrent_cutoffs = True if args.concurrent_cutoffs else False
+
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, True if args.gz else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.number_of_random_pssms,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.number_of_random_pssms,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
 

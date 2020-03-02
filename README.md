@@ -106,6 +106,15 @@ python3 IgOmeProfiling_pipeline.py -h
 The code assumes existence of ```bash``` in order to run.  
 This can be changed via ```local_command_prefix``` variable in ```global_params.py```.
 
+## Important flags:
+The following is are important flags, see help for details:
+* left_construct: Depends on experiment, default is for EXP12
+* right_construct: Depends on experiment, default is for EXP12
+* allowed_gap_frequency: Threshold for gappy columns
+* concurrent_cutoffs: If set then cutoffs are calculated concurrently, if not each BC run as a whole.
+* meme_split_size: Batch size of memes for cutoffs (if concurrent_cutoffs is set) and pValues calculation.
+* number_of_random_pssms: Number of random PSSMs for calculating pValues.
+
 ## Testing
 The code contains mock data for testing.
 
@@ -117,7 +126,6 @@ To run local set:
 Run the following:
 ```bash
 # From project directory
-mkdir output && mkdir output/analysis && mkdir output/logs
 python3 IgOmeProfiling_pipeline.py mock_data/exp12_10M_rows.fastq.gz mock_data/barcode2samplename.txt mock_data/samplename2biologicalcondition.txt output/analysis output/logs
 ```
 
@@ -141,13 +149,11 @@ The image is built without data and command argument of "-h".
 To run the mock-data using docker:
 ```bash
 # From project directory
-mkdir test && mkdir test/analysis && mkdir test/logs
 docker run --name igome --rm -v ./some_data:/data -v ./test:/output webiks/igome-profile /data/exp12_10M_rows.fastq.gz /data/barcode2samplename.txt /data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
 
 The mock data is included in the docker, to run it:
 ```bash
-mkdir test && mkdir test/analysis && mkdir test/logs
 docker run --name igome --rm -v ./test:/output webiks/igome-profile ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
 
@@ -160,7 +166,6 @@ In AWS machine (with aws-cli credentials set):
 ```bash
 $(aws ecr get-login --no-include-email --region us-west-2)
 docker pull 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest
-mkdir test && mkdir test/analysis && mkdir test/logs
 docker run --name igome --rm -v ./test:/output 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
 

@@ -14,12 +14,12 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name
 
 
-def calculate_pssm_cutoffs(meme_path, output_path, done_path, argv='no_argv',
+def calculate_pssm_cutoffs(meme_path, output_path, done_path, total_memes, argv='no_argv',
                            pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
         # TODO: any modules to load?
-        cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {output_path} -CalcPSSM_Cutoff'
+        cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {output_path} -CalcPSSM_Cutoff -total_memes {total_memes}'
         logger.info(f'{datetime.datetime.now()}: starting PSSM_score_Peptide. Executed command is:\n{cmd}')
         subprocess.run(cmd, shell=True)
     else:
@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('meme_file_path', help='A path to a meme file')
     parser.add_argument('output_path', help='A path in which a new subfolder with the united motifs will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('--total_memes', type=int, default=0, help='Total memes in biological condition. Used if input data is splitted.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -51,5 +52,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, argv=sys.argv)
+    calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, args.total_memes, argv=sys.argv)
 

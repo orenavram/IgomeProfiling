@@ -1,6 +1,6 @@
 import os
 import sys
-from subprocess import call, run, Popen
+from subprocess import call, run, Popen, PIPE
 from time import time, sleep
 import global_params
 import logging
@@ -261,6 +261,8 @@ def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
         for line in f:
             if line.isspace():  # empty line
                 continue
+            if line.startswith('#'):  # ignore symbol
+                continue
             key, value = line.strip().split(delimiter)
             if key in table:
                 assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
@@ -332,3 +334,12 @@ def remove_redundant_newlines_from_fasta(input_file_path, output_file_path):
 
     with open(output_file_path, 'w') as f:
         f.write(result)
+
+
+def count_memes(path):
+    p = Popen(f'cat {path} | grep MOTIF | wc -l', stdout=PIPE, shell=True)
+    (output, err) = p.communicate()
+    p_status = p.wait()
+    count = int(output) if p_status == 0 else 0
+    print(f'Found {count} memes in {path}')
+    return count
