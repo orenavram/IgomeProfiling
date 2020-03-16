@@ -142,7 +142,7 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1):
 
-    required_modules_as_str = 'python/python-anaconda3.6.5-orenavr2'
+    required_modules_as_str = 'python/python-anaconda3.6.5'
     if required_modules_as_list:
         # don't forget a space after the python module!!
         required_modules_as_str += ' ' + ' '.join(required_modules_as_list)
@@ -155,11 +155,6 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
         cmds_as_str += new_line_delimiter
 
     example_cmd = ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])) + ';'
-
-    # GENERATE DONE FILE
-    # write an empty string (like "touch" command)
-    # cmds_as_str += ' '.join(['python', done_files_script_path, os.path.join(tmp_dir, job_name + '.done'), 'done'])+';'
-    # cmds_as_str += new_line_delimiter
 
     cmds_as_str += '\t' + job_name + '\n'
     cmds_path = os.path.join(tmp_dir, f'{job_name}.cmds')
