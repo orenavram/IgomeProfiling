@@ -116,39 +116,44 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     # fitting a random forest model (hits and pvalues)
     logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: fitting model')
-    script_name = 'random_forest.py'
-    num_of_expected_results = 0
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
-        done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
-        all_cmds_params.append([aggregated_pvalues_path,
-                                num_of_hyperparam_configurations_to_sample,
-                                done_path])
-        aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
-        all_cmds_params.append([aggregated_hits_path,
-                                num_of_hyperparam_configurations_to_sample,
-                                done_path])
+    if num_of_hyperparam_configurations_to_sample < 1:
+        logger.info(f'{datetime.datetime.now()}: fitting model')
+        script_name = 'random_forest.py'
+        num_of_expected_results = 0
+        all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+        for bc in biological_conditions:
+            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+            done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
+            all_cmds_params.append([aggregated_pvalues_path,
+                                    num_of_hyperparam_configurations_to_sample,
+                                    done_path])
+            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+            done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
+            all_cmds_params.append([aggregated_hits_path,
+                                    num_of_hyperparam_configurations_to_sample,
+                                    done_path])
 
-    for i, bc in enumerate(biological_conditions):
-        cmds_params = all_cmds_params[2*i]
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                                   [cmds_params],
-                                   logs_dir, f'{bc}_pvalues_model',
-                                   queue_name, verbose)
+        for i, bc in enumerate(biological_conditions):
+            cmds_params = all_cmds_params[2*i]
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                       [cmds_params],
+                                       logs_dir, f'{bc}_pvalues_model',
+                                       queue_name, verbose)
 
-        cmds_params = all_cmds_params[2*i+1]
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                                   [cmds_params],
-                                   logs_dir, f'{bc}_hits_model',
-                                   queue_name, verbose)
+            cmds_params = all_cmds_params[2*i+1]
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                       [cmds_params],
+                                       logs_dir, f'{bc}_hits_model',
+                                       queue_name, verbose)
 
-        num_of_expected_results += 2  # 2 jobs (1 hits + 1 pvalues) for each biological condition
+            num_of_expected_results += 2  # 2 jobs (1 hits + 1 pvalues) for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_fitting.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                         error_file_path=error_path, suffix='_done_fitting.txt')
+
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping model fitting')
+        logger.info(f'{datetime.datetime.now()}: num_of_hyperparam_configurations_to_sample is {num_of_hyperparam_configurations_to_sample}')
 
     # wait_for_results(script_name, num_of_expected_results)
     with open(fitting_done_path, 'w') as f:
