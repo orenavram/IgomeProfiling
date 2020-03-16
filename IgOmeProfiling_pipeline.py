@@ -25,6 +25,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
     start_time = datetime.datetime.now()
 
+    # e.g., /groups/pupko/orenavr2/igomeProfilingPipeline/experiments/exp12/analysis
     exp_name = analysis_dir.rstrip('/').split('/')[-2]
 
     # output folders of the different modules

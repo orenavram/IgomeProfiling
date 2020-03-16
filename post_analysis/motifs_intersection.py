@@ -2,7 +2,7 @@ def peptides_intersection(filtered_reads_path, biological_condition, output_path
     peptides_files_counter = 0
     for path, dirs, files in os.walk(filtered_reads_path):
         for file in files:
-            if biological_condition in path and file.endswith(file_extension) and 'test' not in path:
+            if biological_condition in path and file.endswith(file_extension):# and 'test' not in path:
                 peptides_files_counter += 1
                 file_path = os.path.join(path, file)
                 logger.info(f'Loading {file_path}...')
