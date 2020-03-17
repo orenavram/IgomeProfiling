@@ -116,7 +116,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     # fitting a random forest model (hits and pvalues)
     logger.info('_'*100)
-    if num_of_hyperparam_configurations_to_sample < 1:
+    if num_of_hyperparam_configurations_to_sample > 0:
         logger.info(f'{datetime.datetime.now()}: fitting model')
         script_name = 'random_forest.py'
         num_of_expected_results = 0
