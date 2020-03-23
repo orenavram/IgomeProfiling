@@ -33,5 +33,6 @@ RUN cd UnitePSSMs && \
     cd ../PSSM_score_Peptide && \
     g++ *.cpp -std=c++11 -O3 -o PSSM_score_Peptide
 
+ENV APP_FILE IgOmeProfiling_pipeline.py
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["-h"]
