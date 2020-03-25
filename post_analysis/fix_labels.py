@@ -1,10 +1,9 @@
 import logging
 import os
 import sys
-from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, call
 
 
-def fix_labels(input_path, biological_conditions, text_to_catch_in_file, text_to_catch_in_path):
+def fix_labels(input_path, text_to_catch_in_file, text_to_catch_in_path):
 
     files_to_manipulate = []
     for path, dirs, files in os.walk(input_path):
@@ -55,6 +54,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    fix_labels(args.input_path, args.biological_conditions_as_str.split(','), args.text_to_catch_in_file, args.text_to_catch_in_path)
+    # fix_labels(args.input_path, args.biological_conditions_as_str.split(','), args.text_to_catch_in_file, args.text_to_catch_in_path)
+    fix_labels(args.input_path, args.text_to_catch_in_file, args.text_to_catch_in_path)
 
 
