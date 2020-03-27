@@ -100,10 +100,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         for bc in biological_conditions:
             meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
             scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
-            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+            aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
             aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
             done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-            all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
+            all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
                                     aggregated_hits_path, samplename2biologicalcondition_path, done_path])
 
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -125,12 +125,12 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         num_of_expected_results = 0
         all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
         for bc in biological_conditions:
-            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
-            pvalues_done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
+            aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
+            pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
             aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
             
-            all_cmds_params.append([aggregated_pvalues_path, pvalues_done_path])
+            all_cmds_params.append([aggregated_values_path, pvalues_done_path])
             all_cmds_params.append([aggregated_hits_path, hits_done_path])
 
         doubled_bc = repeat_items(biological_conditions)
