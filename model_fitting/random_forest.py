@@ -55,10 +55,11 @@ def plot_error_rate(errors, features, output_path_dir):
     plt.close()
 
 
-def train_models(csv_file_path, done_path, num_of_iterations, argv):
+def train_models(csv_file_path, done_path, num_of_iterations, use_tfidf, argv):
     logging.info('Parsing data...')
     train_data, test_data = parse_data(csv_file_path)
     y = np.array(train_data['label']) # saving the (true) labels
+    max_instances_per_class = np.max(np.unique(y, return_counts=True)[1])
     train_data.drop(['label'], axis=1, inplace=True)
     test_data.drop(['label'], axis=1, inplace=True)
     X = np.array(train_data)  # saving an array of the variables
@@ -75,7 +76,8 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
             logging.info('Creating output path...')
             os.makedirs(output_path_i)
 
-        errors, features = train(X, y, is_hits_data, train_data, output_path_i, 3481 + i)
+        errors, features = train(X, y, max_instances_per_class, is_hits_data, 
+                                 train_data, output_path_i, 3481 + i, use_tfidf)
 
         plot_error_rate(errors, features, output_path_i)
 
@@ -86,7 +88,7 @@ def train_models(csv_file_path, done_path, num_of_iterations, argv):
         f.write(' '.join(argv) + '\n')
 
 
-def train(X, y, hits_data, train_data, output_path, seed):
+def train(X, y, max_instances_per_class, hits_data, train_data, output_path, seed, use_tfidf):
     logging.info('Training...')
     rf = RandomForestClassifier(n_estimators=1000, random_state=np.random.seed(seed))  # number of trees
     model = rf.fit(X, y)
@@ -103,7 +105,8 @@ def train(X, y, hits_data, train_data, output_path, seed):
     # transform the data for better contrast in the visualization
     if hits_data:  # hits data
         train_data = np.log2(train_data+1)  # pseudo counts
-        # df = df
+    elif use_tfidf: # tfidf data
+        train_data = -np.log2(train_data+0.0001)  # avoid 0
     else:  # p-values data
         train_data = -np.log2(train_data)
 
@@ -119,7 +122,8 @@ def train(X, y, hits_data, train_data, output_path, seed):
         previous_error_rate = error_rate
 
         # compute current model accuracy for each fold of the cross validation
-        cv_score = cross_val_score(rf, X, y, cv=3, n_jobs=-1)
+        cv = np.min([max_instances_per_class, 3])
+        cv_score = cross_val_score(rf, X, y, cv=cv, n_jobs=-1)
 
         # current model error_rate rate
         error_rate = 1 - cv_score.mean()
@@ -165,6 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--num_of_iterations', default=10, help='How many should the RF run?')
+    parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -174,5 +179,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.num_of_iterations, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.num_of_iterations, args.tfidf, argv=sys.argv)
 

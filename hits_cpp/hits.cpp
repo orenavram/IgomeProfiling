@@ -15,6 +15,7 @@ Memes loadMemes(string memePath);
 void loadCutoffs(string cutoffsPath, Memes& memes);
 SequencesMap loadSequences(string faaPath);
 
+// TODO support Repeats_
 // TODO move isHit and getHits?
 bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq) {
     auto iter = meme.getCuttofs().find(seqType);
@@ -104,7 +105,8 @@ int main(int argc, char *argv[])
         ("m,memes", "Path to memes file", cxxopts::value<string>())
         ("c,cutoffs", "Path to cutoffs file", cxxopts::value<string>())
         ("s,sequences", "Path to sequences file", cxxopts::value<string>())
-        ("o,output", "Path to results file", cxxopts::value<string>());
+        ("o,output", "Path to results file", cxxopts::value<string>())
+        ("v,verbose", "Verbose output", cxxopts::value<string>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
     string memesPath = result["memes"].as<string>();

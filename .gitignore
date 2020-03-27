@@ -6,3 +6,5 @@ output*
 
 UnitePSSMs/UnitePSSMs
 PSSM_score_Peptide/PSSM_score_Peptide
+hits_cpp/hits
+tfidf/tfidf

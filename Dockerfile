@@ -31,7 +31,11 @@ COPY . /app
 RUN cd UnitePSSMs && \
     g++ *.cpp -std=c++11 -O3 -o UnitePSSMs && \
     cd ../PSSM_score_Peptide && \
-    g++ *.cpp -std=c++11 -O3 -o PSSM_score_Peptide
+    g++ *.cpp -std=c++11 -O3 -o PSSM_score_Peptide && \
+    cd ../hits_cpp && \
+    g++ *.cpp -std=c++11 -O3 -o hits && \
+    cd ../tfidf && \
+    g++ *.cpp -std=c++11 -O3 -o tfidf
 
 ENV APP_FILE IgOmeProfiling_pipeline.py
 ENTRYPOINT ["./entrypoint.sh"]

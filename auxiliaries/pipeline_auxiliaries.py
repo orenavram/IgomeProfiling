@@ -152,7 +152,7 @@ def wait_for_results(script_name, path, num_of_expected_results, error_file_path
 
 def submit_pipeline_step_to_cluster(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1):
+                         required_modules_as_list=None, num_of_cpus=1, executable='python'):
     required_modules_as_str = 'python/python-anaconda3.6.5-orenavr2'
     if required_modules_as_list:
         # don't forget a space after the python module!!
@@ -187,17 +187,29 @@ def submit_pipeline_step_to_cluster(script_path, params_lists, tmp_dir, job_name
     return example_cmd
 
 
+def build_args(executable, script_path, params, verbose):
+    args = []
+    if executable:
+        args.append(executable)
+    if script_path:
+        args.append(script_path)
+    args += [str(x) for x in params]
+    if verbose:
+        args.append('-v')
+    return ' '.join(args)
+
+
 def create_command(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                    q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                   required_modules_as_list=None, num_of_cpus=1):
+                   required_modules_as_list=None, num_of_cpus=1, executable='python'):
     new_line_delimiter = '\n'
     cmds_as_str = ''
     
     for params in params_lists:
-        cmds_as_str += ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else []))
+        cmds_as_str += build_args(executable, script_path, params, verbose)
         cmds_as_str += new_line_delimiter
 
-    example_cmd = ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else []))
+    example_cmd = build_args(executable, script_path, params, verbose)
 
     cmds_path = os.path.join(tmp_dir, f'{job_name}.cmds')
     if os.path.exists(cmds_path):
@@ -214,7 +226,7 @@ def create_command(script_path, params_lists, tmp_dir, job_name, queue_name, ver
 
 def submit_pipeline_step_to_celery(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1):
+                         required_modules_as_list=None, num_of_cpus=1, executable='python'):
     process, example_cmd = create_command(**locals())
     from worker import submit
     logger.info(f'Calling using celery:\n{process}')
@@ -224,7 +236,7 @@ def submit_pipeline_step_to_celery(script_path, params_lists, tmp_dir, job_name,
 
 def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1):
+                         required_modules_as_list=None, num_of_cpus=1, executable='python'):
     process, example_cmd = create_command(**locals())
     logger.info(f'Calling:\n{process}')
     if global_params.run_local_in_parallel_mode:
@@ -235,7 +247,7 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
 
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1):
+                         required_modules_as_list=None, num_of_cpus=1, executable='python'):
     if global_params.run_using_celery:
         return submit_pipeline_step_to_celery(**locals())
     if global_params.is_run_on_cluster:
