@@ -22,7 +22,8 @@ def repeat_items(list):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, queue_name, verbose, error_path, argv):
+                     fitting_done_path, number_of_random_pssms, use_tfidf, queue_name, verbose, 
+                     error_path, argv):
 
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -30,6 +31,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     if os.path.exists(fitting_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({fitting_done_path} already exists)')
         return
+
+    is_debug = False # TODO remove is_debug
 
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     sample_names = sorted(samplename2biologicalcondition)
@@ -47,7 +50,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     logger.info(f'{datetime.datetime.now()}: upper casing all sequences in the faa files')
     script_name = 'scan_peptides_vs_motifs.py'
     num_of_expected_results = 0
-    num_of_cmds_per_job = 1
+    num_of_cmds_per_job = 4
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         # get current biological condition (splitted) motifs folder
@@ -64,12 +67,14 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                 output_path = os.path.join(classification_output_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
-                all_cmds_params.append([meme_file_path, cutoffs_file_path, faa_file_path,
-                                        str(number_of_random_pssms), output_path, done_path])
+                cmd = [meme_file_path, cutoffs_file_path, faa_file_path, str(number_of_random_pssms), output_path, done_path]
+                if use_tfidf: cmd.append('--tfidf')
+                all_cmds_params.append(cmd)
 
     for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
         current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        done_file_name = os.path.split(current_batch[0][-1])[-1]
+        done_path_index = -2 if use_tfidf else -1
+        done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
         name_tokens = done_file_name.split('_peptides_vs_')
         logger.info(name_tokens)
         sample_name = name_tokens[0]
@@ -86,56 +91,58 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
 
     # aggragate scanning scores (hits and pvalues)
-    logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: aggregating scores')
-    script_name = 'merge_pvalues.py'
-    num_of_expected_results = 0
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
-        scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
-        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
-        aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-        all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
-                                aggregated_hits_path, samplename2biologicalcondition_path, done_path])
+    if not is_debug:
+        logger.info('_'*100)
+        logger.info(f'{datetime.datetime.now()}: aggregating scores')
+        script_name = 'merge_pvalues.py'
+        num_of_expected_results = 0
+        all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+        for bc in biological_conditions:
+            meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
+            scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
+            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+            done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
+            all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
+                                    aggregated_hits_path, samplename2biologicalcondition_path, done_path])
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_aggregate_scores',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_aggregate_scores',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_aggregate_scores.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_aggregate_scores.txt')
 
 
     # fitting a random forest model (hits and pvalues)
-    logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: fitting model')
-    script_name = 'random_forest.py'
-    num_of_expected_results = 0
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
-        pvalues_done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
-        aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
-        
-        all_cmds_params.append([aggregated_pvalues_path, pvalues_done_path])
-        all_cmds_params.append([aggregated_hits_path, hits_done_path])
+    if not is_debug:
+        logger.info('_'*100)
+        logger.info(f'{datetime.datetime.now()}: fitting model')
+        script_name = 'random_forest.py'
+        num_of_expected_results = 0
+        all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+        for bc in biological_conditions:
+            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+            pvalues_done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
+            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+            hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
+            
+            all_cmds_params.append([aggregated_pvalues_path, pvalues_done_path])
+            all_cmds_params.append([aggregated_hits_path, hits_done_path])
 
-    doubled_bc = repeat_items(biological_conditions)
-    for cmds_params, bc in zip(all_cmds_params, doubled_bc):
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_model',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+        doubled_bc = repeat_items(biological_conditions)
+        for cmds_params, bc in zip(all_cmds_params, doubled_bc):
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_model',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_fitting.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_fitting.txt')
 
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
@@ -163,6 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
+    parser.add_argument('--tfidf', action='store_true', help='Use TF-IDF instead of p-Values')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -179,4 +187,4 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.queue, True if args.verbose else False, error_path, sys.argv)
+                     args.number_of_random_pssms, args.tfidf, args.queue, True if args.verbose else False, error_path, sys.argv)

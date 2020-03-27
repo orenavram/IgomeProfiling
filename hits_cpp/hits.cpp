@@ -1,230 +1,21 @@
-#include <iostream>
-#include <vector>
 #include <string>
-#include <map>
-#include <list>
-#include <vector>
+#include <iostream>
 #include <math.h>
 #include <fstream>
 #include <regex>
 #include <chrono>
 
 #include "cxxopts.hpp"
+#include "types.hpp"
+#include "trim.hpp"
+#include "meme.hpp"
+#include "memes.hpp"
 
-// Alphabet of 20 + gap
-#define MAX_MEME_COLUMNS 21
+Memes loadMemes(string memePath);
+void loadCutoffs(string cutoffsPath, Memes& memes);
+SequencesMap loadSequences(string faaPath);
 
-using namespace std;
-class Meme;
-typedef map<string, Meme> MemesMap;
-typedef map<string, list<string>*> SequencesMap;
-typedef map<char, int> AlphabetMap;
-typedef map<string, double> CutoffsMap;
-typedef vector<vector<double>> MemeRows;
-
-string& ltrim(string& str, const string& chars = "\t\n\v\f\r ")
-{
-    str.erase(0, str.find_first_not_of(chars));
-    return str;
-}
- 
-string& rtrim(string& str, const string& chars = "\t\n\v\f\r ")
-{
-    str.erase(str.find_last_not_of(chars) + 1);
-    return str;
-}
- 
-string& trim(string& str, const string& chars = "\t\n\v\f\r ")
-{
-    return ltrim(rtrim(str, chars), chars);
-}
-
-class Meme {
-public:
-    Meme() {
-
-    }
-
-    string getMotif() {
-        return this->_motif;
-    }
-
-    void setMotif(string motif) {
-        this->_motif = motif;
-    }
-
-    int getALength() {
-        return this->_alength;
-    }
-
-    void setALength(int alength) {
-        this->_alength = alength;
-    }
-
-    int getNSites() {
-        return this->_nsites;
-    }
-
-    void setNSites(int nsites) {
-        this->_nsites = nsites;
-    }
-
-    MemeRows& getRows() {
-        return this->_rows;
-    }
-
-    CutoffsMap& getCuttofs() {
-        return this->_cutoffs;
-    }
-
-    void normalize() {
-        if (this->_nsites == 0) {
-            return;
-        }
-        auto rows = this->_rows.size();
-        auto columns = this->_alength + 1;
-        
-        auto iter = this->_rows.begin();
-        auto end = this->_rows.end();
-
-        for (auto rowsIter = this->_rows.begin(); rowsIter != this->_rows.end(); ++rowsIter) {
-            for (auto columnsIter = rowsIter->begin(); columnsIter != rowsIter->end(); ++columnsIter) {
-                *columnsIter = ((*columnsIter * this->_nsites) + 1) / (this->_nsites + columns);
-            }
-        }
-    }
-private:
-    string _motif;
-    int _alength;
-    int _nsites;
-    MemeRows _rows;
-    CutoffsMap _cutoffs;
-};
-
-class Memes {
-public:
-    Memes(AlphabetMap alphabet, MemesMap memes) :
-        _alphabet(alphabet), _memes(memes) {
-    }
-
-    AlphabetMap& getAlphabet() {
-        return this->_alphabet;
-    }
-
-    MemesMap& getMemes() {
-        return this->_memes;
-    }
-private:
-    AlphabetMap _alphabet;
-    MemesMap _memes;
-};
-
-Memes loadMemes(string memePath) {
-    ifstream file(memePath);
-    string line;
-
-    AlphabetMap alphabet;
-    MemesMap memes;
-
-    regex motifPattern("alength= (\\d+) w= (\\d+) nsites= (\\d+)");
-    regex rowPattern("(\\d+\\.?\\d*)");
-    auto regexEnd = sregex_iterator();
-    smatch matches;
-    int alength;
-    int rows;
-
-    while (getline(file, line)) {
-        if (line.rfind("MOTIF", 0) == 0) {
-            Meme meme;
-            string motif = line.substr(6);
-            meme.setMotif(rtrim(motif));
-            
-            getline(file, line);
-            regex_search(line, matches, motifPattern);
-            alength = stoi(matches[1]);
-            meme.setALength(alength);
-            rows = stoi(matches[2]);
-            meme.setNSites(stoi(matches[3]));
-
-            for (int i = 0; i < rows; i++) {
-                getline(file, line);
-                vector<double> row;
-                sregex_iterator iter(line.begin(), line.end(), rowPattern);
-                while (iter != regexEnd) {
-                    row.push_back(stod(iter->str()));
-                    iter++;
-                }
-                row.push_back(0); // gap
-                meme.getRows().push_back(row);
-            }
-            meme.normalize();
-            memes[motif] = meme;
-        } else if (line.rfind("ALPHABET=", 0) == 0) {
-            int start = 10;
-            int end = line.length() - start;
-            for (int i = 0; i < end; i++) {
-                alphabet[line[start + i]] = i;
-            }
-            alphabet['-'] = end;
-        }
-    }
-    return Memes(alphabet, memes);
-}
-
-void loadCutoffs(string cutoffsPath, Memes& memes) {
-    ifstream file(cutoffsPath);
-    string line;
-
-    regex pattern("([^\\t]+)\\t([^\\t]+)");
-    smatch matches;
-    Meme* meme;
-
-    while (getline(file, line)) {
-        regex_search(line, matches, pattern);
-        if (matches[1].compare("###") == 0) {
-            meme = &memes.getMemes()[matches[2]]; // TODO does this copy?
-        } else {
-            cout << matches[2] << endl;
-            meme->getCuttofs()[matches[1]] = stod(matches[2]);
-        }
-    }
-}
-
-SequencesMap loadSequences(string faaPath) {
-    SequencesMap sequences;
-    ifstream file(faaPath);
-    string line;
-    list<string>* sequencesByType;
-    
-    regex pattern("^>.+_(.+)$");
-    smatch matches;
-    auto end = sequences.end();
-
-    int count = 0;
-    while (getline(file, line)) {
-        if (line[0] == '>') {
-            auto lastIndex = line.find_last_of('_');
-            auto seqType = line.substr(lastIndex + 1);
-            rtrim(seqType);
-        
-            auto iter = sequences.find(seqType);
-            if (iter == end) {
-                sequencesByType = new list<string>();
-                sequences[seqType] = sequencesByType;
-            } else {
-                sequencesByType = iter->second;
-            }
-            
-            getline(file, line);
-            sequencesByType->push_back(line);
-            count++;
-        }
-    }
-
-    cout << "total sequences: " << count << endl;
-    return sequences;
-}
-
+// TODO move isHit and getHits?
 bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq) {
     auto iter = meme.getCuttofs().find(seqType);
     if (iter == meme.getCuttofs().end()) {
@@ -232,7 +23,7 @@ bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq) {
     }
     auto cutoffValue = iter->second;
     auto seqLen = seq.length();
-    auto memeLen = meme.getRows().size(); // TODO get by variable?
+    auto memeLen = meme.getRows().size();
 
     int start = -memeLen + 1;
     int end = min(memeLen, seqLen);
@@ -274,28 +65,52 @@ int getHits(Memes& memes, SequencesMap sequences) {
                 }
                 counter++;
                 if (isHit(memesIter->second, alphabet, sequencesTypesIter->first, *sequencesIter)) {
+                    memesIter->second.addHitSequence(*sequencesIter);
                     hits++;
                 }
                 sequencesIter++;
             }
             sequencesTypesIter++;
         }
+        cout << "meme hits: " << memesIter->second.getHitCount() << endl;
         memesIter++;
     }
     cout << "total hits: " << hits << endl;
     return hits;
 }
 
+void writeResults(Memes& memes, string& outputPath) {
+    auto memesIter = memes.getMemes().begin();
+    auto memesEnd = memes.getMemes().end();
+    ofstream file(outputPath);
+
+    while (memesIter != memesEnd) {
+        file << "MOTIF " << memesIter->second.getMotif() << endl;
+        file << "HITS " << memesIter->second.getHitCount() << endl;
+        auto sequencesIter = memesIter->second.getHitSequences().begin();
+        auto sequencesEnd = memesIter->second.getHitSequences().end();
+        while (sequencesIter != sequencesEnd) {
+            file << sequencesIter->first << " " << sequencesIter->second << endl;
+            sequencesIter++;
+        }
+        memesIter++;
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    // cxxopts::Options options("MyProgram", "One line description of MyProgram");
-    // options.add_options()("d,debug", "Enable debugging")("f,file", "File name", cxxopts::value<string>());
-    // auto result = options.parse(argc, argv);
-    // cout << result["file"].as<string>() << endl;
+    cxxopts::Options options("Hits", "Calculate hits given mime, cutoffs and sequences");
+    options.add_options()
+        ("m,memes", "Path to memes file", cxxopts::value<string>())
+        ("c,cutoffs", "Path to cutoffs file", cxxopts::value<string>())
+        ("s,sequences", "Path to sequences file", cxxopts::value<string>())
+        ("o,output", "Path to results file", cxxopts::value<string>());
+    auto result = options.parse(argc, argv);
 
-    string memesPath = "/home/shacharm/test2/01_exp4+9_exp4_naive_meme_20.txt";
-    string cutoffsPath = "/home/shacharm/test2/02_exp4+9_exp4_naive_cutoff_20.txt";
-    string sequencesPath = "/home/shacharm/test2/03_exp4+9_exp4_naive_c.faa";
+    string memesPath = result["memes"].as<string>();
+    string cutoffsPath = result["cutoffs"].as<string>();
+    string sequencesPath = result["sequences"].as<string>();
+    string outputPath = result["output"].as<string>();
 
     auto begin = chrono::steady_clock::now();
 
@@ -303,6 +118,7 @@ int main(int argc, char *argv[])
     loadCutoffs(cutoffsPath, memes);
     SequencesMap sequences = loadSequences(sequencesPath);
     getHits(memes, sequences);
+    writeResults(memes, outputPath);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

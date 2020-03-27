@@ -499,7 +499,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
-    parser.add_argument('--meme_split_size', type=int, default=1,
+    parser.add_argument('--meme_split_size', type=int, default=5,
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
