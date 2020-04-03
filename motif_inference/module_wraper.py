@@ -40,23 +40,29 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
             cluster_rank = get_cluster_rank_from(faa_filename)
             aligned_cluster_path = os.path.join(aligned_sequences_path, faa_filename)
             done_path = f'{logs_dir}/05_{sample_name}_{cluster_rank}_{done_path_suffix}'
-            all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
+            if not os.path.exists(done_path):
+                all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
+            else:
+                logger.debug(f'Skipping sequence alignment as {done_path} exists')
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        sample_name = current_batch[0][1].split('/')[-3]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        cluster_rank = get_cluster_rank_from(current_batch[-1][1])
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_{cluster_rank}_msa',
-                             queue_name, verbose)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            sample_name = current_batch[0][1].split('/')[-3]
+            assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+            cluster_rank = get_cluster_rank_from(current_batch[-1][1])
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
+                                logs_dir, f'{sample_name}_{cluster_rank}_msa',
+                                queue_name, verbose)
 
-        num_of_expected_results += len(current_batch)
+            num_of_expected_results += len(current_batch)
 
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix=done_path_suffix)
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix=done_path_suffix)
+    else:
+        logger.info('Skipping sequence alignment, all found')
 
 
     # For each sample, clean alignments from gappy columns
@@ -80,23 +86,28 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
             msa_path = os.path.join(msas_path, msa_name)
             cleaned_msa_path = os.path.join(cleaned_msas_path, msa_name)
             done_path = f'{logs_dir}/06_{sample_name}_{msa_name}_{done_path_suffix}'
-            # done_files_list.append(done_path)
-            all_cmds_params.append([msa_path, cleaned_msa_path, done_path,
-                                    '--maximal_gap_frequency_allowed_per_column', gap_frequency])
+            if not os.path.exists(done_path):
+                all_cmds_params.append([msa_path, cleaned_msa_path, done_path,
+                                        '--maximal_gap_frequency_allowed_per_column', gap_frequency])
+            else:
+                logger.debug(f'Skipping cleaning as {done_path} exists')
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        sample_name = current_batch[0][1].split('/')[-3]
-        assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
-        cluster_rank = get_cluster_rank_from(current_batch[-1][0])
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{sample_name}_{cluster_rank}_clean',
-                             queue_name, verbose)
-        num_of_expected_results += len(current_batch)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            sample_name = current_batch[0][1].split('/')[-3]
+            assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
+            cluster_rank = get_cluster_rank_from(current_batch[-1][0])
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
+                                logs_dir, f'{sample_name}_{cluster_rank}_clean',
+                                queue_name, verbose)
+            num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix=done_path_suffix) #, done_files_list=done_files_list)
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix=done_path_suffix) #, done_files_list=done_files_list)
+    else:
+        logger.info(f'Skipping cleaning, all exists')
 
 
     # For each sample, generate a meme file with a corresponding pssm for each alignment
@@ -113,14 +124,19 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
         assert sample_name in folder_names_to_handle, f'Sample {sample_name} not in folder names list:\n{folder_names_to_handle}'
         meme_path = os.path.join(sample_motifs_dir, 'meme.txt')
         done_path = f'{logs_dir}/07_{sample_name}_{meme_done_path_suffix}'
-        all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        memes_cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             current_batch,
-                             logs_dir, f'{i//num_of_cmds_per_job}_meme',
-                             queue_name, verbose)
-        num_of_expected_memes += len(current_batch)
+        if not os.path.exists(done_path):
+            all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
+        else:
+            logger.debug(f'Skipping meme creation as {done_path} exists')
+    
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            memes_cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
+                                logs_dir, f'{i//num_of_cmds_per_job}_meme',
+                                queue_name, verbose)
+            num_of_expected_memes += len(current_batch)
 
     # instead of waiting here, submit the weblogos first..
 
@@ -136,19 +152,24 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
         for msa_name in os.listdir(cleaned_msas_path):
             msa_path = os.path.join(cleaned_msas_path, msa_name)
             weblogo_prefix_path = os.path.join(weblogos_path, os.path.splitext(msa_name)[0])
-            all_cmds_params.append([msa_path, weblogo_prefix_path])
+            # all_cmds_params.append([msa_path, weblogo_prefix_path])
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        # submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-        #                      current_batch,
-        #                      logs_dir, f'weblogo_{i}th_batch',
-        #                      queue_name='pupkolab', verbose=verbose)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            # submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+            #                      current_batch,
+            #                      logs_dir, f'weblogo_{i}th_batch',
+            #                      queue_name='pupkolab', verbose=verbose)
 
     # wait for the memes!! (previous logical block!)
     # (no need to wait for weblogos..)
-    wait_for_results(script_name, logs_dir, num_of_expected_memes, example_cmd=memes_cmd,
-                     error_file_path=error_path, suffix=meme_done_path_suffix)
+    if num_of_expected_memes > 0:
+        script_name = 'create_meme.py'
+        wait_for_results(script_name, logs_dir, num_of_expected_memes, example_cmd=memes_cmd,
+                        error_file_path=error_path, suffix=meme_done_path_suffix)
+    else:
+        logger.info('Skipping memes creation, all found')
 
 
 def compute_cutoffs_then_split(biological_conditions, meme_split_size,
@@ -165,17 +186,23 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
         meme_path = os.path.join(bc_folder, 'meme.txt')
         output_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
-        all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0])
+        else:
+            logger.debug(f'Skipping cutoff as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_cutoffs',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_cutoffs',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+    else:
+        logger.info('Skipping cuttoffs, all exist')
 
     # Split memes and cutoffs
     logger.info('_'*100)
@@ -189,17 +216,23 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
         meme_path = os.path.join(bc_folder, 'meme.txt')
         cutoff_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/14_{bc}_done_split.txt'
-        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+        else:
+            logger.debug(f'Skipping split as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_split',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_split',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_split.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_split.txt')
+    else:
+        logger.info('Skipping split, all exist')
 
 
 def split_then_compute_cutoffs(biological_conditions, meme_split_size,
@@ -224,17 +257,23 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
         meme_path = os.path.join(bc_folder, 'meme.txt')
         cutoff_path = 'skip'
         done_path = f'{logs_dir}/13_{bc}_done_split.txt'
-        all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
+        else:
+            logger.debug(f'Skipping split as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_split',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_split',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_split.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_split.txt')
+    else:
+        logger.info('Skipping split, all exist')
     
     # Compute pssm cutoffs for each bc
     # TODO change to read to cut files (read directory)
@@ -254,18 +293,24 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
             meme_path = os.path.join(bc_memes_folder, file_name)
             output_path = os.path.join(bc_cutoffs_folder, file_name)
             done_path = f'{logs_dir}/14_{bc}_{file_name}_done_compute_cutoffs.txt'
-            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc]])
-            cutoffs_bcs.append(bc)
+            if not os.path.exists(done_path):
+                all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc]])
+                cutoffs_bcs.append(bc)
+            else:
+                logger.debug(f'Skipping calculate cutoff as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, cutoffs_bcs):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                             [cmds_params],
-                             logs_dir, f'{bc}_cutoffs',
-                             queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, cutoffs_bcs):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_cutoffs',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_compute_cutoffs.txt')
+    else:
+        logger.info('Skipping calculate cutoffs, all exists')
 
 
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
@@ -311,7 +356,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         upper_faa_paths.append(out_faa_path)
         done_path = f'{logs_dir}/01_{sample_name}_done_uppering.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
-                [in_faa_path, out_faa_path, done_path], verbose, error_path)
+                [in_faa_path, out_faa_path, done_path],
+                verbose, error_path, done_path)
         num_of_expected_results += 1
 
     wait_for_results(script_name, logs_dir, num_of_expected_results,
@@ -330,7 +376,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         sample_name = upper_faa_path.split('/')[-1].split('_upper_')[0]
         done_path = f'{logs_dir}/02_{sample_name}_remove_cysteines.txt'
         fetch_cmd(f'{src_dir}/motif_inference/{script_name}',
-                [upper_faa_path, no_cys_faa_path, done_path], verbose, error_path)
+                [upper_faa_path, no_cys_faa_path, done_path],
+                verbose, error_path, done_path)
         num_of_expected_results += 1
 
     wait_for_results(script_name, logs_dir, num_of_expected_results,
@@ -351,19 +398,25 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         output_prefix = os.path.join(faa_dir, sample_name)
         clstr_paths.append(f'{output_prefix}.clstr')
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
-        all_cmds_params.append([no_cys_faa_path, output_prefix, done_path])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([no_cys_faa_path, output_prefix, done_path])
+        else:
+            logger.debug(f'Skipping clustering as {done_path} exists')
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        sample_name = os.path.split(current_batch[0][1])[-1]
-        assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                            current_batch,
-                            logs_dir, f'{sample_name}_cluster', queue_name, verbose)
-        num_of_expected_results += len(current_batch)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            sample_name = os.path.split(current_batch[0][1])[-1]
+            assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
+                                logs_dir, f'{sample_name}_cluster', queue_name, verbose)
+            num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='clustering.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='clustering.txt')
+    else:
+        logger.info('Skipping clustering, all exists')
 
     # For each sample, split the faa file to the clusters inferred in the previous step
     # this step uses the sequences WITH THE FLANKING CYSTEINE so the msa will use these Cs
@@ -382,22 +435,28 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         unaligned_clusters_folders.append(clusters_sequences_path)
         os.makedirs(clusters_sequences_path, exist_ok=True)
         done_path = f'{logs_dir}/04_{sample_name}_done_extracting_sequences.txt'
-        all_cmds_params.append([upper_faa_path, clstr_path, clusters_sequences_path, done_path,
-                                f'--max_num_of_sequences_to_keep {max_number_of_cluster_members_per_sample}',
-                                f'--file_prefix {sample_name}'])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([upper_faa_path, clstr_path, clusters_sequences_path, done_path,
+                                    f'--max_num_of_sequences_to_keep {max_number_of_cluster_members_per_sample}',
+                                    f'--file_prefix {sample_name}'])
+        else:
+            logger.debug(f'Skipping sequence extraction as {done_path} exists')
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        clusters_sequences_path = current_batch[0][2]
-        sample_name = clusters_sequences_path.split('/')[-2]
-        assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                            current_batch,
-                            logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
-        num_of_expected_results += len(current_batch)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            clusters_sequences_path = current_batch[0][2]
+            sample_name = clusters_sequences_path.split('/')[-2]
+            assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
+                                logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
+            num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='extracting_sequences.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='extracting_sequences.txt')
+    else:
+        logger.info('Skipping sequences extraction, all exist')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap_frequency,
@@ -417,17 +476,23 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         os.makedirs(bc_folder, exist_ok=True)
         output_path = os.path.join(bc_folder, 'merged_meme_sorted.txt')
         biological_condition_memes.append(output_path)
-        all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
+        else:
+            logger.debug(f'Skipping merge as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                            [cmds_params],
-                            logs_dir, f'{bc}_merge_meme',
-                            queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_merge_meme',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='_done_meme_merge.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_meme_merge.txt')
+    else:
+        logger.info('Skipping merge, all exist')
 
 
     # Unite motifs based on their correlation using UnitePSSMs.cpp
@@ -442,19 +507,25 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         relevant_samples = ','.join([sample for sample in samplename2biologicalcondition if samplename2biologicalcondition[sample] == bc])
         output_path = os.path.split(merged_meme_path)[0]
         done_path = f'{logs_dir}/09_{bc}_done_detecting_similar_pssms.txt'
-        all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples,
-                                max_number_of_cluster_members_per_bc,
-                                output_path, done_path])
+        if not os.path.exists(done_path):
+            all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples,
+                                    max_number_of_cluster_members_per_bc,
+                                    output_path, done_path])
+        else:
+            logger.debug(f'Skipping unite as {done_path} exists')
 
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-                            [cmds_params],
-                            logs_dir, f'{bc}_detect_similar_pssms',
-                            queue_name, verbose)
-        num_of_expected_results += 1   # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_detect_similar_pssms',
+                                queue_name, verbose)
+            num_of_expected_results += 1   # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_detecting_similar_pssms.txt')
+    else:
+        logger.info('Skipping unite, all exist')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap_frequency,

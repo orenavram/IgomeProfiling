@@ -65,27 +65,33 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                 output_path = os.path.join(classification_output_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
-                cmd = [meme_file_path, cutoffs_file_path, faa_file_path, str(number_of_random_pssms), output_path, done_path]
-                if use_tfidf: cmd.append('--tfidf')
-                all_cmds_params.append(cmd)
+                if not os.path.exists(done_path):
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, str(number_of_random_pssms), output_path, done_path]
+                    if use_tfidf: cmd.append('--tfidf')
+                    all_cmds_params.append(cmd)
+                else:
+                    logger.debug(f'skipping scan as {done_path} found')
 
-    for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
-        current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-        done_path_index = -2 if use_tfidf else -1
-        done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
-        name_tokens = done_file_name.split('_peptides_vs_')
-        logger.info(name_tokens)
-        sample_name = name_tokens[0]
-        bc = name_tokens[1].split('_motifs_')[0]
-        split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
-        assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-        assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
-                                   logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
-        num_of_expected_results += len(current_batch)
+    if len(all_cmds_params) > 0:
+        for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
+            current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
+            done_path_index = -2 if use_tfidf else -1
+            done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
+            name_tokens = done_file_name.split('_peptides_vs_')
+            logger.info(name_tokens)
+            sample_name = name_tokens[0]
+            bc = name_tokens[1].split('_motifs_')[0]
+            split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
+            assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
+            assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
+                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
+            num_of_expected_results += len(current_batch)
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                     error_file_path=error_path, suffix='_done_scan.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_scan.txt')
+    else:
+        logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
 
 
     # aggregate scanning scores (hits and values)
@@ -97,32 +103,38 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     for bc in biological_conditions:
         scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-        if use_tfidf:
-            cmds = ['--bc', bc,
-                    '--sam2bc', samplename2biologicalcondition_path,
-                    '--scan', scanning_dir_path,
-                    '--output', classification_output_path,
-                    '--method', tfidf_method,
-                    '--factor', str(tfidf_factor),
-                    '--done', done_path]
-            all_cmds_params.append(cmds)
+        if not os.path.exists(done_path):
+            if use_tfidf:
+                cmds = ['--bc', bc,
+                        '--sam2bc', samplename2biologicalcondition_path,
+                        '--scan', scanning_dir_path,
+                        '--output', classification_output_path,
+                        '--method', tfidf_method,
+                        '--factor', str(tfidf_factor),
+                        '--done', done_path]
+                all_cmds_params.append(cmds)
+            else:
+                meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
+                aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
+                aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+                all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
+                                        aggregated_hits_path, samplename2biologicalcondition_path, done_path])
         else:
-            meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
-            aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
-            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-            all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
-                                    aggregated_hits_path, samplename2biologicalcondition_path, done_path])
+            logger.debug(f'skipping score aggregation as {done_path} found')
 
-    executable = None if use_tfidf else 'python'
-    script_path = f'{src_dir}/tfidf/tfidf' if use_tfidf else f'{src_dir}/model_fitting/{script_name}'
-    for cmds_params, bc in zip(all_cmds_params, biological_conditions):
-        cmd = submit_pipeline_step(script_path,[cmds_params],
-                            logs_dir, f'{bc}_aggregate_scores',
-                            queue_name, verbose, executable=executable)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        executable = None if use_tfidf else 'python'
+        script_path = f'{src_dir}/tfidf/tfidf' if use_tfidf else f'{src_dir}/model_fitting/{script_name}'
+        for cmds_params, bc in zip(all_cmds_params, biological_conditions):
+            cmd = submit_pipeline_step(script_path,[cmds_params],
+                                logs_dir, f'{bc}_aggregate_scores',
+                                queue_name, verbose, executable=executable)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='_done_aggregate_scores.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_aggregate_scores.txt')
+    else:
+        logger.info(f'skipping aggregating scores, all scores found')
 
 
     # fitting a random forest model (hits and values)
@@ -143,19 +155,29 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             value_cmd.append('--tfidf')
             hits_cmd.append('--tfidf')
 
-        all_cmds_params.append(value_cmd)
-        all_cmds_params.append(hits_cmd)
+        if not os.path.exists(pvalues_done_path):
+            all_cmds_params.append(value_cmd)
+        else:
+            logger.debug(f'Skipping fitting as {pvalues_done_path} found')
+        
+        if not os.path.exists(hits_done_path):
+            all_cmds_params.append(hits_cmd)
+        else:
+            logger.debug(f'Skipping fitting as {hits_done_path} found')
 
-    doubled_bc = repeat_items(biological_conditions)
-    for cmds_params, bc in zip(all_cmds_params, doubled_bc):
-        cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                            [cmds_params],
-                            logs_dir, f'{bc}_model',
-                            queue_name, verbose)
-        num_of_expected_results += 1  # a single job for each biological condition
+    if len(all_cmds_params) > 0:
+        doubled_bc = repeat_items(biological_conditions)
+        for cmds_params, bc in zip(all_cmds_params, doubled_bc):
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                [cmds_params],
+                                logs_dir, f'{bc}_model',
+                                queue_name, verbose)
+            num_of_expected_results += 1  # a single job for each biological condition
 
-    wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                    error_file_path=error_path, suffix='_done_fitting.txt')
+        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_fitting.txt')
+    else:
+        logger.info(f'Skipping fitting, all found')
 
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path

@@ -247,7 +247,11 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
 
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
-                         required_modules_as_list=None, num_of_cpus=1, executable='python'):
+                         required_modules_as_list=None, num_of_cpus=1, executable='python', done_path = None):
+    if done_path and os.path.exists(done_path):
+        process, example_cmd = create_command(**locals())
+        logger.info(f'Skipping "{example_cmd}" as "{done_path}" exists')
+        return example_cmd
     if global_params.run_using_celery:
         return submit_pipeline_step_to_celery(**locals())
     if global_params.is_run_on_cluster:
@@ -256,8 +260,11 @@ def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_nam
     return run_step_locally(**locals())
 
 
-def fetch_cmd(script_name, parameters, verbose, error_path):
+def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
     cmd = f'python3 {script_name} ' + ' '.join(parameters + (['-v'] if verbose else []))
+    if done_path and os.path.exists(done_path):
+        logger.info(f'Skipping "{cmd}" as "{done_path}" exists')
+        return
     logger.info(f'Executing:\n{cmd}')
     # try:
     run(cmd, shell=True)
