@@ -8,7 +8,7 @@
 #include "memeSample.hpp"
 
 using namespace std;
-void writeResults(Scans& scans, string& outputPath, string& bc) {
+void writeResults(MemesList& memes, Scans& scans, string& outputPath, string& bc) {
     ofstream hitsFile(outputPath + bc + "_hits.csv");
     ofstream scoreFile(outputPath + bc + "_values.csv");
     auto header = "sample_name,label";
@@ -21,15 +21,17 @@ void writeResults(Scans& scans, string& outputPath, string& bc) {
     auto hitsValues = new double[memesCount * samplesCount];
     auto scoreValues = new double[memesCount * samplesCount];
     
-    auto memesIter = scans.getMemes().begin();
-    auto memesEnd = scans.getMemes().end();
+    auto memesIter = memes.begin();
+    auto memesEnd = memes.end();
     int memeIndex = 0;
     while (memesIter != memesEnd) {
-        hitsFile << "," << memesIter->first;
-        scoreFile << "," << memesIter->first;
+        hitsFile << "," << *memesIter;
+        scoreFile << "," << *memesIter;
 
-        auto samplesIter = memesIter->second->getSamples().begin();
-        auto samplesEnd = memesIter->second->getSamples().end();
+        auto meme = scans.getMemes().find(*memesIter);
+
+        auto samplesIter = meme->second->getSamples().begin();
+        auto samplesEnd = meme->second->getSamples().end();
         int sampleIndex = 0;
         while (samplesIter != samplesEnd) {
             auto hits = samplesIter->second->getHitsCount();
@@ -52,8 +54,8 @@ void writeResults(Scans& scans, string& outputPath, string& bc) {
         hitsFile << samplesIter->first << "," << samplesIter->second;
         scoreFile << samplesIter->first << "," << samplesIter->second;
         
-        auto memesIter = scans.getMemes().begin();
-        auto memesEnd = scans.getMemes().end();
+        auto memesIter = memes.begin();
+        auto memesEnd = memes.end();
         int memeIndex = 0;
         while (memesIter != memesEnd) {
             hitsFile << "," << hitsValues[sampleIndex * memesCount + memeIndex];

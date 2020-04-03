@@ -12,14 +12,16 @@
 #include "scans.hpp"
 #include "utils.hpp"
 
+MemesList loadMemes(string memesPath);
 Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMultiClass);
 void calculateScores(Scans& scans, TFMethod eMethod, float augmentFactor);
-void writeResults(Scans& scans, string& outputPath, string& bc);
+void writeResults(MemesList& memes, Scans& scans, string& outputPath, string& bc);
 
 int main(int argc, char *argv[])
 {
     cxxopts::Options options("td-idf", "Calculate td-idf based on hits");
     options.add_options()
+        ("memes", "Ordered memes file", cxxopts::value<string>())
         ("bc", "Biological condition", cxxopts::value<string>())
         ("sam2bc", "Samples to biological condition mapping", cxxopts::value<string>())
         ("scan", "Path to hits results directory", cxxopts::value<string>())
@@ -32,6 +34,7 @@ int main(int argc, char *argv[])
 
     auto result = options.parse(argc, argv);
 
+    string memesPath = result["memes"].as<string>();
     string bc = result["bc"].as<string>();
     string samples2bcPath = result["sam2bc"].as<string>();
     string scanPath = result["scan"].as<string>();
@@ -59,9 +62,10 @@ int main(int argc, char *argv[])
     outputPath += bc + "/";
     mkdir(outputPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
+    MemesList memes = loadMemes(memesPath);
     Scans scans = loadScans(scanPath, samples2bcPath, bc, isMultiClass);
     calculateScores(scans, eMethod, augmentFactor);
-    writeResults(scans, outputPath, bc);
+    writeResults(memes, scans, outputPath, bc);
 
     auto end = chrono::steady_clock::now();
 

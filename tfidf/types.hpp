@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <map>
+#include <vector>
 using namespace std;
 
 // types
@@ -19,3 +20,4 @@ typedef map<string, string> SamplesLabel;
 typedef map<string, MemeSample*> MemeSampleMap;
 typedef map<string, Meme*> MemesMap;
 typedef map<string, string> SamplesBC;
+typedef vector<string> MemesList;

@@ -101,11 +101,13 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     num_of_expected_results = 0
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
+        meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
         scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
         if not os.path.exists(done_path):
             if use_tfidf:
-                cmds = ['--bc', bc,
+                cmds = ['--memes', meme_path,
+                        '--bc', bc,
                         '--sam2bc', samplename2biologicalcondition_path,
                         '--scan', scanning_dir_path,
                         '--output', classification_output_path,
@@ -114,7 +116,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                         '--done', done_path]
                 all_cmds_params.append(cmds)
             else:
-                meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
                 aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
                 aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
                 all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
