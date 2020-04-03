@@ -24,21 +24,27 @@ def get_consensus_sequences_from_meme(meme_path):
     return result
 
 
-def get_results(path):
-    pvalues = []
-    hits = []
+def get_results(consensusesValues, sample_name, path):
+    # pvalues = []
+    # hits = []
     with open(path) as f:
         for line in f:
             if line.startswith('##'):
                 # "## PSSM_name	p_Value	True_Hits: num_of_hits"
                 continue
             # "CLKGASFLAC_17b_clusterRank_0_uniqueMembers_339_clusterSize_2659173.71.faa\t0.01\tTrue_Hits: 118"
+            motif = line.split('_')[0]
             line_tokens = line.split('\t')
-            # consensus.append(line_tokens[0].split('_')[0])
-            pvalues.append(line_tokens[1])
-            hits.append(line_tokens[2].split()[-1])
+            pvalue = line_tokens[1]
+            hits = line_tokens[2].split()[-1]
 
-    return pvalues, hits
+            if motif not in consensusesValues:
+                motifSamples = {}
+                consensusesValues[motif] = motifSamples
+            else:
+                motifSamples = consensusesValues[motif]
+
+            motifSamples[sample_name] = { 'hits': hits, 'pvalue': pvalue }
 
 
 def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplename2biologicalcondition_path,
@@ -48,32 +54,32 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
                                                 'Barcode {} belongs to more than one sample_name!!')
 
     all_consensuses = get_consensus_sequences_from_meme(meme_path)
+    samples = set()
+    # consensuses => samples => hits, pvals
+    consensusesValues = {}
+    for file_name in sorted(os.listdir(scanning_results_dir_path)):
+        sample_name = file_name.split('_peptides')[0]
+        samples.add(sample_name)
+        get_results(consensusesValues, sample_name, os.path.join(scanning_results_dir_path, file_name))
+
     pvalues_f = open(aggregated_pvalues_path, 'w')
     hits_f = open(aggregated_hits_path, 'w')
 
-    #header
-    pvalues_result = hits_result = f'sample_name,label,{",".join(all_consensuses)}'
-    for file_name in sorted(os.listdir(scanning_results_dir_path)):
-        # if file_name.endswith('100.txt'):
-        #     raise TypeError  # why?
+    # header
+    header = f'sample_name,label,{",".join(all_consensuses).rstrip(",")}\n'
+    pvalues_f.write(header)
+    hits_f.write(header)
 
-        if file_name.endswith('_00.txt'):
-            # next sample is starting
-            pvalues_f.write(f'{pvalues_result.rstrip(",")}\n')
-            hits_f.write(f'{hits_result.rstrip(",")}\n')
-            sample_name = file_name.split('_peptides')[0]
-            if bc in sample_name:
-                label = samplename2biologicalcondition[sample_name]
-            else:
-                label = 'other'
-            pvalues_result = hits_result = f'{sample_name},{label},'
-
-        pvalues, hits = get_results(os.path.join(scanning_results_dir_path, file_name))
-        pvalues_result += ','.join(pvalues) + ','
-        hits_result += ','.join(hits) + ','
-
-    pvalues_f.write(f'{pvalues_result.rstrip(",")}\n')
-    hits_f.write(f'{hits_result.rstrip(",")}\n')
+    for sample in samples:
+        label = bc if samplename2biologicalcondition[sample] == bc else 'other'
+        pvalues_f.write(f'{sample},{label}')
+        hits_f.write(f'{sample},{label}')
+        for consensus in all_consensuses:
+            values = consensusesValues[consensus][sample]
+            pvalues_f.write(f',{values["pvalue"]}')
+            hits_f.write(f',{values["hits"]}')
+        pvalues_f.write('\n')
+        hits_f.write('\n')
 
     pvalues_f.close()
     hits_f.close()
