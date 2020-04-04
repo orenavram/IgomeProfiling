@@ -14,7 +14,7 @@
 
 MemesList loadMemes(string memesPath);
 Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMultiClass);
-void calculateScores(Scans& scans, TFMethod eMethod, float augmentFactor);
+void calculateScores(Scans& scans, TFMethod eMethod, float augmentFactor, bool isUseAllSequences);
 void writeResults(MemesList& memes, Scans& scans, string& outputPath, string& bc);
 
 int main(int argc, char *argv[])
@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
         ("method", "TF method (boolean, terms, log, augmented), default is boolean", cxxopts::value<string>()->default_value("boolean"))
         ("factor", "Augment TF method factor (0-1), default is 0.5", cxxopts::value<float>()->default_value("0.5"))
         ("multiclass", "If labeling is multi-class or bc/other, default is false", cxxopts::value<bool>()->default_value("false"))
+        ("allseqs", "If use all sequences to score or just BC sequences, default is false", cxxopts::value<bool>()->default_value("false"))
         ("v,verbose", "Verbose output", cxxopts::value<string>()->default_value("false"));
 
     auto result = options.parse(argc, argv);
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
     string donePath = result["done"].as<string>();
     string method = result["method"].as<string>();
     bool isMultiClass = result["multiclass"].as<bool>();
+    bool isUseAllSequences = result["allseqs"].as<bool>();
     float augmentFactor = result["factor"].as<float>();
 
     auto begin = chrono::steady_clock::now();
@@ -64,8 +66,11 @@ int main(int argc, char *argv[])
 
     MemesList memes = loadMemes(memesPath);
     Scans scans = loadScans(scanPath, samples2bcPath, bc, isMultiClass);
-    calculateScores(scans, eMethod, augmentFactor);
+    calculateScores(scans, eMethod, augmentFactor, isUseAllSequences);
     writeResults(memes, scans, outputPath, bc);
+
+    cout << "total BC seq: " << scans.getBCSequences().size() << endl;
+    cout << "total seq: " << scans.getSequencesCount().size() << endl;
 
     auto end = chrono::steady_clock::now();
 

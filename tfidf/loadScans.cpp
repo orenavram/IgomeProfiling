@@ -31,9 +31,11 @@ void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc
 
     string other = "other";
     string sample = matches[1];
+    auto isSampleOfBC = bc.compare(samplesToBC[sample]) == 0;
+
     if (isMulticlass) {
         samplesLabel->insert(pair<string, string>(sample, samplesToBC[sample]));
-    } else if (bc.compare(samplesToBC[sample]) == 0) {
+    } else if (isSampleOfBC) {
         samplesLabel->insert(pair<string, string>(sample, bc));
     } else {
         samplesLabel->insert(pair<string, string>(matches[1], other));
@@ -72,6 +74,10 @@ void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc
                 sequencesCount->insert(pair<string, int>(sequence, 1));
             } else {
                 sequencesCountIter->second += 1;
+            }
+
+            if (isSampleOfBC) {
+                scans.getBCSequences().insert(sequence);
             }
         }
     }

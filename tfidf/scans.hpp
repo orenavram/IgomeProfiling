@@ -17,8 +17,13 @@ public:
     SequencesCount& getSequencesCount() {
         return this->_sequencesMemeCount;
     }
+
+    SequencesSet& getBCSequences() {
+        return this->_bcSequences;
+    }
 private:
     MemesMap _memes;
     SamplesLabel _samplesLabel;
     SequencesCount _sequencesMemeCount;
+    SequencesSet _bcSequences;
 };

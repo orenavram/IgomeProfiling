@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 using namespace std;
 
 // types
@@ -21,3 +22,4 @@ typedef map<string, MemeSample*> MemeSampleMap;
 typedef map<string, Meme*> MemesMap;
 typedef map<string, string> SamplesBC;
 typedef vector<string> MemesList;
+typedef set<string> SequencesSet;
