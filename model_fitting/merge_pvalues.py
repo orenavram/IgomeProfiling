@@ -70,7 +70,7 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
     pvalues_f.write(header)
     hits_f.write(header)
 
-    for sample in samples:
+    for sample in sorted(samples):
         label = bc if samplename2biologicalcondition[sample] == bc else 'other'
         pvalues_f.write(f'{sample},{label}')
         hits_f.write(f'{sample},{label}')
