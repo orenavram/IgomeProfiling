@@ -7,6 +7,16 @@ public:
 
     }
 
+    Meme(const Meme& other) :
+        _motif(other._motif),
+        _alength(other._alength),
+        _nsites(other._nsites),
+        _hitCount(other._hitCount),
+        _rows(other._rows),
+        _cutoffs(other._cutoffs),
+        _hitSequences(other._hitSequences) {
+    }
+
     string getMotif() {
         return this->_motif;
     }

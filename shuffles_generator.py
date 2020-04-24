@@ -107,7 +107,7 @@ def play(unset, positions, cutoff):
     return positions, score
 
 
-def max_shuffle(length, iterations=1, file=None):
+def max_shuffle(length, iterations=1, file=None, output_hpp=False):
     unset, positions = create_board(length)
     # print(calculate_score(positions))
     seed(RANDOM_SEED)
@@ -115,8 +115,14 @@ def max_shuffle(length, iterations=1, file=None):
     
     if file:
         def writeLine(*args):
-            file.write(' '.join([str(arg) for arg in args]))
-            file.write('\n')
+            if output_hpp:
+                if len(args) == 1:
+                    file.write(f'{args[0]}\n')    
+                else:
+                    file.write(f'\t\t\t{{{",".join([str(x) for x in args[0]])}}},\n')
+            else:
+                file.write(' '.join([str(arg) for arg in args]))
+                file.write('\n')
         print_func = writeLine
     else:
         print_func = print
@@ -125,16 +131,34 @@ def max_shuffle(length, iterations=1, file=None):
     for _ in range(iterations):
         iteration_positions, iteration_score = play(list(unset), list(positions), cutoff)
         results[tuple(iteration_positions)] = iteration_score
-    print_func(f'length={length}, max_score={max_score}, cutoff={cutoff}')
+    if output_hpp:
+        print_func(f'\t{{\t{length}, {{')
+    else:
+        print_func(f'length={length}, max_score={max_score}, cutoff={cutoff}')
     for result in results:
         print_func(result, results[result])
+    if output_hpp:
+        print_func(f'\t\t}}\n\t}},')
 
 
 if __name__ == '__main__':
     min_length = 1
-    max_length = 10
+    max_length = 20
     iterations = 100
+    output_hpp = True
+    output_ext = 'hpp' if output_hpp else 'txt'
     
-    with open('controlled_shuffles.txt', 'w') as f:
+    with open(f'controlled_shuffles.{output_ext}', 'w') as f:
+        if output_hpp:
+            f.write('#include <map>\n')
+            f.write('#include <vector>\n')
+            f.write('using namespace std;\n')
+            f.write('\n')
+            f.write('typedef vector<int> ShufflePattern;\n')
+            f.write('typedef vector<ShufflePattern> ShufflePatterns;\n')
+            f.write('typedef map<int, ShufflePatterns> ShufflesMap;\n')
+            f.write('ShufflesMap _shuffle_sequences = {\n')
         for length in range(min_length, max_length + 1):
-            max_shuffle(length, iterations, f)
+            max_shuffle(length, iterations, f, output_hpp)
+        if output_hpp:
+            f.write('};\n')
