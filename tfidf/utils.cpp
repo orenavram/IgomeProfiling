@@ -39,7 +39,7 @@ SamplesBC loadSamplesToBC(string samples2bcPath) {
 
     string line;
     smatch matches;
-    regex pattern("^([^#\t]+?)\\t(.+?)$");
+    regex pattern("^([^#\t]+?)\\t(.+?)\\r?$");
     while (getline(file, line)) {
         if (regex_search(line, matches, pattern)) {
             // cout << matches[1] << ": " << matches[2] << endl;
