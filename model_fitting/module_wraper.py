@@ -29,7 +29,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     os.makedirs(logs_dir, exist_ok=True)
 
     if os.path.exists(fitting_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({fitting_done_path} already exists)')
+        logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({fitting_done_path} already exists)')
         return
 
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
