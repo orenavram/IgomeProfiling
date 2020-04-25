@@ -17,18 +17,22 @@ from time import time
 
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
-                              output_path, done_path, use_tfidf, argv='no_argv',
+                              shuffles, output_path, done_path, rank_method, argv='no_argv',
                               pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
         # TODO: any modules to load?
-        if use_tfidf:
-            cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path}'
-            logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')
-        else:
+        if rank_method == 'pval':
             cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {cutoffs_path} -seq {faa_path} ' \
                 f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
+        elif rank_method == 'tfidf':
+            cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
+            logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')
+        else:  # shuffles
+            cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles}'
+            logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
+            
         subprocess.run(cmd, shell=True)
     else:
         logger.info(f'{datetime.datetime.now()}: skipping scanning calculation as it is already exist at:\n{output_path}')
@@ -50,10 +54,11 @@ if __name__ == '__main__':
     parser.add_argument('meme_file_path', help='A path to a meme file with motifs against which a set of random peptides will be scanned')
     parser.add_argument('cutoffs_file_path', help='A path to a cutoffs file (peptide above cutoff? -> peptide is part of the motif')
     parser.add_argument('faa_file_path', help='A path to a faa file with peptides to scan against the pssms in the meme file')
+    parser.add_argument('rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('number_of_random_pssms', type=int, help='Number of pssm permutations')
     parser.add_argument('output_path', help='A path to which the Pvalues will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--tfidf', action='store_true', help='Use TD-IDF hits instead of p-Val')
+    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -65,8 +70,8 @@ if __name__ == '__main__':
 
     start = time()
     calculate_pssm_thresholds(args.meme_file_path, args.cutoffs_file_path, args.faa_file_path,
-                              args.number_of_random_pssms, args.output_path, args.done_file_path, 
-                              args.tfidf, argv=sys.argv)
+                              args.number_of_random_pssms, args.shuffles, args.output_path, 
+                              args.done_file_path, args.rank_method, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')
 

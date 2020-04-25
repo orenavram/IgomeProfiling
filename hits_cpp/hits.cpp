@@ -142,7 +142,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     return hits;
 }
 
-MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool isOutputSequences, bool verbose) {
+MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose) {
     MemeRatingMap ratings;
 
     auto memeIter = shuffles.begin();
@@ -172,7 +172,7 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool isOutputS
     return ratings;
 }
 
-void writeResults(Memes& memes, MemeRatingMap& ratings, string& outputPath, bool verbose) {
+void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -183,6 +183,7 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, string& outputPath, bool
         file << "HITS " << memesIter->second.getHitCount() << endl;
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
+            file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
             file << "RANK " << ratingIter->second << endl;
         }
         auto sequencesIter = memesIter->second.getHitSequences().begin();
@@ -226,8 +227,11 @@ int main(int argc, char *argv[])
     SequencesMap sequences = loadSequences(sequencesPath, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
     getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
-    auto memesRating = getRatings(memes, memesShuffles, isOutputSequences, isVerbose);
-    writeResults(memes, memesRating, outputPath, isVerbose);
+    MemeRatingMap memesRating;
+    if (shuffles) {
+        memesRating = getRatings(memes, memesShuffles, isVerbose);
+    }
+    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

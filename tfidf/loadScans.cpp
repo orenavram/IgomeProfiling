@@ -12,7 +12,8 @@
 #include "utils.hpp"
 
 using namespace std;
-void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc, bool isMulticlass) {
+void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc, 
+    bool isMulticlass, bool readRankAsScore) {
     ifstream file(scanPath);
 
     auto memes = &scans.getMemes();
@@ -60,6 +61,13 @@ void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc
             int hits = stoi(matches[2]);
             memeSample = new MemeSample(hits);
             // cout << "motif " << motif << ", sample hits: " << sample << " = " << hits << endl;
+            if (readRankAsScore) {
+                getline(file, line); // shuffles
+                getline(file, line); // rank
+                regex_search(line, matches, hitsPattern);
+                auto rank = stod(matches[2]);
+                memeSample->setScore(rank);
+            }
             meme->addSample(sample, memeSample);
         }
         else if (regex_search(line, matches, hitsPattern)) // sequences
@@ -83,7 +91,8 @@ void loadScan(Scans& scans, string& scanPath, SamplesBC& samplesToBC, string& bc
     }
 }
 
-Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMultiClass) {
+Scans loadScans(string scanPath, string samples2bcPath, string& bc, 
+    bool isMultiClass, bool readRankAsScore) {
     Scans scans;
     auto samplesToBC = loadSamplesToBC(samples2bcPath);
 
@@ -95,7 +104,7 @@ Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMulti
             string entryName(entry->d_name);
             string entryPath = scanPath + entryName;
             // cout << entryPath << endl;
-            loadScan(scans, entryPath, samplesToBC, bc, isMultiClass);
+            loadScan(scans, entryPath, samplesToBC, bc, isMultiClass, readRankAsScore);
         }
     }
     closedir(dp);

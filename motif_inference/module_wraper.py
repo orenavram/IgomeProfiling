@@ -44,6 +44,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
                 all_cmds_params.append([unaligned_cluster_path, aligned_cluster_path, done_path])
             else:
                 logger.debug(f'Skipping sequence alignment as {done_path} exists')
+                num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -91,6 +92,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
                                         '--maximal_gap_frequency_allowed_per_column', gap_frequency])
             else:
                 logger.debug(f'Skipping cleaning as {done_path} exists')
+                num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -128,6 +130,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
             all_cmds_params.append([cleaned_msas_path, meme_path, done_path])
         else:
             logger.debug(f'Skipping meme creation as {done_path} exists')
+            num_of_expected_results += 1
     
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -190,6 +193,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
             all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0])
         else:
             logger.debug(f'Skipping cutoff as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -220,6 +224,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
             all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
         else:
             logger.debug(f'Skipping split as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -261,6 +266,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
             all_cmds_params.append([meme_path, cutoff_path, done_path, '--motifs_per_file', meme_split_size])
         else:
             logger.debug(f'Skipping split as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -298,6 +304,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
                 cutoffs_bcs.append(bc)
             else:
                 logger.debug(f'Skipping calculate cutoff as {done_path} exists')
+                num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, cutoffs_bcs):
@@ -402,6 +409,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
             all_cmds_params.append([no_cys_faa_path, output_prefix, done_path])
         else:
             logger.debug(f'Skipping clustering as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -441,6 +449,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                                     f'--file_prefix {sample_name}'])
         else:
             logger.debug(f'Skipping sequence extraction as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -480,6 +489,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
             all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
         else:
             logger.debug(f'Skipping merge as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -513,6 +523,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                                     output_path, done_path])
         else:
             logger.debug(f'Skipping unite as {done_path} exists')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):

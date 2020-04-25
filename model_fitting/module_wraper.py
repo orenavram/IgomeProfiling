@@ -22,9 +22,9 @@ def repeat_items(list):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, use_tfidf, tfidf_method, tfidf_factor,
-                     queue_name, verbose, error_path, argv):
-
+                     fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
+                     shuffles, queue_name, verbose, error_path, argv):
+    is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -66,16 +66,19 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, str(number_of_random_pssms), output_path, done_path]
-                    if use_tfidf: cmd.append('--tfidf')
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms)]
+                    if rank_method == 'shuffles':
+                        cmd += ['--shuffles', shuffles]
+                    cmd += [output_path, done_path]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
+                    num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            done_path_index = -2 if use_tfidf else -1
+            done_path_index = -1 if is_pval else -2
             done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
             name_tokens = done_file_name.split('_peptides_vs_')
             logger.info(name_tokens)
@@ -105,7 +108,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
         if not os.path.exists(done_path):
-            if use_tfidf:
+            if not is_pval:
                 cmds = ['--memes', meme_path,
                         '--bc', bc,
                         '--sam2bc', samplename2biologicalcondition_path,
@@ -114,6 +117,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                         '--method', tfidf_method,
                         '--factor', str(tfidf_factor),
                         '--done', done_path]
+                if rank_method == 'shuffles':
+                    cmds.append('--rank')
                 all_cmds_params.append(cmds)
             else:
                 aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
@@ -122,10 +127,11 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                                         aggregated_hits_path, samplename2biologicalcondition_path, done_path])
         else:
             logger.debug(f'skipping score aggregation as {done_path} found')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
-        executable = None if use_tfidf else 'python'
-        script_path = f'{src_dir}/tfidf/tfidf' if use_tfidf else f'{src_dir}/model_fitting/{script_name}'
+        executable = 'python' if is_pval else None
+        script_path = f'{src_dir}/model_fitting/{script_name}' if is_pval else f'{src_dir}/tfidf/tfidf'
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
             cmd = submit_pipeline_step(script_path,[cmds_params],
                                 logs_dir, f'{bc}_aggregate_scores',
@@ -152,7 +158,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         
         value_cmd = [aggregated_values_path, pvalues_done_path]
         hits_cmd = [aggregated_hits_path, hits_done_path]
-        if use_tfidf:
+        if rank_method == 'tfidf' or rank_method == 'shuffles':
             value_cmd.append('--tfidf')
             hits_cmd.append('--tfidf')
 
@@ -160,11 +166,13 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             all_cmds_params.append(value_cmd)
         else:
             logger.debug(f'Skipping fitting as {pvalues_done_path} found')
+            num_of_expected_results += 1
         
         if not os.path.exists(hits_done_path):
             all_cmds_params.append(hits_cmd)
         else:
             logger.debug(f'Skipping fitting as {hits_done_path} found')
+            num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
         doubled_bc = repeat_items(biological_conditions)
@@ -209,9 +217,10 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
-    parser.add_argument('--tfidf', action='store_true', help='Use TF-IDF instead of p-Values')
-    parser.add_argument('--tfidf-method', dest="tfidf_method", choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
-    parser.add_argument('--tfidf-factor', dest="tfidf_factor", type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
+    parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
+    parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
+    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -228,5 +237,5 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.tfidf, args.tfidf_method, args.tfidf_factor, args.queue, 
-                     True if args.verbose else False, error_path, sys.argv)
+                     args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
+                     args.shuffles, args.queue, True if args.verbose else False, error_path, sys.argv)

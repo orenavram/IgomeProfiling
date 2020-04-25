@@ -13,7 +13,7 @@
 #include "utils.hpp"
 
 MemesList loadMemes(string memesPath);
-Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMultiClass);
+Scans loadScans(string scanPath, string samples2bcPath, string& bc, bool isMultiClass, bool readRankAsScore);
 void calculateScores(Scans& scans, TFMethod eMethod, float augmentFactor, bool isUseAllSequences);
 void writeResults(MemesList& memes, Scans& scans, string& outputPath, string& bc);
 
@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
         ("scan", "Path to hits results directory", cxxopts::value<string>())
         ("output", "Path to results (CSVs) directory", cxxopts::value<string>())
         ("done", "Path to done file", cxxopts::value<string>())
+        ("rank", "Read and use rank in scan instead of calculating TF-IDF", cxxopts::value<bool>()->default_value("false"))
         ("method", "TF method (boolean, terms, log, augmented), default is boolean", cxxopts::value<string>()->default_value("boolean"))
         ("factor", "Augment TF method factor (0-1), default is 0.5", cxxopts::value<float>()->default_value("0.5"))
         ("multiclass", "If labeling is multi-class or bc/other, default is false", cxxopts::value<bool>()->default_value("false"))
@@ -35,13 +36,14 @@ int main(int argc, char *argv[])
 
     auto result = options.parse(argc, argv);
 
-    string memesPath = result["memes"].as<string>();
-    string bc = result["bc"].as<string>();
-    string samples2bcPath = result["sam2bc"].as<string>();
-    string scanPath = result["scan"].as<string>();
-    string outputPath = result["output"].as<string>();
-    string donePath = result["done"].as<string>();
-    string method = result["method"].as<string>();
+    auto memesPath = result["memes"].as<string>();
+    auto bc = result["bc"].as<string>();
+    auto samples2bcPath = result["sam2bc"].as<string>();
+    auto scanPath = result["scan"].as<string>();
+    auto outputPath = result["output"].as<string>();
+    auto donePath = result["done"].as<string>();
+    auto useRank = result["rank"].as<bool>();
+    auto method = result["method"].as<string>();
     bool isMultiClass = result["multiclass"].as<bool>();
     bool isUseAllSequences = result["allseqs"].as<bool>();
     float augmentFactor = result["factor"].as<float>();
@@ -65,8 +67,10 @@ int main(int argc, char *argv[])
     mkdir(outputPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     MemesList memes = loadMemes(memesPath);
-    Scans scans = loadScans(scanPath, samples2bcPath, bc, isMultiClass);
-    calculateScores(scans, eMethod, augmentFactor, isUseAllSequences);
+    Scans scans = loadScans(scanPath, samples2bcPath, bc, isMultiClass, useRank);
+    if (!useRank) {
+        calculateScores(scans, eMethod, augmentFactor, isUseAllSequences);
+    }
     writeResults(memes, scans, outputPath, bc);
 
     cout << "total BC seq: " << scans.getBCSequences().size() << endl;
@@ -75,6 +79,10 @@ int main(int argc, char *argv[])
     auto end = chrono::steady_clock::now();
 
     ofstream doneFile(donePath);
-    doneFile << "Calculated TF-IDF for " << bc << " biological condition" << endl;
+    if (useRank) {
+        doneFile << "Merged using rank for " << bc << " biological condition" << endl;
+    } else {
+        doneFile << "Calculated TF-IDF for " << bc << " biological condition" << endl;
+    }
     doneFile << "Completed in " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]" << endl;
 }
