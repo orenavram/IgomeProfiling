@@ -1,10 +1,7 @@
-#include <map>
-#include <vector>
-using namespace std;
+#pragma once
 
-typedef vector<int> ShufflePattern;
-typedef vector<ShufflePattern> ShufflePatterns;
-typedef map<int, ShufflePatterns> ShufflesMap;
+#include "types.hpp"
+
 ShufflesMap _shuffle_sequences = {
 	{	1, {
 			{0},

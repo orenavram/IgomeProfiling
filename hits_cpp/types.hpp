@@ -15,3 +15,7 @@ typedef map<char, int> AlphabetMap;
 typedef map<string, double> CutoffsMap;
 typedef vector<vector<double>> MemeRows;
 typedef map<string, int> SequencesCount;
+typedef vector<int> ShufflePattern;
+typedef vector<ShufflePattern> ShufflePatterns;
+typedef map<int, ShufflePatterns> ShufflesMap;
+typedef map<string, vector<Meme>> MemeShufflesMap;
