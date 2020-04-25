@@ -142,14 +142,49 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     return hits;
 }
 
-void writeResults(Memes& memes, string& outputPath, bool verbose) {
+MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool isOutputSequences, bool verbose) {
+    MemeRatingMap ratings;
+
+    auto memeIter = shuffles.begin();
+    auto memeEnd = shuffles.end();
+
+    while (memeIter != memeEnd) {
+        auto hits = memes.getMemes()[memeIter->first].getHitCount();
+        int rank = 0;
+
+        auto shuffleIter = memeIter->second.begin();
+        auto shuffleEnd = memeIter->second.end();
+        while (shuffleIter != shuffleEnd) {
+            if (hits > shuffleIter->getHitCount()) { // TODO should be >= ? 
+                rank++;
+            }
+            shuffleIter++;
+        }
+        auto score = (float)rank / memeIter->second.size();
+        if (verbose) {
+            cout << "Motif " << memeIter->first << ", Total shuffles: " << memeIter->second.size() <<
+                ", Rank: " << rank << ", Score: " << score << endl;
+        }
+        ratings[memeIter->first] = score;
+        memeIter++;
+    }
+
+    return ratings;
+}
+
+void writeResults(Memes& memes, MemeRatingMap& ratings, string& outputPath, bool verbose) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
+    auto ratingEnd = ratings.end();
     ofstream file(outputPath);
 
     while (memesIter != memesEnd) {
         file << "MOTIF " << memesIter->second.getMotif() << endl;
         file << "HITS " << memesIter->second.getHitCount() << endl;
+        auto ratingIter = ratings.find(memesIter->first);
+        if (ratingIter != ratingEnd) {
+            file << "RANK " << ratingIter->second << endl;
+        }
         auto sequencesIter = memesIter->second.getHitSequences().begin();
         auto sequencesEnd = memesIter->second.getHitSequences().end();
         while (sequencesIter != sequencesEnd) {
@@ -191,7 +226,8 @@ int main(int argc, char *argv[])
     SequencesMap sequences = loadSequences(sequencesPath, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
     getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
-    writeResults(memes, outputPath, isVerbose);
+    auto memesRating = getRatings(memes, memesShuffles, isOutputSequences, isVerbose);
+    writeResults(memes, memesRating, outputPath, isVerbose);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;
