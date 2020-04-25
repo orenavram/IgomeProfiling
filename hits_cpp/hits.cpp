@@ -11,13 +11,13 @@
 #include "meme.hpp"
 #include "memes.hpp"
 
-Memes loadMemes(string memePath);
-void loadCutoffs(string cutoffsPath, Memes& memes);
-SequencesMap loadSequences(string faaPath);
+Memes loadMemes(string memePath, int limit, bool verbose);
+void loadCutoffs(string cutoffsPath, Memes& memes, int limit, bool verbose);
+SequencesMap loadSequences(string faaPath, bool verbose);
 
 // TODO support Repeats_
 // TODO move isHit and getHits?
-bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq) {
+bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq, bool verbose) {
     auto iter = meme.getCuttofs().find(seqType);
     if (iter == meme.getCuttofs().end()) {
         return false;
@@ -46,27 +46,34 @@ bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq) {
     return false;
 }
 
-int getHits(Memes& memes, SequencesMap sequences) {
-    cout << "GET HITS" << endl;
+int getHits(Memes& memes, SequencesMap sequences, bool isOutputSequences, bool verbose) {
+    if (verbose) {
+        cout << "GET HITS" << endl;
+    }
     auto alphabet = memes.getAlphabet();
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
 
     int hits = 0;
     int counter = 0;
+    int printInterval = 100000;
+    if (verbose) {
+        printInterval = 10000;
+    }
     while (memesIter != memesEnd) {
         auto sequencesTypesIter = sequences.begin();
         auto sequencesTypesEnd = sequences.end();
+        counter = 0;
         while (sequencesTypesIter != sequencesTypesEnd) {
             auto sequencesIter = sequencesTypesIter->second->begin();
             auto sequencesEnd = sequencesTypesIter->second->end();
             while (sequencesIter != sequencesEnd) {
-                if ((counter % 10000) == 0) {
+                if (counter && (counter % printInterval) == 0) {
                     cout << "seq: " << counter << ", hits: " << hits << endl;
                 }
                 counter++;
-                if (isHit(memesIter->second, alphabet, sequencesTypesIter->first, *sequencesIter)) {
-                    memesIter->second.addHitSequence(*sequencesIter);
+                if (isHit(memesIter->second, alphabet, sequencesTypesIter->first, *sequencesIter, verbose)) {
+                    memesIter->second.addHitSequence(*sequencesIter, isOutputSequences);
                     hits++;
                 }
                 sequencesIter++;
@@ -80,7 +87,7 @@ int getHits(Memes& memes, SequencesMap sequences) {
     return hits;
 }
 
-void writeResults(Memes& memes, string& outputPath) {
+void writeResults(Memes& memes, string& outputPath, bool verbose) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     ofstream file(outputPath);
@@ -106,21 +113,28 @@ int main(int argc, char *argv[])
         ("c,cutoffs", "Path to cutoffs file", cxxopts::value<string>())
         ("s,sequences", "Path to sequences file", cxxopts::value<string>())
         ("o,output", "Path to results file", cxxopts::value<string>())
-        ("v,verbose", "Verbose output", cxxopts::value<string>()->default_value("false"));
+        ("maxMemes", "Limit number of memes to process (0 = all)", cxxopts::value<int>()->default_value("0"))
+        ("outputSequences", "Write matched sequences (not memory efficient)", cxxopts::value<bool>()->default_value("false"))
+        //shuffles
+        //shufflesintersections
+        ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
-    string memesPath = result["memes"].as<string>();
-    string cutoffsPath = result["cutoffs"].as<string>();
-    string sequencesPath = result["sequences"].as<string>();
-    string outputPath = result["output"].as<string>();
+    auto memesPath = result["memes"].as<string>();
+    auto cutoffsPath = result["cutoffs"].as<string>();
+    auto sequencesPath = result["sequences"].as<string>();
+    auto outputPath = result["output"].as<string>();
+    auto isOutputSequences = result["outputSequences"].as<bool>();
+    auto maxMemes = result["maxMemes"].as<int>();
+    auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
 
-    Memes memes = loadMemes(memesPath);
-    loadCutoffs(cutoffsPath, memes);
-    SequencesMap sequences = loadSequences(sequencesPath);
-    getHits(memes, sequences);
-    writeResults(memes, outputPath);
+    Memes memes = loadMemes(memesPath, maxMemes, isVerbose);
+    loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
+    SequencesMap sequences = loadSequences(sequencesPath, isVerbose);
+    getHits(memes, sequences, isOutputSequences, isVerbose);
+    writeResults(memes, outputPath, isVerbose);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

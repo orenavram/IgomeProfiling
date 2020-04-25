@@ -57,12 +57,14 @@ public:
         return this->_hitCount;
     }
 
-    void addHitSequence(string& sequence, int count = 1) {
+    void addHitSequence(string& sequence, bool isStoreSequences = true, int count = 1) {
         this->_hitCount += count;
-        if (this->_hitSequences.find(sequence) == this->_hitSequences.end()) {
-            this->_hitSequences[sequence] = count; 
-        } else {
-            this->_hitSequences[sequence] += count;
+        if (isStoreSequences) {
+            if (this->_hitSequences.find(sequence) == this->_hitSequences.end()) {
+                this->_hitSequences[sequence] = count; 
+            } else {
+                this->_hitSequences[sequence] += count;
+            }
         }
     }
 

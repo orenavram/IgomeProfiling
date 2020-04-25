@@ -9,7 +9,7 @@
 
 using namespace std;
 
-Memes loadMemes(string memePath);
+Memes loadMemes(string memePath, int limit, bool verbose);
 
 class MemeShuffler {
 public:
@@ -75,20 +75,20 @@ MemeShuffler getShuffler(Meme& meme, int maxPatterns) {
     return MemeShuffler(meme, maxPatterns, iter->second);
 }
 
-int main() {
-    // cout << "hello" << endl;
-    // auto pattern = getPattern(7);
-    // cout << (*pattern)[0] << endl;
+// int main() {
+//     // cout << "hello" << endl;
+//     // auto pattern = getPattern(7);
+//     // cout << (*pattern)[0] << endl;
 
-    Memes memes = loadMemes("../output/mock_small_pval/analysis/motif_inference/17b/meme.txt");
-    auto memesIter = memes.getMemes().begin();
-    cout << memesIter->first << endl;
-    auto meme = memesIter->second;
-    cout << "rows: " << meme.getRows().size() << ", a: " << meme.getALength() << endl;
-    auto shuffler = getShuffler(meme, 5);
-    while (shuffler.next()) {
-        auto newMeme = shuffler.generate();
-        cout << newMeme.getMotif() << endl;
-        cout << newMeme.getRows().size() << endl;
-    }
-}
+//     Memes memes = loadMemes("../output/mock_small_pval/analysis/motif_inference/17b/meme.txt", 0, false);
+//     auto memesIter = memes.getMemes().begin();
+//     cout << memesIter->first << endl;
+//     auto meme = memesIter->second;
+//     cout << "rows: " << meme.getRows().size() << ", a: " << meme.getALength() << endl;
+//     auto shuffler = getShuffler(meme, 5);
+//     while (shuffler.next()) {
+//         auto newMeme = shuffler.generate();
+//         cout << newMeme.getMotif() << endl;
+//         cout << newMeme.getRows().size() << endl;
+//     }
+// }

@@ -7,7 +7,7 @@
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath) {
+SequencesMap loadSequences(string faaPath, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;

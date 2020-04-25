@@ -10,7 +10,7 @@
 
 using namespace std;
 
-Memes loadMemes(string memePath) {
+Memes loadMemes(string memePath, int limit = 0, bool verbose = false) {
     ifstream file(memePath);
     string line;
 
@@ -23,6 +23,7 @@ Memes loadMemes(string memePath) {
     smatch matches;
     int alength;
     int rows;
+    int total = 0;
 
     while (getline(file, line)) {
         if (line.rfind("MOTIF", 0) == 0) {
@@ -50,6 +51,10 @@ Memes loadMemes(string memePath) {
             }
             meme.normalize();
             memes[motif] = meme;
+
+            if (++total == limit) {
+                break;
+            }
         } else if (line.rfind("ALPHABET=", 0) == 0) {
             int start = 10;
             int end = line.length() - start;
@@ -58,6 +63,9 @@ Memes loadMemes(string memePath) {
             }
             alphabet['-'] = end;
         }
+    }
+    if (verbose) {
+        cout << "Total memes: " << memes.size() << endl;
     }
     return Memes(alphabet, memes);
 }
