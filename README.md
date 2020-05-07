@@ -75,6 +75,18 @@ Most of the code is in Python but some of the code is in C++ and requires compil
   cd PSSM_score_Peptide
   g++ *.cpp -std=c++11 -O3 -o PSSM_score_Peptide
   ```
+* Hits
+  ```bash
+  # From project directory
+  cd hits_cpp
+  g++ *.cpp -std=c++11 -O3 -o hits
+  ```
+* TF-IDF/Merge
+  ```bash
+  # From project directory
+  cd tfidf
+  g++ *.cpp -std=c++11 -O3 -o tfidf
+  ```
 
 ### Python 
 Python3 should be installed in previous steps.  
