@@ -182,7 +182,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path):
 
 
 
-def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
+def load_table_to_dict(table_path, error_msg='', delimiter ='\t'):
     table = {}
     with open(table_path) as f:
         for line in f:
@@ -267,3 +267,7 @@ def write_running_configuration(argv, args, output_dir):
         f.write(f'{" ".join(argv)}\n\n')
         for k, v in args._get_kwargs():
             f.write(f'{k}: {v}\n')
+
+
+def get_delimited_relevant_samples(samplename2biologicalcondition, bc, delimiter=','):
+    return delimiter.join([sample for sample in samplename2biologicalcondition if samplename2biologicalcondition[sample] == bc])
