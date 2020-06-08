@@ -20,9 +20,9 @@ public:
 		}
 		_alphabetMap['-'] = GAP;
 	}
-	vector<char> _correspondingCharacters;
+	vector<char> _correspondingCharacters; //  these are the letters, one for each amino acid. _correspondingCharacters[0] is 'A'
 	vector<double> _aaFreq;
-	map<char, size_t> _alphabetMap;
+	map<char, size_t> _alphabetMap; // map['A'] = 0, Map['C'] = 1, etc.
 };
 
 #endif

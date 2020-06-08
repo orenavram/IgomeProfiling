@@ -21,7 +21,7 @@ public:
 
 	alphabet _alph;
 	vector<PSSM> _PSSM_array;
-	map<string, int> _PSSM_Name_To_ArrayIndex;
+	map<string, int> _PSSM_Name_To_ArrayIndex; // A map between the motif name and its index.
 };
 
 

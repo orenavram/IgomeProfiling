@@ -45,7 +45,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
-                             logs_dir, f'{exp_name}_reads_filtration',
+                             logs_dir, f'reads_filtration',
                              queue, verbose)
 
         wait_for_results('reads_filtration', logs_dir, num_of_expected_results=1, example_cmd=cmd,
@@ -66,7 +66,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
                              [module_parameters],
-                             logs_dir, f'{exp_name}_motif_inference',
+                             logs_dir, f'motif_inference',
                              queue, verbose)
 
         wait_for_results('motif_inference', logs_dir, num_of_expected_results=1, example_cmd=cmd,
@@ -87,7 +87,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'-q {queue}']
         cmd = submit_pipeline_step(f'{src_dir}/model_fitting/module_wraper.py',
                              [module_parameters],
-                             logs_dir, f'{exp_name}_model_fitting',
+                             logs_dir, f'model_fitting',
                              queue, verbose)
 
         wait_for_results('model_fitting', logs_dir, num_of_expected_results=1, example_cmd=cmd,

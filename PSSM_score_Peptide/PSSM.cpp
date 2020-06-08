@@ -27,12 +27,11 @@ void PSSM::setMatrix(const vector<string> & PSSMLines)
 	//cout<<"done with pssm matrix before pseudocounts"<<endl;
 	//cout<<"num elements in first row for example is "<<PSSMmatrix[0].size()<<endl;
 	//cout<<"first row is:"<<endl;
-	double sum_first_row = 0;
-	for(size_t i = 0; i < PSSMmatrix[0].size(); i++)
-	{
-		sum_first_row = sum_first_row + PSSMmatrix[0][i];
+	//double sum_first_row = 0;
+	//for(size_t i = 0; i < PSSMmatrix[0].size(); i++)	{
+	//	sum_first_row = sum_first_row + PSSMmatrix[0][i];
 		//cout<<PSSMmatrix[0][i]<<endl;
-	}
+	//}
 	//cout<<"sum of elements in first row for example is "<<sum_first_row<<endl;
 	//cout<<"gap element in first row for example is "<<PSSMmatrix[0][PSSMmatrix[0].size()-1]<<endl;
 
@@ -48,21 +47,15 @@ vector<size_t> PSSM::GetConsensusSeq() const {
 	return ConsensusSeq;
 }
 
-void PSSM::Add_PseudoCount(double PseudoCountSize)
-{
-	if (_Nsite==0)
-	{
-		cout<<"ERROR: Cna't employ AddPseudoCount on motif: '"<<PSSM_name<<"' because Nsite is not defiend..."<<endl;
+void PSSM::Add_PseudoCount(double PseudoCountSize) {
+	if (_Nsite==0) {
+		cout<<"ERROR: Can't employ AddPseudoCount on motif: '"<<PSSM_name<<"' because Nsite is not defiend..."<<endl;
 		return;
-	}
-	else
-	{
-		for (size_t MotifPos=0;MotifPos<PSSMmatrix.size();MotifPos++) 
-		{
-			for (size_t i=0;i<PSSMmatrix[MotifPos].size();i++)
-			{
+	} else {
+		for (size_t MotifPos=0;MotifPos<PSSMmatrix.size();MotifPos++) { // going over the length of the motif.
+			for (size_t i=0;i<PSSMmatrix[MotifPos].size();i++) {
 				double currValue=PSSMmatrix[MotifPos][i];
-				double newVal=((currValue*_Nsite)+PseudoCountSize)/(_Nsite+(PseudoCountSize*PSSMmatrix[MotifPos].size()));
+				double newVal=((currValue*_Nsite)+PseudoCountSize)/(_Nsite+(PseudoCountSize*PSSMmatrix[MotifPos].size())); // PSSMmatrix[MotifPos].size() = alphabet size
 //				newVal=log(newVal)/log(2.0);
 				PSSMmatrix[MotifPos][i]=newVal;
 			}
@@ -93,7 +86,7 @@ double PSSM::computeScore(const vector<size_t> &seq, int & best_match_start) con
 	vector<size_t> best_match_string;
 	int PSSM_Size = PSSMmatrix.size();
 	int paddingSize = PSSM_Size;
-	vector<size_t > SeqPadded = PadSeq(seq, paddingSize);
+	vector<size_t > SeqPadded = PadSeq(seq, paddingSize); // now the sequence (SeqPadded) is -----SEQ----- where the number of - is the same size as the PSSM
 	for (size_t posInSeq = 0; posInSeq < SeqPadded.size() - PSSM_Size + 1; ++posInSeq) {
 		//vector<size_t> stringToCheck = SeqPadded.substr(i, PSSM_Size);
 		double score = computeScoreExactr(SeqPadded, posInSeq, posInSeq +PSSM_Size);

@@ -118,8 +118,8 @@ if __name__ == '__main__':
     parser.add_argument('meme_file_path', help='A path to a meme file')
     parser.add_argument('biological_condition', help='A biological condition that its motifs will be unified')
     parser.add_argument('sample_names', help='Sample names to apply over the "motif unification". More than one '
-                                                 'sample name should be separated by commas but no spaces. '
-                                                 'For example: 17b_01,17b_03,17b_05')
+                                             'sample name should be separated by commas. No spaces!'
+                                             'For example: 17b_01,17b_03,17b_05')
     parser.add_argument('max_number_of_members_per_cluster', type=int,
                         help='How many members (at most) should be taken to each cluster')
     parser.add_argument('output_path', help='A path in which a new subfolder with the united motifs will be written to')

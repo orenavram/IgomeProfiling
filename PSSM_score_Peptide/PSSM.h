@@ -47,12 +47,12 @@ public:
 	//int integerOfChar(const char s) const;
 
 	//members:
-	vector< vector<double> > PSSMmatrix;
+	vector< vector<double> > PSSMmatrix; // PSSMmatrix[i][j] is for position i in the PSSM and for character j.
 	string PSSM_name;
 	vector<size_t> _PSSM_consensus_seq;
 	double PSSM_MaxScore;
-	double _Nsite;
-	map<string, vector<double>> dist_of_random_peptides_scores;
+	double _Nsite; // THE NUMBER OF PEPTIDES BASED ON WHICH THE PSSM WAS DERIVED
+	map<string, vector<double>> dist_of_random_peptides_scores; // this array just includes many scores of random peptides for this specific PSSM.
 	map<string, double> seq_type_cutoff;
 	alphabet& _alph;
 

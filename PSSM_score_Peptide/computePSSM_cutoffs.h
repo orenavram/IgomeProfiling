@@ -26,26 +26,10 @@ private:
 
 	vector<PSSM>  & _PSSM_array;
 	size_t _totalNumberOfRandoSeq;
-	//vector<double> const & _aaFreq;
-	//vector<char> const & _correspondingCharacters;
-	map<string, randomPeptides> _randomPeptideDataSet; // map between seqType and object containing the random peptides dataset
+	map<string, randomPeptides> _randomPeptideDataSet; // map between seqType (e.g., "C10C", "10", "C12C", etc.) and object containing the random peptides dataset
 	string const & _CutofsPerPSSM_FileName;
 	const double PercentOfRandomHitsPerPSSM = 0.05;
 	alphabet& _alph;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 };
 

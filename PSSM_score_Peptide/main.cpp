@@ -160,9 +160,11 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 	cout<<endl;
 }
 
-int computeCutoffsOfPssmMain(int argc, char *argv[])
-{
-	size_t TotalNumberOfRandoSeq=100000;
+// The procedure gets a MEME file format of multiple PSSMs.
+// An example of such input file is included in this project directory: "example_Motifs_File.meme_format.txt"
+
+int computeCutoffsOfPssmMain(int argc, char *argv[]) {
+	size_t TotalNumberOfRandoSeq=100000; // number of random shuffles
 	string PSSM_FileName = "";
 	string CutofsPerPSSM_FileName = "";
 	getFileNamesFromArgv(argc,argv,PSSM_FileName, CutofsPerPSSM_FileName);
@@ -291,6 +293,7 @@ void Find_PSSM_Hits(const PSSM& PSSM1, const vector<SEQ> & vseq1, vector<HIT> & 
 	}
 }
 
+// This function gets a PSSM as input and a list of (random) sequences (vseq1). It computes the score of each peptide and push it to "scores".
 void PSSM_scoresFromSeqVector(const PSSM& PSSM1, const vector<vector<size_t> > & vseq1, vector<double> & scores) {
 	for (size_t j =0; j < vseq1.size(); ++j) {
 		int best_match_start=0;
@@ -301,12 +304,10 @@ void PSSM_scoresFromSeqVector(const PSSM& PSSM1, const vector<vector<size_t> > &
 
 
 
-vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
-{
+vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength) {
 		vector<size_t> tempSeqPadded(PaddingLength,GAP);
-		tempSeqPadded.insert(tempSeqPadded.end(), seq.begin(), seq.end());
-		for (size_t i=0;i<PaddingLength;++i)
-		{
+		tempSeqPadded.insert(tempSeqPadded.end(), seq.begin(), seq.end()); // The tempSeqPadded before this is ----- and after it is -----seq
+		for (size_t i=0;i<PaddingLength;++i) {
 			tempSeqPadded.push_back(GAP); // padding with '-' will get same score as unobserved charcter
 		}
 		return tempSeqPadded;
@@ -422,7 +423,7 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 }
 
 double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const size_t verbose=0) {
-	vector <HIT> hits;
+	vector<HIT> hits;
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
 	for (size_t k = 0; k < hits.size(); ++k) {
@@ -432,8 +433,7 @@ double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array
 }
 
 
-int assignPvalueToPSSMaRRAY(int argc, char *argv[])
-{
+int assignPvalueToPSSMaRRAY(int argc, char *argv[]) {
 	// -pssm <PSSMs_in_MAST_Format> -seq <input_seq_FASTA> -out <out> -calc_cutoff TRUE / FALSE -pssm_cutoffs <filename_for PSSM_cutoffs>
 
 	// the function get 4 arguments from the command line. That is argc = 8.

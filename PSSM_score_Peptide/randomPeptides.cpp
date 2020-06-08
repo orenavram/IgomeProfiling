@@ -23,7 +23,7 @@ void randomPeptides::generateRandomSequences() {
 //	Seq_eng.seed(dev_random()); //real random seed
 //	std::uniform_real_distribution<double> unif; //std::uniform_real<double> unif(0, 1);
 	for (size_t i=0; i<_numberOfSeqToSimulate; ++i) {
-		vector<size_t> tmp;
+		vector<size_t> tmp; // this will be the random sequence
 		if (_CysLoop)
 		{
 			tmp.push_back(1);// = "C";
@@ -38,7 +38,6 @@ void randomPeptides::generateRandomSequences() {
 }
 
 void randomPeptides::simulateOneSeq(vector<size_t> &tmp) { // this function appends to the tmp new characters
-	
 	for (size_t i=0; i<_sequenceLength; ++i) {
 		tmp.push_back(simulateOneCharacter());
 	}
@@ -48,17 +47,11 @@ size_t randomPeptides::simulateOneCharacter() {
 	int Rand_int = rand();
 	double Rand =((double) Rand_int / (RAND_MAX));
 	size_t i=0;
-	while((i<_characterFrequencies.size()) && ( Rand >= _characterFrequencies[i]))
-	{
+	while((i<_characterFrequencies.size()) && ( Rand >= _characterFrequencies[i])) {
 		Rand=Rand-_characterFrequencies[i];
 		++i;
-//		if (i>19)
-//		{
-//			cout<<"OUT OF RANGE"<<endl;
-//		}
 	}
 	if (i==_characterFrequencies.size()){--i;} // to avoid out of range when the Rand is getting to 0
 	return i;
-
 }
 

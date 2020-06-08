@@ -27,6 +27,9 @@ void readPSSM_info_from_file::get_aaFreq_and_CorrChar(vector<string> & allLines)
 			stringstream line_element(currLine); // split line by spaces
 			istream_iterator<string> begin(line_element);
 			istream_iterator<string> end;
+
+			//e.g.:
+			//A 0.0625 C 0.03125 D 0.03125 E 0.03125 F 0.03125 G 0.0625 H 0.03125 I 0.03125 K 0.03125 L 0.09375 M 0.03125 N 0.03125 P 0.0625 Q 0.0625 R 0.09375 S 0.09375 T 0.0625 V 0.0625 W 0.03125 Y 0.03125
 			vector<string> vstrings(begin, end);
 			for (size_t j = 0; j<vstrings.size(); j += 2)
 			{
@@ -34,7 +37,7 @@ void readPSSM_info_from_file::get_aaFreq_and_CorrChar(vector<string> & allLines)
 				double lol = atof(vstrings[j + 1].c_str());
 				_alph._aaFreq.push_back(lol);
 			}
-			i = allLines.size(); // finish to extract relevant data
+			i = allLines.size(); // finish to extract relevant data. Same as break.
 		}
 	}
 	_alph.generateMap();
@@ -49,7 +52,7 @@ void readPSSM_info_from_file::readFileToPSSM_array(vector<string> & allLines) {
 		if (found != std::string::npos)
 		{
 			//std::cout << "found MOTIF at line " << i << "this is motif number " << num_motifs << endl;
-			string motif_name = currLine.substr(6);
+			string motif_name = currLine.substr(6); // exclude from the name the beginning "MOTIF ".
 			PSSM crrPSSM(_alph);
 			crrPSSM.setName(motif_name);
 			// read _Nsite
@@ -59,10 +62,10 @@ void readPSSM_info_from_file::readFileToPSSM_array(vector<string> & allLines) {
 			if (regex_search(currLine, match, rgx))
 			{
 				string Nsite_str = match[1].str();
-				crrPSSM.set_Nsite(stod(Nsite_str));
+				crrPSSM.set_Nsite(stod(Nsite_str)); // Nsite is the number of unique peptides inducing the motif.
 			}
 			i = i + 2; // let's collect matrix lines
-			vector <string> PSSM_Block;
+			vector<string> PSSM_Block;
 			currLine = allLines[i];
 			while (currLine.compare("") != 0) // did not reach empty line - end of block
 			{
