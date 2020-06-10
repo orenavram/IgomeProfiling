@@ -11,7 +11,8 @@ import logging
 logger = logging.getLogger('main')
 
 
-def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samples_to_skip, argv='no_argv'):
+def merge_meme_files(motif_inference_path, biological_condition, relevant_sample_names,
+                     merged_meme_path, done_path, samples_to_skip, argv='no_argv'):
     """
     :param motif_inference_path: A path in which each folder corresponds to a sample and contains a meme file for the
     motifs in this sample.
@@ -25,7 +26,7 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
     first_meme = True
     for sample_name in sorted(os.listdir(motif_inference_path)):  # sorted by sample name
         dir_path = os.path.join(motif_inference_path, sample_name)
-        if not os.path.isdir(dir_path) or biological_condition not in sample_name:
+        if not os.path.isdir(dir_path) or sample_name not in relevant_sample_names:
             # skip file or folders of non-related biological condition
             continue
         if sample_name in samples_to_skip:
@@ -67,6 +68,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('motif_inference_path', help='A path in which each folder corresponds to a sample and contains a meme file for the motifs in this sample.')
     parser.add_argument('biological_condition', help='A biological condition to merge its samples meme files')
+    parser.add_argument('sample_names', help='Sample names to apply over the meme merging. More than one '
+                                             'sample name should be separated by commas. No spaces!'
+                                             'For example: 17b_01,17b_03,17b_05')
     parser.add_argument('merged_meme_path', help='A path to the output file')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--skip_sample', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
@@ -83,5 +87,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    merge_meme_files(args.motif_inference_path, args.biological_condition, args.merged_meme_path,
-                     args.done_file_path, args.skip_sample.split(','), sys.argv)
+    merge_meme_files(args.motif_inference_path, args.biological_condition, args.sample_names.split(','),
+                     args.merged_meme_path, args.done_file_path, args.skip_sample.split(','), sys.argv)
