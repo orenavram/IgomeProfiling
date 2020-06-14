@@ -161,11 +161,14 @@ def submit_pipeline_step_to_cluster(script_path, params_lists, tmp_dir, job_name
     # the queue does not like very long commands so I use a dummy delimiter (!@#) to break the rows in q_submitter
     cmds_as_str += new_line_delimiter
 
+    if executable is None:
+        executable = ''
+
     for params in params_lists:
-        cmds_as_str += ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])) + ';'
+        cmds_as_str += ' '.join([executable, script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])).lstrip() + ';'
         cmds_as_str += new_line_delimiter
 
-    example_cmd = ' '.join(['python', script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])) + ';'
+    example_cmd = ' '.join([executable, script_path, *[str(param) for param in params]] + (['-v'] if verbose else [])).lstrip() + ';'
 
     # GENERATE DONE FILE
     # write an empty string (like "touch" command)
