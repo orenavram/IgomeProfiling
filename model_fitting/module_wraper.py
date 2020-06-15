@@ -24,7 +24,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({fitting_done_path} already exists)')
         return
 
-    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
+    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path)
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
@@ -95,12 +95,13 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     num_of_expected_results = 0
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
+        relevant_samples = get_delimited_relevant_samples(samplename2biologicalcondition, bc)
         meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
         scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
-        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_insignificant_pvalues.csv')
+        aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
-        all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_pvalues_path,
+        all_cmds_params.append([meme_path, scanning_dir_path, bc, relevant_samples, aggregated_pvalues_path,
                                 aggregated_hits_path, samplename2biologicalcondition_path, done_path])
 
     for cmds_params, bc in zip(all_cmds_params, biological_conditions):
@@ -122,7 +123,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         num_of_expected_results = 0
         all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
         for bc in biological_conditions:
-            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_pvalues.csv')
+            aggregated_pvalues_path = os.path.join(classification_output_path, bc, f'{bc}_significant_pvalues.csv')
             done_path = os.path.join(logs_dir, f'{bc}_pvalues_done_fitting.txt')
             all_cmds_params.append([aggregated_pvalues_path,
                                     num_of_hyperparam_configurations_to_sample,
