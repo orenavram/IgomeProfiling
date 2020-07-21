@@ -105,7 +105,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 # E.g.: CAAAAC and AAAA are the same after removing Cys
 
                 num_of_expected_results += 1
-                break
 
         wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='collapsing.txt')
