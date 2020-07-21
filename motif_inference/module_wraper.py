@@ -323,7 +323,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
+                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, use_mapitope, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -350,7 +350,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
             continue
 
         for file_name in os.listdir(dir_path):
-            if file_name.endswith('faa') and 'unique' in file_name:
+
+            if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == use_mapitope:
                 faa_filename = file_name
                 break
         else:
@@ -586,6 +587,7 @@ if __name__ == '__main__':
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
+    parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
     args = parser.parse_args()
 
     import logging
@@ -601,4 +603,4 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)
+                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
