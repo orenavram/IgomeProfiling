@@ -87,7 +87,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
                              third_phase_done_path, f'--rank_method {rank_method}', f'--error_path {error_path}', 
-                             '-v' if verbose else '', f'-q {queue}']
+                             '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
