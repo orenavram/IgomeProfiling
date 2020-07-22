@@ -9,7 +9,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict
 from global_params import src_dir
 
 
@@ -45,25 +45,28 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     else:
         logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
 
-
     if use_mapitope:
         mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
         if not os.path.exists(mapitope_done_path):
             logger.info('_' * 100)
             logger.info(f'{datetime.datetime.now()}: mapitope encoding data {first_phase_output_path}')
-            # run mapitope_conversion.py        
+            # run mapitope_conversion.py
 
-            parameters = [
-                first_phase_output_path,
-                barcode2samplename,
-                mapitope_done_path
-            ]
+            num_of_expected_results = 0
+            for sample_name in sorted(os.listdir(first_phase_output_path)):
+                dir_path = os.path.join(first_phase_output_path, sample_name)
+                if not os.path.isdir(dir_path):
+                    continue
+                done_path = f'{logs_dir}/01_{sample_name}_done_converting_to_mapitope.txt'
+                parameters = [
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}.faa',
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}_mapitope.faa',
+                    done_path
+                ]
+                fetch_cmd(f'{src_dir}/reads_filtration/mapitope_conversion.py', parameters, verbose, error_path, done_path)
+                num_of_expected_results += 1
 
-            fetch_cmd(f'{src_dir}/reads_filtration/mapitope_conversion.py', parameters, verbose, error_path)
-
-            num_of_expected_results = 1
-            wait_for_results('mapitope_conversion.py', logs_dir, num_of_expected_results,
-                        error_file_path=error_path, suffix='mapitope_encoding.txt')
+            wait_for_results('mapitope_conversion.py', logs_dir, num_of_expected_results, error_file_path=error_path, suffix='mapitope.txt')
             with open(mapitope_done_path, 'w') as f:
                 f.write(' '.join(argv) + '\n')
 
@@ -90,8 +93,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 file_path = f'{dir_path}/{file}'
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
-                is_mapitop_file = 'mapitope' in file
-                rpm_factors_path =  f'{first_phase_output_path}/{'mapitop_' if is_mapitop_file else ''}rpm_factors.txt'
+                factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
+                rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
                 parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
                 fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
                           
