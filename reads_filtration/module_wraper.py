@@ -90,11 +90,10 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 file_path = f'{dir_path}/{file}'
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
-
-                parameters = [file_path, output_file_path, done_path,
-                              '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
-                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
-                          parameters, verbose, error_path, done_path)
+                is_mapitop_file = 'mapitope' in file
+                rpm_factors_path =  f'{first_phase_output_path}/{'mapitop_' if is_mapitop_file else ''}rpm_factors.txt'
+                parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
+                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
                           
                 # file_path = output_file_path
                 # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
@@ -159,4 +158,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, True if args.mapitope else False, error_path, args.queue, sys.argv)
+                    True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)

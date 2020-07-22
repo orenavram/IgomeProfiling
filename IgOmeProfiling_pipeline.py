@@ -191,7 +191,6 @@ if __name__ == '__main__':
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, True if args.gz else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, True if args.mapitope else False, args.number_of_random_pssms,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
-

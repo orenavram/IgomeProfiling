@@ -82,3 +82,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     mapitope_convert_all_samples(args.reads_filtration_path, args.barcode2samplename_path, args.done_file_path,sys.argv)
+    
