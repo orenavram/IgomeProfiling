@@ -15,7 +15,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, number_of_random_pssms,
+                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, number_of_random_pssms,
                  rank_method, tfidf_method, tfidf_factor, shuffles,
                  run_summary_path, error_path, queue, verbose, argv):
 
@@ -43,7 +43,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
                              max_mismatches_allowed, min_sequencing_quality, first_phase_done_path,
-                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '']
+                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
                              logs_dir, f'{exp_name}_reads_filtration',
@@ -65,7 +65,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                              allowed_gap_frequency, second_phase_done_path,
                              f'--meme_split_size {meme_split_size}',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
@@ -77,7 +77,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                          error_file_path=error_path, suffix='motif_inference_done.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping motif inference. Done file exists at:\n{second_phase_done_path}')
-
+        
     third_phase_done_path = f'{logs_dir}/model_fitting_done.txt'
     if not os.path.exists(third_phase_done_path):
         os.makedirs(third_phase_output_path, exist_ok=True)
@@ -87,7 +87,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
                              third_phase_done_path, f'--rank_method {rank_method}', f'--error_path {error_path}', 
-                             '-v' if verbose else '', f'-q {queue}']
+                             '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -156,6 +156,7 @@ if __name__ == '__main__':
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
                         help='Split size, how many meme per files for calculations')
+    parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
 
     # optional parameters for the modelling step
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
@@ -190,7 +191,6 @@ if __name__ == '__main__':
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, True if args.gz else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.number_of_random_pssms,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
-

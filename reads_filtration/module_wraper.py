@@ -9,13 +9,13 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict
 from global_params import src_dir
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose, error_path, queue, argv='no_argv'):
+                    gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -45,6 +45,35 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     else:
         logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
 
+    if use_mapitope:
+        mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
+        if not os.path.exists(mapitope_done_path):
+            logger.info('_' * 100)
+            logger.info(f'{datetime.datetime.now()}: mapitope encoding data {first_phase_output_path}')
+            # run mapitope_conversion.py
+
+            num_of_expected_results = 0
+            for sample_name in sorted(os.listdir(first_phase_output_path)):
+                dir_path = os.path.join(first_phase_output_path, sample_name)
+                if not os.path.isdir(dir_path):
+                    continue
+                done_path = f'{logs_dir}/01_{sample_name}_done_converting_to_mapitope.txt'
+                parameters = [
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}.faa',
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}_mapitope.faa',
+                    done_path
+                ]
+                fetch_cmd(f'{src_dir}/reads_filtration/mapitope_conversion.py', parameters, verbose, error_path, done_path)
+                num_of_expected_results += 1
+
+            wait_for_results('mapitope_conversion.py', logs_dir, num_of_expected_results, error_file_path=error_path, suffix='mapitope.txt')
+            with open(mapitope_done_path, 'w') as f:
+                f.write(' '.join(argv) + '\n')
+
+        else:
+            logger.info(f'{datetime.datetime.now()}: skipping mapitope_conversion.py ({done_path} exists)')
+
+
     collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
     if not os.path.exists(collapsing_done_path):
         logger.info('_' * 100)
@@ -57,19 +86,18 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 continue
             for file in os.listdir(dir_path):
                 # look for faa files to collapse
-                if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
+                if not file.startswith(f'{dir_name}.faa') and not file.startswith(f'{dir_name}_mapitope.faa'):  # maybe there's a .gz afterwards
                     continue
 
                 sample_name = file.split('.faa')[0]
                 file_path = f'{dir_path}/{file}'
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
-
-                parameters = [file_path, output_file_path, done_path,
-                              '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
-                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
-                          parameters, verbose, error_path, done_path)
-
+                factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
+                rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
+                parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
+                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
+                          
                 # file_path = output_file_path
                 # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
                 # parameters = [file_path, output_file_path]
@@ -79,7 +107,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 # E.g.: CAAAAC and AAAA are the same after removing Cys
 
                 num_of_expected_results += 1
-                break
 
         wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
                      error_file_path=error_path, suffix='collapsing.txt')
@@ -89,6 +116,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
+
+
 
     with open(first_phase_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -116,6 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
+    parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
     args = parser.parse_args()
 
     import logging
@@ -131,4 +161,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, error_path, args.queue, sys.argv)
+                    True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
