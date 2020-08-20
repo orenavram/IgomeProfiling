@@ -35,7 +35,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                       f'--left_construct {left_construct}',
                       f'--right_construct {right_construct}',
                       f'--max_mismatches_allowed {max_mismatches_allowed}',
-                      f'--min_sequencing_quality {min_sequencing_quality}'] + (['--gz'] if gz else [])
+                      f'--min_sequencing_quality {min_sequencing_quality}',
+                      f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
 
         fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
                   parameters, verbose, error_path)
@@ -140,6 +141,8 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+    parser.add_argument('--minimal_length_required', default=3, type=int,
+                        help='Shorter peptides will be discarded')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
@@ -160,5 +163,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, True if args.gz else False,
+                    args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
                     True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
