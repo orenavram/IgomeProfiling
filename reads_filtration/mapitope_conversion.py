@@ -5,26 +5,26 @@ import os
 logger = logging.getLogger('main')
 
 mapitope = {
-    'R': 'B',
-    'K': 'B',
-    'E': 'J',
-    'D': 'J',
-    'S': 'O',
-    'T': 'O',
-    'I': 'U',
-    'L': 'U',
-    'V': 'U',
-    'Q': 'X',
-    'N': 'X',
-    'W': 'Z',
-    'F': 'Z',
+    'R': 'R',
+    'K': 'R',
+    'E': 'E',
+    'D': 'E',
+    'S': 'S',
+    'T': 'S',
+    'I': 'I',
+    'L': 'I',
+    'V': 'I',
+    'Q': 'Q',
+    'N': 'Q',
+    'Y': 'Y',
+    'F': 'Y',
     'A': 'A',
     'C': 'C',
     'G': 'G',
     'H': 'H',
     'M': 'M',
     'P': 'P',
-    'Y': 'Y'
+    'W': 'W'
 }
 
 def convert_to_mapitope(sequence):
