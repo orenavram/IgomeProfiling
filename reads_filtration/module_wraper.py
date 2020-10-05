@@ -141,7 +141,7 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-    parser.add_argument('--minimal_length_required', default=3, type=int,
+    parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')

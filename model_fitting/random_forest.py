@@ -66,9 +66,7 @@ def get_hyperparameters_grid(seed):
                    'min_samples_split': min_samples_split,
                    'min_samples_leaf': min_samples_leaf,
                    'bootstrap': bootstrap}
-    # Set seed
-    random_state = np.random.seed(seed)
-
+                   
     if os.path.exists('/Users/Oren'):
         # use all cores when running locally.
         # does not apply on the cluster (needed to be set as well in the .pbs file)
@@ -78,11 +76,12 @@ def get_hyperparameters_grid(seed):
     return random_grid
 
 
-def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample):
+def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed):
     configurations = []
     for i in range(num_of_configurations_to_sample):
         configuration = {}
         for key in hyperparameters_grid:
+            np.random.seed(seed+i)
             configuration[key] = np.random.choice(hyperparameters_grid[key], size=1)[0]
         configurations.append(configuration)
     return configurations
@@ -180,7 +179,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
         # logger.info(f'Current model\'s predictions\n{predictions.tolist()}')
 
         # compute current model accuracy for each fold of the cross validation
-        cv_score = cross_val_score(model, X, y, cv=StratifiedKFold(n_splits=4))
+        cv_score = cross_val_score(model, X, y, cv=StratifiedKFold(n_splits))
 
         # current model cv_avg_error_rate rate
         cv_avg_error_rate = 1 - cv_score.mean()
@@ -336,7 +335,7 @@ def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, 
         # if i % 10 == 0:
         logger.info(f'Checking feature {feature} number {i}')
         # assert df.columns[i] == feature
-        cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(n_splits=4, shuffle=True)).mean()
+        cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(n_splits, shuffle=True)).mean()
         if cv_score == 1:
             logger.info('-' * 10 + f'{feature} has 100% accuracy!' + '-' * 10)
         #     print(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])
@@ -382,6 +381,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--n_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -392,4 +392,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.n_splits, args.seed, argv=sys.argv)
