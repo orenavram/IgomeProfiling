@@ -278,7 +278,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     feature_selection_summary_f = open(feature_selection_summary_path, 'w')
     feature_selection_summary_f.write(f'model_number\tnum_of_features\tfinal_error_rate\n')
 
-    sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample)
+    sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
     for i, configuration in enumerate(sampled_configurations):
         model_number = str(i).zfill(len(str(num_of_configurations_to_sample)))
         output_path_i = os.path.join(output_path, model_number)
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('n_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('n_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
