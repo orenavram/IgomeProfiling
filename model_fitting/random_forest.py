@@ -378,10 +378,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('n_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
-    parser.add_argument('--n_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -392,4 +392,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.n_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.n_splits, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
