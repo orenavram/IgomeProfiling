@@ -136,7 +136,7 @@ def generate_roc_curve(X, y, classifier, number_of_features, output_path):
     plt.close()
 
 
-def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_path):
+def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_path, cv_num_of_splits):
     original_feature_names = feature_names[:]
     original_X = X[:]
     logger.debug('\n'+'#'*100 + f'\nTrue labels:\n{y.tolist()}\n' + '#'*100 + '\n')
@@ -179,7 +179,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
         # logger.info(f'Current model\'s predictions\n{predictions.tolist()}')
 
         # compute current model accuracy for each fold of the cross validation
-        cv_score = cross_val_score(model, X, y, cv=StratifiedKFold(n_splits))
+        cv_score = cross_val_score(model, X, y, cv=StratifiedKFold(cv_num_of_splits))
 
         # current model cv_avg_error_rate rate
         cv_avg_error_rate = 1 - cv_score.mean()
@@ -245,7 +245,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
 
     # single feature analysis
     logging.info('Applying single feature analysis...')
-    perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed)
+    perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits)
     if perfect_feature_names:
         df = save_model_features(X_train, perfect_feature_indexes, perfect_feature_names, sample_names_train, f'{output_path}/perfect_feature_names')
         generate_heat_map(df, df.shape[1], False, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
@@ -289,7 +289,8 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
 
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
         rf = RandomForestClassifier(**configuration)
-        errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, use_tfidf, output_path_i)
+        errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, use_tfidf, output_path_i, cv_num_of_splits)
+        # model.predict(X_test, y_test)
 
         plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
 
@@ -326,7 +327,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
         f.write(' '.join(argv) + '\n')
 
 
-def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed):
+def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits):
     feature_to_avg_accuracy = {}
     # df = pd.read_csv(f'{output_path}/Top_149_features.csv', index_col='sample_name')
     rf = RandomForestClassifier(random_state=np.random.seed(seed))
@@ -335,7 +336,7 @@ def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, 
         # if i % 10 == 0:
         logger.info(f'Checking feature {feature} number {i}')
         # assert df.columns[i] == feature
-        cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(n_splits, shuffle=True)).mean()
+        cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(cv_num_of_splits, shuffle=True)).mean()
         if cv_score == 1:
             logger.info('-' * 10 + f'{feature} has 100% accuracy!' + '-' * 10)
         #     print(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])
@@ -378,10 +379,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('n_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    # parser.add_argument('n_splits', type=int, default=2, help='How manyfolds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
-    parser.add_argument('--cv_num_of_splits', default=4, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -392,4 +393,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.n_splits, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
