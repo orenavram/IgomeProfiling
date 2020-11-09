@@ -99,7 +99,7 @@ def identify(values_path: str, samples_to_bio_conds_path: str, assumed_motifs, p
             is_assumed = motif in assumed_motifs
             if is_assumed and is_positive and not is_negative:
                 assumption_in.append(motif)
-                motif_label = 'perfect' if is_positive else 'mixed'
+                motif_label = 'perfect' if is_perfect else 'mixed'
             elif is_assumed:
                 assumption_out.append(motif)
                 motif_label = 'incorrect'
