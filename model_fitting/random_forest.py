@@ -97,7 +97,7 @@ def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_
     else:  # p-values data
         train_data = -np.log2(df)
 
-    cm = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True)
+    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
     cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
@@ -248,7 +248,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits)
     if perfect_feature_names:
         df = save_model_features(X_train, perfect_feature_indexes, perfect_feature_names, sample_names_train, f'{output_path}/perfect_feature_names')
-        generate_heat_map(df, df.shape[1], False, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
+        generate_heat_map(df, df.shape[1], is_hits_data, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
     else:
         # touch a file so we can see that there were no perfect features
         with open(f'{output_path}/perfect_feature_names', 'w') as f:
