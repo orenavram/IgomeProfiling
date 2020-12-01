@@ -6,7 +6,7 @@ from os import path
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import sys 
 colors_map = {
     'perfect': 'green',
     'mixed': 'blue',
@@ -21,7 +21,7 @@ def get_sorted_features(feature_importance_path: str):
     return features
 
 
-def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int):
+def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int, txt_file_out: str):
     data = values[['label', 'sample_name', motif]]
     other_max = data.loc[data['label'] == 'other', motif].max()
     bc_min = data.loc[data['label'] == bio_cond, motif].min()
@@ -30,16 +30,16 @@ def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: st
     is_valid_mix = True
     mixed_samples = list(data.loc[(data['label'] == 'other') & (data[motif] >= bc_min), 'sample_name'])
     if artifact:
-        print(f'Motif {motif} is artifact, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}')
+        txt_file_out.write(f'Motif {motif} is artifact, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}\n')
     elif is_perfect:
-        print(f'Motif {motif} is perfect, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}')
+        txt_file_out.write(f'Motif {motif} is perfect, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}\n')
     else:
         if invalid_mix:
             is_valid_mix = not any(invalid_mix in s for s in mixed_samples)
         if is_valid_mix:
-            print(f'Motif {motif} is mixed, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}, mixes={mixed_samples}')
+            txt_file_out.write(f'Motif {motif} is mixed, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}\n')
         else:
-            print(f'Motif {motif} has invalid mix, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}, mixes={mixed_samples}')
+            txt_file_out.write(f'Motif {motif} is invalid mix, other_max={other_max}, bc_min={bc_min}, importance score={score}, importance order={order}\n')
         # TODO convert mixed samples to mixed bc inc. count
     return artifact, is_perfect, is_valid_mix, mixed_samples
 
@@ -86,13 +86,16 @@ def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_pa
     colors = []
     output = []
     output_label = ''
+    #create txt file for all the prints
+    out_txt_path = f'{output_base_path}.txt'
+    txt_file_out=open(out_txt_path,'w')
     for feature in features:
         i += 1
         motif = feature[0]
         score = float(feature[1])
         if score < min_importance_score:
             break
-        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, values, bio_cond, invalid_mix, score, i)
+        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, values, bio_cond, invalid_mix, score, i,txt_file_out)
         if total >= count and score + epsilon < last_score:
             break
         if artifact:
@@ -132,23 +135,41 @@ def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_pa
         columns = ['sample_name'] + [x[0] for x in features[:i - 1]]
         generate_heatmap(output_base_path, values[columns], colors, heatmap_title)
         save_output(output_base_path, output)
-    return distinctive_motifs, last_order, perfect_count, artifact_count, invalid_mix_count, mixed_count
+    
+    txt_file_out.write(f'\nDistinctive motifs ({len(distinctive_motifs)}/{last_order} tested): {distinctive_motifs}\n')
+    txt_file_out.write(f'Perfects count: {perfect_count}\n')
+    txt_file_out.write(f'Mixed count: {mixed_count}\n')
+    txt_file_out.write(f'Filtered: Artifacts count: {artifact_count}, Invalid mixes count: {invalid_mix_count}\n')
+    txt_file_out.close()
 
 
 if __name__ == '__main__':
-    base_path = '/mnt/d/workspace/data/webiks/igome/results/exp4+9_all_half_gaps/model_fitting'
-    count = 1000
-    epsilon = 0
-    feature_importance_path = path.join(base_path, 'Naive/Naive_values_exp9_model/best_model/sorted_feature_importance.txt')
-    values_path = path.join(base_path, 'Naive/Naive_values_exp9.csv')
-    hits_path = path.join(base_path, 'Naive/Naive_hits_exp9.csv')
-    invalid_mix = None # 'naive'
-    min_importance_score = 0
-    output_base_path = path.join(base_path, 'Naive/distinctive_motifs_all')
-    heatmap_title = 'Exp8 Naive Distinctive Motifs (all)'
+    print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('base_path', type=str, help='A path in which each subfolder corresponds to a results of the last level')
+    # example:'/mnt/d/workspace/data/webiks/igome/results/exp4+9_all_half_gaps/model_fitting'
+    parser.add_argument('count',type=int ,help='number of motifs at the end') #all=1000, top_10 =10
+    parser.add_argument('feature_importance_path', type=str, help='A path for the feature importance path for specifice biological condition')
+    # example:'Naive/Naive_values_exp9_model/best_model/sorted_feature_importance.txt'
+    parser.add_argument('values_path',type=str ,help='A csv file of values')
+    #exmple:'Naive/Naive_values_exp9.csv'    
+    parser.add_argument('hits_path',type=str ,help='A csv file of hits')
+    #exmple:'Naive/Naive_hits_exp9.csv'  
+    parser.add_argument('output_base_path',type=str, help='A path for puting the results files in')
+    #exmaple:'Naive/distinctive_motifs_all'
+    parser.add_argument('--invalid_mix',type=str,default=None,help='A argument to know if there is compare to naive')
+    parser.add_argument('--epsilon',type=int, default=0, help='range of mistake')
+    parser.add_argument('--min_importance_score',type=int, default=0)
+    args = parser.parse_args()
+
+    feature_importance_path= path.join(args.base_path, args.feature_importance_path)
+    values_path=path.join(args.base_path,args.values_path)
+    hits_path=path.join(args.base_path,args.hits_path)
+    output_base_path=path.join(args.base_path,args.output_base_path)
+    heatmap_title='Exp8 Naive Distinctive Motifs (all)' #change the title heatmap
+    extract_distinctive_motifs(args.count, args.epsilon, feature_importance_path, values_path, hits_path, args.invalid_mix, args.min_importance_score, output_base_path, heatmap_title)
     
-    motifs, last_index, perfect_count, artifact_count, invalid_mix_count, mixed_count = extract_distinctive_motifs(count, epsilon, feature_importance_path, values_path, hits_path, invalid_mix, min_importance_score, output_base_path, heatmap_title)
-    print(f'\nDistinctive motifs ({len(motifs)}/{last_index} tested): {motifs}')
-    print(f'Perfects count: {perfect_count}')
-    print(f'Mixed count: {mixed_count}')
-    print(f'Filtered: Artifacts count: {artifact_count}, Invalid mixes count: {invalid_mix_count}')
+    
+    
