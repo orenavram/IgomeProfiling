@@ -4,6 +4,7 @@ Extract ranked distinctive motifs ignoring artifacts
 '''
 from os import path
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys 
@@ -44,8 +45,13 @@ def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: st
     return artifact, is_perfect, is_valid_mix, mixed_samples
 
 
-def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str):
+def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str ,is_hit: bool):
     print('Generating heatmap...')
+    if is_hit:
+        sample_name=df['sample_name']
+        df= df.drop(columns=['sample_name'])
+        df=np.log2(df+1)
+        df.insert(loc=0, column='sample_name', value=sample_name)
 
     df.set_index('sample_name', inplace=True)
     map_path = f'{base_path}.svg'
@@ -68,6 +74,7 @@ def save_output(base_path: str, data):
 def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_path: str, values_path: str, hits_path: str, invalid_mix: str, min_importance_score: float, output_base_path: str, heatmap_title: str):
     features = get_sorted_features(feature_importance_path)
     values = pd.read_csv(values_path)
+    is_hits= True if values_path.find('hits')>0 else False
     # hits = pd.read_csv(hits_path, index_col=[1,0])
     # TODO check if motif is backed by hits (only log, no filter)
     bio_conds = list(values['label'].unique())
@@ -132,8 +139,9 @@ def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_pa
             last_score = score
     
     if output_base_path:
-        columns = ['sample_name'] + [x[0] for x in features[:i - 1]]
-        generate_heatmap(output_base_path, values[columns], colors, heatmap_title)
+        #columns = ['sample_name'] + [x[0] for x in features[:i-1]]
+        columns = ['sample_name'] + [x[0] for x in features[:count]]
+        generate_heatmap(output_base_path, values[columns], colors, heatmap_title,is_hits)
         save_output(output_base_path, output)
     
     txt_file_out.write(f'\nDistinctive motifs ({len(distinctive_motifs)}/{last_order} tested): {distinctive_motifs}\n')
@@ -168,7 +176,7 @@ if __name__ == '__main__':
     values_path=path.join(args.base_path,args.values_path)
     hits_path=path.join(args.base_path,args.hits_path)
     output_base_path=path.join(args.base_path,args.output_base_path)
-    heatmap_title='Exp8 Naive Distinctive Motifs (all)' #change the title heatmap
+    heatmap_title='Exp 7/8 motifs (all) 234_N_HIV on 27/28 samples hits Distinctive Motifs (hits - top 10)' #change the title heatmap
     extract_distinctive_motifs(args.count, args.epsilon, feature_importance_path, values_path, hits_path, args.invalid_mix, args.min_importance_score, output_base_path, heatmap_title)
     
     
