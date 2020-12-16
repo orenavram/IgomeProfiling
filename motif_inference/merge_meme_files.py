@@ -1,6 +1,9 @@
 import datetime
 import os
 import sys
+from auxiliaries.pipeline_auxiliaries import *
+from collections import defaultdict
+
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -12,22 +15,32 @@ sys.path.insert(0, src_dir)
 import logging
 logger = logging.getLogger('main')
 
+def dictionary_bc_2_sample(s2b_path):
+    s2b=load_table_to_dict(s2b_path, 'Barcode {} belongs to more than one sample!!')
+    bc2s = defaultdict(list)
+    for k, v in s2b.items():
+        bc2s[v].append(k)
+    return bc2s   
 
-def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samples_to_skip, argv='no_argv'):
+
+def merge_meme_files(motif_inference_path, biological_condition, merged_meme_path, done_path, samplename2biologicalcondition_path, samples_to_skip, argv='no_argv'):
     """
     :param motif_inference_path: A path in which each folder corresponds to a sample and contains a meme file for the
     motifs in this sample.
     :param biological_condition: A biological condition to merge its samples meme files
     :param meme_file_name: An optional file name for the output file
+    :param samplename2biologicalcondition_path: A file that connect a sample name to is biological condition
     :return: A merged meme file at $motif_inference_path/$biological_condition/$meme_file_name
     """
     logger.info(f'{datetime.datetime.now()}: merging meme files of {biological_condition}')
 
     memes = []
     first_meme = True
-    for sample_name in sorted(os.listdir(motif_inference_path)):  # sorted by sample name
+    bc2s=dictionary_bc_2_sample(samplename2biologicalcondition_path)
+    print(sorted(bc2s[biological_condition]))
+    for sample_name in sorted(bc2s[biological_condition]):  # sample name of the specific bc
         dir_path = os.path.join(motif_inference_path, sample_name)
-        if not os.path.isdir(dir_path) or biological_condition not in sample_name:
+        if not os.path.isdir(dir_path):
             # skip file or folders of non-related biological condition
             continue
         if sample_name in samples_to_skip:
@@ -71,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('biological_condition', help='A biological condition to merge its samples meme files')
     parser.add_argument('merged_meme_path', help='A path to the output file')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('samplename2biologicalcondition_path', help='A path to the sample name to biological condition file.')
     parser.add_argument('--skip_sample', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped, e.g., for testing purposes. More than one sample '
                              'name should be separated by commas but no spaces. '
@@ -86,4 +100,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     merge_meme_files(args.motif_inference_path, args.biological_condition, args.merged_meme_path,
-                     args.done_file_path, args.skip_sample.split(','), sys.argv)
+                     args.done_file_path, args.samplename2biologicalcondition_path ,args.skip_sample.split(','), sys.argv)

@@ -487,7 +487,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         output_path = os.path.join(bc_folder, 'merged_meme_sorted.txt')
         biological_condition_memes.append(output_path)
         if not os.path.exists(done_path):
-            all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path])
+            all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path, samplename2biologicalcondition_path])
         else:
             logger.debug(f'Skipping merge as {done_path} exists')
             num_of_expected_results += 1
