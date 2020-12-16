@@ -15,7 +15,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, number_of_random_pssms,
+                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, stop_random_forest, number_of_random_pssms,
                  rank_method, tfidf_method, tfidf_factor, shuffles,
                  run_summary_path, error_path, queue, verbose, argv):
 
@@ -86,8 +86,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--rank_method {rank_method}', f'--error_path {error_path}', 
-                             '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
+                             third_phase_done_path, '--stop_random_forest' if stop_random_forest else '',
+                             f'--rank_method {rank_method}', f'--error_path {error_path}', '-v' if verbose else '',
+                             f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -161,6 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
 
     # optional parameters for the modelling step
+    parser.add_argument('--stop_random_forest', action='store_true',help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
@@ -193,6 +195,6 @@ if __name__ == '__main__':
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
-                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope,True if args.stop_random_forest else False,
+                 args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)

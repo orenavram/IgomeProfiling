@@ -22,7 +22,7 @@ def repeat_items(list):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
+                     fitting_done_path, number_of_random_pssms, stop_random_forest,rank_method, tfidf_method, tfidf_factor,
                      shuffles, queue_name, verbose, error_path, use_mapitop, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
@@ -41,7 +41,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
-
 
     # compute scanning scores (hits and values)
     logger.info('_'*100)
@@ -145,49 +144,53 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
 
     # fitting a random forest model (hits and values)
-    logger.info('_'*100)
-    logger.info(f'{datetime.datetime.now()}: fitting model')
-    script_name = 'random_forest.py'
-    num_of_expected_results = 0
-    all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
-        pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
-        aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
-        
-        value_cmd = [aggregated_values_path, pvalues_done_path]
-        hits_cmd = [aggregated_hits_path, hits_done_path]
-        if rank_method == 'tfidf' or rank_method == 'shuffles':
-            value_cmd.append('--tfidf')
-            hits_cmd.append('--tfidf')
+    if not stop_random_forest:
+        print('not stop')
+        logger.info('_'*100)
+        logger.info(f'{datetime.datetime.now()}: fitting model')
+        script_name = 'random_forest.py'
+        num_of_expected_results = 0
+        all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
+        for bc in biological_conditions:
+            aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
+            pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
+            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+            hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
+            
+            value_cmd = [aggregated_values_path, pvalues_done_path]
+            hits_cmd = [aggregated_hits_path, hits_done_path]
+            if rank_method == 'tfidf' or rank_method == 'shuffles':
+                value_cmd.append('--tfidf')
+                hits_cmd.append('--tfidf')
 
-        if not os.path.exists(pvalues_done_path):
-            all_cmds_params.append(value_cmd)
+            if not os.path.exists(pvalues_done_path):
+                all_cmds_params.append(value_cmd)
+            else:
+                logger.debug(f'Skipping fitting as {pvalues_done_path} found')
+                num_of_expected_results += 1
+            
+            if not os.path.exists(hits_done_path):
+                all_cmds_params.append(hits_cmd)
+            else:
+                logger.debug(f'Skipping fitting as {hits_done_path} found')
+                num_of_expected_results += 1
+
+        if len(all_cmds_params) > 0:
+            doubled_bc = repeat_items(biological_conditions)
+            for cmds_params, bc in zip(all_cmds_params, doubled_bc):
+                cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                    [cmds_params],
+                                    logs_dir, f'{bc}_model',
+                                    queue_name, verbose)
+                num_of_expected_results += 1  # a single job for each biological condition
+
+            wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                            error_file_path=error_path, suffix='_done_fitting.txt')
         else:
-            logger.debug(f'Skipping fitting as {pvalues_done_path} found')
-            num_of_expected_results += 1
-        
-        if not os.path.exists(hits_done_path):
-            all_cmds_params.append(hits_cmd)
-        else:
-            logger.debug(f'Skipping fitting as {hits_done_path} found')
-            num_of_expected_results += 1
-
-    if len(all_cmds_params) > 0:
-        doubled_bc = repeat_items(biological_conditions)
-        for cmds_params, bc in zip(all_cmds_params, doubled_bc):
-            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                                [cmds_params],
-                                logs_dir, f'{bc}_model',
-                                queue_name, verbose)
-            num_of_expected_results += 1  # a single job for each biological condition
-
-        wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                        error_file_path=error_path, suffix='_done_fitting.txt')
+            logger.info(f'Skipping fitting, all found')
     else:
-        logger.info(f'Skipping fitting, all found')
-
+        print('stop before') 
+        logger.info(f'Stop before random forest')        
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
@@ -217,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
+    parser.add_argument('--stop_random_forest', action='store_true',help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
@@ -238,5 +242,6 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
-                     args.shuffles, args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
+                     args.number_of_random_pssms, True if args.stop_random_forest else False,args.rank_method,
+                     args.tfidf_method, args.tfidf_factor, args.shuffles, args.queue,True if args.verbose else False,
+                     error_path, args.mapitope, sys.argv)
