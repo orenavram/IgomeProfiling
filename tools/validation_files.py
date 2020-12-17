@@ -1,5 +1,5 @@
-
-from auxiliaries.pipeline_auxiliaries import *
+import sys
+#from auxiliaries.pipeline_auxiliaries import *
 
 def is_same_samples(samples2bc_path,barcode2samples_path):
     #verify that file sample2biologicalcondition and file barcode2sample have the same samples.
@@ -10,17 +10,22 @@ def is_same_samples(samples2bc_path,barcode2samples_path):
 
 def is_valid_structure_file(file_path):
     #verift the structure of the file, should look like: word\tword\n
-    f=open(file_path)
-    lines=f.readlines()
-    for line in lines:
-        if line.count('\t')!=1:
-            return False 
-        if len(line.split('\t'))!=2:
-            return False
+    #word can conation: number, big or little letter,_
+    with open(file_path, "rb") as f:
+        b=f.read(1)
+        find_tab=False
+        count_tab=0
+        while b:
+            num=int.from_bytes(b, byteorder=sys.byteorder)
+            if num==9: #is a TAB
+                count_tab+=1
+                find_tab=True
+            elif num==10 and find_tab and count_tab==1: #10 is new line
+                find_tab=False
+                count_tab=0
+            elif num<48 or (num>57 and num<65) or (num>90 and num<95) or (num>95 and num<97) or (num>122):
+                #48-57 number, 65-90 Big letter, 97-122 small letter, 95 is _
+                return False
+            b=f.read(1)
     return True        
-'''
-if __name__ == '__main__':
-    path_file_bc='mock_data/samplename2biologicalcondition.txt'
-    path_file_barcode='mock_data/barcode2samplename.txt'
-    print(is_valid_structure_file(path_file_bc))
-'''    
+
