@@ -10,10 +10,8 @@ def stop_machines():
     #ec2.instances.filter(InstanceIds = ids).stop() #for stopping an ec2 instance
     
     ec2 = boto3.resource('ec2')
-    instance = ec2.Instance('i-03df2ae895498b6da')
-    response = instance.stop()
-    print(response)
-    
+    for instance in ec2.instances.all():
+        print("Id: {0}\nPlatform: {1}\nType: {2}\nPublic IPv4: {3}\nAMI: {4}\nState: {5}\n".format(instance.id, instance.platform, instance.instance_type, instance.public_ip_address, instance.image.id, instance.state))    
     #client = boto3.client('ec2',region_name=region, endpoint_url=f'https://sts.{region}.amazonaws.com')
     #response = client.stop_instances(InstanceIds=['i-03df2ae895498b6da'])
     #Hibernate=True|False,
