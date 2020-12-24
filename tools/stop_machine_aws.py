@@ -1,32 +1,27 @@
 import subprocess
 import paramiko
+import boto3 
 
-def stop_machines(shell_script):
+def stop_machines():
     print('Stop all machines...')
-    sec=subprocess.call(['sh', shell_script])
-    if sec==0:
-        print('the machines are close')
-    else:
-        print('can\'t close the machines')    
+    region='us-west-2'
+    #ec2 = boto3.resource('ec2',region)
+    #ids = ['i-03df2ae895498b6da']
+    #ec2.instances.filter(InstanceIds = ids).stop() #for stopping an ec2 instance
+    
+    ec2 = boto3.resource('ec2')
+    instance = ec2.Instance('i-03df2ae895498b6da')
+    response = instance.stop()
+    print(response)
+    
+    #client = boto3.client('ec2',region_name=region, endpoint_url=f'https://sts.{region}.amazonaws.com')
+    #response = client.stop_instances(InstanceIds=['i-03df2ae895498b6da'])
+    #Hibernate=True|False,
+    #DryRun=True|False,
+    #Force=True|False
+    #instances = ec2.instances.filter(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+    #for instance in instances:
+    #    print(instance.id, instance.instance_type)
 
-def stop_manager_machines(private_key):
-    print('Connecting to manager machine...')
-     # Connect
-    key = paramiko.RSAKey.from_private_key_file(private_key)
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect('35.160.134.140', username='ec2-user', password='',pkey=key)
-    command='sudo shutdown -h now'
-    stdin, stdout, stderr = ssh.exec_command(command)
-    lines = stdout.readlines()
-    print(lines)
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('shell_script', type=str, help='A path for the shell script that close all the machine')
-    #parser.add_argument('private_key', type=str, help='A path for the private key pem file')
-    args = parser.parse_args()
-
-    stop_machines(args.shell_script)
-    #stop_manager_machines(args.private_key)
+if __name__ == "__main__":    
+    stop_machines()
