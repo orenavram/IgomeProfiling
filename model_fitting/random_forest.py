@@ -227,7 +227,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
     return cv_avg_error_rates, number_of_features_per_model
 
 
-def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_tfidf, cv_num_of_splits, seed, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample,number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -280,28 +280,41 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     feature_selection_summary_f.write(f'model_number\tnum_of_features\tfinal_error_rate\n')
 
     sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
+    
+    script_name = 'train_random_forest.py'
+    num_of_expected_results=0
+    all_cmds_params=[]
     for i, configuration in enumerate(sampled_configurations):
         model_number = str(i).zfill(len(str(num_of_configurations_to_sample)))
         output_path_i = os.path.join(output_path, model_number)
         logging.info(f'Creating output path #{i}...')
         os.makedirs(output_path_i, exist_ok=True)
-
         save_configuration_to_txt_file(configuration, output_path_i)
 
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
-        rf = RandomForestClassifier(**configuration)
-        errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, use_tfidf, output_path_i, cv_num_of_splits)
-        # model.predict(X_test, y_test)
-
-        plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
-
-        feature_selection_summary_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}\n')
-
-        if features[-1] == 1 and errors[-1] == 0:
-            # found the best model (accuracy-wise)
-            # there is no point to continue...
-            break
-
+        done_file_path_configuration=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
+        cmds=[str(configuration),csv_file_name,is_hits_data,output_path_i,
+                model_number,feature_selection_summary_path,done_file_path_configuration,
+                '--tfidf',tfidf,'--cv_num_of_splits',cv_num_of_splits]
+         all_cmds_params.append(cmds)       
+    num_c=0    
+    if len(all_cmds_params) > 0:
+        for count,cmds_params in enumerate(all_cmds_params):
+            cmd = submit_pipeline_step(script_path,[cmds_params],
+                                logs_dir, f'{cmds_params[4]}_train_random_forest',
+                                queue_name, verbose, executable=executable)
+            num_of_expected_results += 1  # a single job for each random forest
+            if count==number_parallel_random_forest:
+                wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                        error_file_path=error_path, suffix='_done_train_random_forest.txt') 
+                #check if we found the best model and can stop run
+                models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
+                for feature,error in zip(models_stats[num_of_features],models_stats[final_error_rate]):
+                    feature==1 and error==min_value_error if min_value_error else 0:
+                        break
+                num_c+=1
+                count=0                  
+ 
     feature_selection_summary_f.close()
 
     # find who was the best performing model
@@ -380,8 +393,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('logs_dir',help='A path for the log dir')
+    parser.add_argument('error_path',help='Path for error file')
     # parser.add_argument('n_splits', type=int, default=2, help='How manyfolds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
+    parser.add_argument('--number_parallel_random_forest',type=int,help='How many random forest to run in parallel')
+    parser.add_argument('--min_value_error', type=float, help='A min value for error that the run can stop')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
@@ -394,4 +411,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.logs_dir,args.error_path, args.num_of_configurations_to_sample,args.number_parallel_random_forest, args.min_value_error,args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)

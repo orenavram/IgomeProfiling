@@ -157,8 +157,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
             
-            value_cmd = [aggregated_values_path, pvalues_done_path]
-            hits_cmd = [aggregated_hits_path, hits_done_path]
+            value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path]
+            hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path]
             if rank_method == 'tfidf' or rank_method == 'shuffles':
                 value_cmd.append('--tfidf')
                 hits_cmd.append('--tfidf')
