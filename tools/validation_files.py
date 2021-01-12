@@ -1,5 +1,5 @@
 import sys
-#from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import *
 
 def is_same_samples(samples2bc_path,barcode2samples_path):
     #verify that file sample2biologicalcondition and file barcode2sample have the same samples.
