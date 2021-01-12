@@ -37,7 +37,6 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
     memes = []
     first_meme = True
     bc2s=dictionary_bc_2_sample(samplename2biologicalcondition_path)
-    print(sorted(bc2s[biological_condition]))
     for sample_name in sorted(bc2s[biological_condition]):  # sample name of the specific bc
         dir_path = os.path.join(motif_inference_path, sample_name)
         if not os.path.isdir(dir_path):
