@@ -9,11 +9,18 @@ import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
 from sklearn.metrics import plot_roc_curve
-
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+sys.path.insert(0, src_dir)
 
+from auxiliaries.pipeline_auxiliaries import *
 
 
 def parse_data(file_path):
@@ -281,7 +288,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
 
     sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
     
-    script_name = 'train_random_forest.py'
+    script_name = 'model_fitting/train_random_forest.py'
     num_of_expected_results=0
     all_cmds_params=[]
     for i, configuration in enumerate(sampled_configurations):
@@ -289,29 +296,38 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
         output_path_i = os.path.join(output_path, model_number)
         logging.info(f'Creating output path #{i}...')
         os.makedirs(output_path_i, exist_ok=True)
-        save_configuration_to_txt_file(configuration, output_path_i)
+        file_save_configuration=save_configuration_to_txt_file(configuration, output_path_i)
 
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
         done_file_path_configuration=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
-        cmds=[str(configuration),csv_file_name,is_hits_data,output_path_i,
+        cmds=[file_save_configuration,csv_file_path,is_hits_data,output_path_i,
                 model_number,feature_selection_summary_path,done_file_path_configuration,
-                '--tfidf',tfidf,'--cv_num_of_splits',cv_num_of_splits]
-         all_cmds_params.append(cmds)       
+            '--cv_num_of_splits',cv_num_of_splits]
+        all_cmds_params.append(cmds)       
     num_c=0    
+    
+    queue_name='pupkoweb'
+    verbose=True
+    executable='python'
     if len(all_cmds_params) > 0:
         for count,cmds_params in enumerate(all_cmds_params):
-            cmd = submit_pipeline_step(script_path,[cmds_params],
-                                logs_dir, f'{cmds_params[4]}_train_random_forest',
+            cmd = submit_pipeline_step(script_name,[cmds_params],
+                                logs_dir, f'{cmds_params[4]}_done_train_random_forest.txt',
                                 queue_name, verbose, executable=executable)
             num_of_expected_results += 1  # a single job for each random forest
             if count==number_parallel_random_forest:
+                print('Start waiting to the filles....')
                 wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                         error_file_path=error_path, suffix='_done_train_random_forest.txt') 
                 #check if we found the best model and can stop run
                 models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
                 for feature,error in zip(models_stats[num_of_features],models_stats[final_error_rate]):
-                    feature==1 and error==min_value_error if min_value_error else 0:
-                        break
+                    if min_value_error:
+                        if feature==1 and error==min_value_error:
+                            break
+                    else:
+                        if feature==1 and error==0:
+                            break
                 num_c+=1
                 count=0                  
  
@@ -378,11 +394,12 @@ def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, 
 
 
 def save_configuration_to_txt_file(sampled_configuration, output_path_i):
+    file_save_configuration=f'{output_path_i}/hyperparameters_configuration.txt'
     with open(f'{output_path_i}/hyperparameters_configuration.txt', 'w') as f:
         for key in sampled_configuration:
             f.write(f'{key}={sampled_configuration[key]}\n')
     joblib.dump(sampled_configuration, f'{output_path_i}/hyperparameters_configuration.pkl')
-
+    return save_configuration_to_txt_file
 
 if __name__ == '__main__':
 
@@ -404,7 +421,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
-
+    import logging
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
