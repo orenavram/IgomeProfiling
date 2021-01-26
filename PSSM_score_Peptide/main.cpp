@@ -478,14 +478,38 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		// }
 		// listOfPvaluesFile << endl;
 
-		int place = numberOfRandomPSSM-1;
-		while (place>=0) {
-			if (numberOfHitsInRealPSSM > numSigPeptides[place]) break;
-			place--;
+		/**************************new code of calculate p-value*******************************/
+		double p_Value;
+		if (numberOfHitsInRealPSSM>=numSigPeptides[0]){
+			p_Value=1;
+		}else if(numberOfHitsInRealPSSM<=numSigPeptides[numberOfRandomPSSM-1]){
+			p_Value=0;
+		}else{
+			//algo1
+			for (int place=0;place<=numberOfRandomPSSM;place++){
+				if (numberOfHitsInRealPSSM>=numSigPeptides[place]){
+                	double min_1=numSigPeptides[place];
+                	double max_1=numSigPeptides[place-1];
+      		        double z_maen=(numberOfHitsInRealPSSM-min_1)/(max_1-min_1);
+                	number_pvalue=(z_maen/numberOfRandomPSSM)+((double)place/(double)numberOfRandomPSSM);
+	                break;
+			} 
+			//algo2
+			double min=numSigPeptides[0];
+        	double max=numSigPeptides[numberOfRandomPSSM-1];
+        	p_Value=(numberOfHitsInRealPSSM-min)/(max-min);
 		}
-		if (place == -1) place = 0; //so that we get p value = 1 in this case.
+
+		
+		
+		//int place = numberOfRandomPSSM-1;
+		//while (place>=0) {
+		//	if (numberOfHitsInRealPSSM > numSigPeptides[place]) break;
+		//	place--;
+		//}
+		//if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
-		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
+		//double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}
