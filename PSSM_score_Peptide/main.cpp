@@ -480,24 +480,26 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 
 		/**************************new code of calculate p-value*******************************/
 		double p_Value;
-		if (numberOfHitsInRealPSSM>=numSigPeptides[0]){
-			p_Value=1;
-		}else if(numberOfHitsInRealPSSM<=numSigPeptides[numberOfRandomPSSM-1]){
+		if (numberOfHitsInRealPSSM<numSigPeptides[0]){
 			p_Value=0;
+		}else if(numberOfHitsInRealPSSM>numSigPeptides[numberOfRandomPSSM-1]){
+			p_Value=1;
 		}else{
 			//algo1
 			for (int place=0;place<=numberOfRandomPSSM;place++){
 				if (numberOfHitsInRealPSSM>=numSigPeptides[place]){
-                	double min_1=numSigPeptides[place];
-                	double max_1=numSigPeptides[place-1];
+                	double min_1=numSigPeptides[place-1];
+                	double max_1=numSigPeptides[place];
       		        double z_maen=(numberOfHitsInRealPSSM-min_1)/(max_1-min_1);
                 	number_pvalue=(z_maen/numberOfRandomPSSM)+((double)place/(double)numberOfRandomPSSM);
 	                break;
 			} 
 			//algo2
+			/*
 			double min=numSigPeptides[0];
         	double max=numSigPeptides[numberOfRandomPSSM-1];
         	p_Value=(numberOfHitsInRealPSSM-min)/(max-min);
+			*/
 		}
 
 		
