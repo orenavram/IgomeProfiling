@@ -23,7 +23,7 @@ def repeat_items(list):
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, shuffles_percent, shufles_digits, queue_name, verbose, error_path, use_mapitop, argv):
+                     shuffles, shuffles_percent, shufles_digits, queue_name, verbose, error_path, use_mapitope, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -61,7 +61,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             cutoffs_file_path = os.path.join(cutoffs_path, file_name)
             for sample_name in sample_names:
                 sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
-                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitop)
+                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
                 output_path = os.path.join(classification_output_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
@@ -195,9 +195,9 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         f.write(' '.join(argv) + '\n')
 
 
-def get_faa_file_name_from_path(path, use_mapitop):
+def get_faa_file_name_from_path(path, use_mapitope):
     for file_name in os.listdir(path):
-        if file_name.endswith('faa') and 'unique' not in file_name and ('mapitope' in file_name) == use_mapitop:
+        if file_name.endswith('faa') and 'unique' not in file_name and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
             break
     return os.path.join(path, file_name)
