@@ -23,7 +23,7 @@ def repeat_items(list):
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, percent, digit, queue_name, verbose, error_path, use_mapitop, argv):
+                     shuffles, shuffles_percent, shufles_digits, queue_name, verbose, error_path, use_mapitop, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -69,7 +69,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                     cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms)]
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
-                    cmd += ['--percent', percent, '--digit', digit, output_path, done_path]
+                    cmd += ['--shuffles_percent', shuffles_percent, '--shufles_digits', shufles_digits, output_path, done_path]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
@@ -221,8 +221,8 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
-    parser.add_argument('--percent', default=0.2, type=float, help='Percent from the bigit hit shuffle')
-    parser.add_argument('--digit', default=2, type=int, help='Number of digit after the point to print in scanning files.')
+    parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
+    parser.add_argument('--shufles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -241,4 +241,4 @@ if __name__ == '__main__':
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
                      args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
-                     args.shuffles, args.percent, args.digit, args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
+                     args.shuffles, args.shuffles_percent, args.shufles_digits, args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
