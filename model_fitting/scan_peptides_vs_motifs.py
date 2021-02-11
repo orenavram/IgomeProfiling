@@ -17,7 +17,7 @@ from time import time
 
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
-                              shuffles, output_path, done_path, rank_method, argv='no_argv',
+                              shuffles, percent, digit,output_path, done_path, rank_method, argv='no_argv',
                               pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
@@ -30,7 +30,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
             logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')
         else:  # shuffles
-            cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles}'
+            cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles} --percent {percent} --digit {digit}'
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
             
         subprocess.run(cmd, shell=True)
@@ -59,6 +59,8 @@ if __name__ == '__main__':
     parser.add_argument('output_path', help='A path to which the Pvalues will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--percent', default=0.2, type=float, help='Percent from the bigit hit shuffle')
+    parser.add_argument('--digit', default=2, type=int, help='Number of digit after the point to print in scanning files.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -70,7 +72,7 @@ if __name__ == '__main__':
 
     start = time()
     calculate_pssm_thresholds(args.meme_file_path, args.cutoffs_file_path, args.faa_file_path,
-                              args.number_of_random_pssms, args.shuffles, args.output_path, 
+                              args.number_of_random_pssms, args.shuffles, args.percent, args.digit,args.output_path, 
                               args.done_file_path, args.rank_method, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <regex>
 #include <chrono>
+#include <iomanip>
 
 #include "cxxopts.hpp"
 #include "types.hpp"
@@ -142,7 +143,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     return hits;
 }
 
-MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose) {
+MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose,float percent) {
     MemeRatingMap ratings;
 
     auto memeIter = shuffles.begin();
@@ -150,10 +151,11 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose) 
 
     while (memeIter != memeEnd) {
         auto hits = memes.getMemes()[memeIter->first].getHitCount();
-        int rank = 0;
+        //int rank = 0;
 
         auto shuffleIter = memeIter->second.begin();
         auto shuffleEnd = memeIter->second.end();
+        /*
         while (shuffleIter != shuffleEnd) {
             if (hits > shuffleIter->getHitCount()) { // TODO should be >= ? 
                 rank++;
@@ -165,6 +167,54 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose) 
             cout << "Motif " << memeIter->first << ", Total shuffles: " << memeIter->second.size() <<
                 ", Rank: " << rank << ", Score: " << score << endl;
         }
+        */
+        int add=memeIter->second.size();
+        if (percent!=0.0){
+            add++;
+        }
+        int shuffleArray[add];
+        int count=0;
+        int max=0;
+        //create list of the suffle hits
+        while (shuffleIter != shuffleEnd) {
+                shuffleArray[count]=shuffleIter->getHitCount();
+                if (shuffleIter->getHitCount()>max){
+                    max=shuffleIter->getHitCount();
+                }
+                shuffleIter++;
+                count++;
+        }
+        if (add!=memeIter->second.size()){
+            shuffleArray[memeIter->second.size()]=(int)((float)max*percent)+max;
+        }
+        //sort the list 
+        int n = sizeof(shuffleArray) / sizeof(shuffleArray[0]);
+        sort(shuffleArray, shuffleArray + n);
+        
+        int shuffleHitStart=shuffleArray[0];
+        int shuffleHitEnd=shuffleArray[n-1];
+        float score;
+        if (hits==0){
+            score=0.0;
+        }
+        else if (hits>shuffleHitEnd){
+            score=1.0;
+        }
+        else if (hits<shuffleHitStart){
+            score=0.0;
+        }else{
+            for (int place=0; place<n;place++){
+                if (hits <=shuffleArray[place]){
+                    float min_1=(float)shuffleArray[place-1];
+                    float max_1=(float)shuffleArray[place];
+                    float z_maen=((float)hits-min_1)/(max_1-min_1);
+                    float p=(float)place/(float)n;
+                    score=(z_maen/(float)n)+p;
+                    break;
+                }
+			} 
+        }
+        cout<<"score"<<score<<endl;
         ratings[memeIter->first] = score;
         memeIter++;
     }
@@ -172,7 +222,7 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose) 
     return ratings;
 }
 
-void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose) {
+void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int digit) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -184,7 +234,7 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
-            file << "RANK " << ratingIter->second << endl;
+            file << "RANK " << std::fixed << std::setprecision(digit) <<ratingIter->second << endl;
         }
         auto sequencesIter = memesIter->second.getHitSequences().begin();
         auto sequencesEnd = memesIter->second.getHitSequences().end();
@@ -207,6 +257,8 @@ int main(int argc, char *argv[])
         ("maxMemes", "Limit number of memes to process (0 = all)", cxxopts::value<int>()->default_value("0"))
         ("outputSequences", "Write matched sequences (not memory efficient)", cxxopts::value<bool>()->default_value("false"))
         ("shuffles", "Create shuffles and rate memes by them (0 = disable)", cxxopts::value<int>()->default_value("0"))
+        ("percent", "Percent number of over the last number shuffle", cxxopts::value<float>()->default_value("0.2"))
+        ("digit","Number digit after the point to print in scanning files",cxxopts::value<int>()->default_value("2"))
         //shufflesintersections
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
@@ -218,6 +270,8 @@ int main(int argc, char *argv[])
     auto isOutputSequences = result["outputSequences"].as<bool>();
     auto maxMemes = result["maxMemes"].as<int>();
     auto shuffles = result["shuffles"].as<int>();
+    auto percent = result["percent"].as<float>();
+    auto digit = result["digit"].as<int>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -229,9 +283,9 @@ int main(int argc, char *argv[])
     getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
-        memesRating = getRatings(memes, memesShuffles, isVerbose);
+        memesRating = getRatings(memes, memesShuffles, isVerbose,percent);
     }
-    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose);
+    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose,digit);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;
