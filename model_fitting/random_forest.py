@@ -90,12 +90,15 @@ def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample,
 def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_tfidf, output_path):
     # plt.figure(dpi=1000)
     # transform the data for better contrast in the visualization
-    if hits_data:  # hits data
-        train_data = np.log2(df+1)  # pseudo counts
-    elif use_tfidf: # tfidf data
-        train_data = -np.log2(df+0.0001)  # avoid 0
-    else:  # p-values data
-        train_data = -np.log2(df)
+    
+    train_data = np.log2(df+1) if hits_data else df 
+
+    #if hits_data:  # hits data
+    #    train_data = np.log2(df+1)  # pseudo counts
+    #elif use_tfidf: # tfidf data
+    #    train_data = -np.log2(df+0.0001)  # avoid 0
+    #else:  # p-values data
+    #    train_data = -np.log2(df)
 
     cm = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
