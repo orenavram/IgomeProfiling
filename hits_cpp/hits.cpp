@@ -212,7 +212,7 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
-void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shuflesDigits) {
+void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -224,7 +224,7 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
-            file << "RANK " << std::fixed << std::setprecision(shuflesDigits) <<ratingIter->second << endl;
+            file << "RANK " << std::fixed << std::setprecision(shufflesDigits) <<ratingIter->second << endl;
         }
         auto sequencesIter = memesIter->second.getHitSequences().begin();
         auto sequencesEnd = memesIter->second.getHitSequences().end();
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
         ("outputSequences", "Write matched sequences (not memory efficient)", cxxopts::value<bool>()->default_value("false"))
         ("shuffles", "Create shuffles and rate memes by them (0 = disable)", cxxopts::value<int>()->default_value("0"))
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
-        ("shuflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
+        ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
         //shufflesintersections
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
     auto maxMemes = result["maxMemes"].as<int>();
     auto shuffles = result["shuffles"].as<int>();
     auto shufflesPercent = result["shufflesPercent"].as<float>();
-    auto shuflesDigits = result["shuflesDigits"].as<int>();
+    auto shufflesDigits = result["shufflesDigits"].as<int>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
     }
-    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shuflesDigits);
+    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shufflesDigits);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

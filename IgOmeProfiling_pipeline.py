@@ -16,7 +16,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, number_of_random_pssms,
-                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shufles_digits,
+                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
@@ -86,7 +86,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--shuffles_percent {shuffles_percent}', f'--shufles_digits {shufles_digits}' ,f'--rank_method {rank_method}', f'--error_path {error_path}', 
+                             third_phase_done_path, f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}' ,f'--rank_method {rank_method}', f'--error_path {error_path}', 
                              '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
-    parser.add_argument('--shufles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
+    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -196,5 +196,5 @@ if __name__ == '__main__':
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
-                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shufles_digits,
+                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
