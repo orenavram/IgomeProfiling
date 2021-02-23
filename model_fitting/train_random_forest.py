@@ -180,22 +180,24 @@ def configuration_from_txt_to_dictionary(configuration_path):
     with open(configuration_path, 'r') as f:
             for line in f:
                 (key, val) = line.split('=')
-                if key=='max_features' or key=='bootstrap':
+                if key == 'max_features' or key == 'bootstrap':
                     configuration[key] = val.split('\n')[0]
+                elif (key == 'max_depth' and val == 'None\n'):
+                    configuration[key]=None
                 else:
                     configuration[key] = int(val)
     return configuration                
 
-def pre_train(configuration_path,csv_file_path,is_hits_data,output_path_i,model_number,feature_selection_summary_path,done_file_path,cv_num_of_splits,argv):
+def pre_train(configuration_path,csv_file_path,is_hits_data,output_path_i,model_number,done_file_path,cv_num_of_splits,argv):
     configuration=configuration_from_txt_to_dictionary(configuration_path)
     print(configuration)
     print(f'start run random forest for model number {model_number}')
-    feature_selection_summary_f = open(feature_selection_summary_path, 'w')
+    feature_selection_f = open(f'{output_path_i}/feature_selection.txt', 'w')
     rf = RandomForestClassifier(**configuration)
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
     errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, output_path_i, cv_num_of_splits)
     plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
-    feature_selection_summary_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}\n')
+    feature_selection_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}')
     
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -207,14 +209,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('configuration_path', type=str, help='A dictionary of the configuration to this model ')
-    parser.add_argument('csv_file_path',type=str,help='')
-    parser.add_argument('is_hits_data',type=bool,help='if is hits data or pvalue data')
-    parser.add_argument('output_path_i',type=str,help='A path for the results of this model')
-    parser.add_argument('model_number',type=str,help='number of model')
-    parser.add_argument('feature_selection_summary_path',type=str,help='A path for a file for write the results featurs')
-    parser.add_argument('done_file_path',type=str,help='A path to a file that signals that the script finished running successfully')
+    parser.add_argument('csv_file_path', type=str, help='')
+    parser.add_argument('is_hits_data', type=bool, help='if is hits data or pvalue data')
+    parser.add_argument('output_path_i', type=str, help='A path for the results of this model')
+    parser.add_argument('model_number', type=str, help='number of model')
+    parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully')
     #parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
-    parser.add_argument('--cv_num_of_splits',type=int,help='number of CV folds')
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='number of CV folds')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
     import logging
@@ -226,4 +227,4 @@ if __name__ == '__main__':
 
     #  rf = RandomForestClassifier(**{'n_estimators': 2000, 'max_features': 'auto', 'max_depth': 70, 'min_samples_split': 5, 'min_samples_leaf': 1, 'bootstrap': True, 'n_jobs': -1}
     #pre_train(args.configuration_path,args.csv_file_path,args.is_hits_data,args.output_path_i,args.model_number,args.feature_selection_summary_path,args.done_file_path,args.use_tfidf,args.cv_num_of_splits,argv=sys.argv)
-    pre_train(args.configuration_path,args.csv_file_path,args.is_hits_data,args.output_path_i,args.model_number,args.feature_selection_summary_path,args.done_file_path,args.cv_num_of_splits,argv=sys.argv)
+    pre_train(args.configuration_path,args.csv_file_path,args.is_hits_data,args.output_path_i,args.model_number,args.done_file_path,args.cv_num_of_splits,argv=sys.argv)
