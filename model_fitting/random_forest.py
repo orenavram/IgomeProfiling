@@ -289,33 +289,32 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
     
     script_name = 'model_fitting/train_random_forest.py'
-    num_of_expected_results=0
-    all_cmds_params=[]
+    num_of_expected_results = 0
+    all_cmds_params = []
     for i, configuration in enumerate(sampled_configurations):
         model_number = str(i).zfill(len(str(num_of_configurations_to_sample)))
         output_path_i = os.path.join(output_path, model_number)
         logging.info(f'Creating output path #{i}...')
         os.makedirs(output_path_i, exist_ok=True)
-        file_save_configuration=save_configuration_to_txt_file(configuration, output_path_i)
-
+        file_save_configuration = save_configuration_to_txt_file(configuration, output_path_i)
+        print(file_save_configuration)
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
-        done_file_path_configuration=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
-        cmds=[file_save_configuration,csv_file_path,is_hits_data,output_path_i,
-                model_number,feature_selection_summary_path,done_file_path_configuration,
-            '--cv_num_of_splits',cv_num_of_splits]
+        done_file_path=os.path.join(output_path_i, f'{model_number}_done_train_random_forest.txt')
+        cmds=[file_save_configuration, csv_file_path, is_hits_data, output_path_i,
+                model_number, feature_selection_summary_path, done_file_path,
+                '--cv_num_of_splits', cv_num_of_splits]
         all_cmds_params.append(cmds)       
-    num_c=0    
     
-    queue_name='pupkoweb'
-    verbose=True
-    executable='python'
+    queue_name = 'pupkoweb'
+    verbose = True
+    executable = 'python'
     if len(all_cmds_params) > 0:
         for count,cmds_params in enumerate(all_cmds_params):
             cmd = submit_pipeline_step(script_name,[cmds_params],
-                                logs_dir, f'{cmds_params[4]}_done_train_random_forest.txt',
+                                logs_dir, '_done_train_random_forest.txt',
                                 queue_name, verbose, executable=executable)
-            num_of_expected_results += 1  # a single job for each random forest
-            if count==number_parallel_random_forest:
+            num_of_expected_results += 1  # a single job for each train random forest
+            if count%number_parallel_random_forest==0 or count==num_of_configurations_to_sample:
                 print('Start waiting to the filles....')
                 wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                         error_file_path=error_path, suffix='_done_train_random_forest.txt') 
@@ -328,8 +327,6 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
                     else:
                         if feature==1 and error==0:
                             break
-                num_c+=1
-                count=0                  
  
     feature_selection_summary_f.close()
 
