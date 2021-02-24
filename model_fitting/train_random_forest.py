@@ -47,16 +47,7 @@ def generate_roc_curve(X, y, classifier, number_of_features, output_path):
 
 
 def generate_heat_map(df, number_of_features, hits_data, number_of_samples, output_path):
-    # plt.figure(dpi=1000)
-    # transform the data for better contrast in the visualization
     train_data = np.log2(df+1) if hits_data else df 
-    
-    
-    #elif use_tfidf: # tfidf data
-    #    train_data = -np.log2(df+0.0001) 
-    #else:  # p-values data
-    #    train_data = -np.log2(df)
-
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -188,16 +179,15 @@ def configuration_from_txt_to_dictionary(configuration_path):
                     configuration[key] = int(val)
     return configuration                
 
-def pre_train(configuration_path,csv_file_path,is_hits_data,output_path_i,model_number,done_file_path,cv_num_of_splits,argv):
-    configuration=configuration_from_txt_to_dictionary(configuration_path)
-    print(configuration)
-    print(f'start run random forest for model number {model_number}')
+def pre_train(configuration_path, csv_file_path, is_hits_data, output_path_i, model_number, done_file_path, cv_num_of_splits, argv):
+    configuration = configuration_from_txt_to_dictionary(configuration_path)
+    print(f'Start run random forest for model number {model_number}:')
     feature_selection_f = open(f'{output_path_i}/feature_selection.txt', 'w')
     rf = RandomForestClassifier(**configuration)
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
     errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, output_path_i, cv_num_of_splits)
     plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
-    feature_selection_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}')
+    feature_selection_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}\n')
     
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -209,7 +199,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('configuration_path', type=str, help='A dictionary of the configuration to this model ')
-    parser.add_argument('csv_file_path', type=str, help='')
+    parser.add_argument('csv_file_path', type=str, help='A csv file with data matrix to model')
     parser.add_argument('is_hits_data', type=bool, help='if is hits data or pvalue data')
     parser.add_argument('output_path_i', type=str, help='A path for the results of this model')
     parser.add_argument('model_number', type=str, help='number of model')
@@ -225,6 +215,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    #  rf = RandomForestClassifier(**{'n_estimators': 2000, 'max_features': 'auto', 'max_depth': 70, 'min_samples_split': 5, 'min_samples_leaf': 1, 'bootstrap': True, 'n_jobs': -1}
-    #pre_train(args.configuration_path,args.csv_file_path,args.is_hits_data,args.output_path_i,args.model_number,args.feature_selection_summary_path,args.done_file_path,args.use_tfidf,args.cv_num_of_splits,argv=sys.argv)
-    pre_train(args.configuration_path,args.csv_file_path,args.is_hits_data,args.output_path_i,args.model_number,args.done_file_path,args.cv_num_of_splits,argv=sys.argv)
+   
+    pre_train(args.configuration_path, args.csv_file_path, args.is_hits_data, args.output_path_i, args.model_number, args.done_file_path, args.cv_num_of_splits, argv=sys.argv)

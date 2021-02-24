@@ -1,3 +1,4 @@
+import time
 import sys
 import os
 import shutil
@@ -122,22 +123,23 @@ def save_model_features(X, feature_indexes, feature_names, sample_names, output_
     return df
 
 
-def write_results_feature_selection_summary(feature_selection_summary_path,path_dir):
-    feature_selection_summary_f=open(feature_selection_summary_path,'w')
-    models=sorted([x[0] for x in os.walk(path_dir)])
+def write_results_feature_selection_summary(feature_selection_summary_path, path_dir):
+    feature_selection_summary_f = open(feature_selection_summary_path, 'w')
+    models = sorted([x[0] for x in os.walk(path_dir)])
+    del models[0]
     for path_number_model in models:
-        path_file=f'{path_number_model}/feature_selection.txt'
+        path_file = f'{path_number_model}/feature_selection.txt'
         if os.path.exists(path_file):
-            f=open(path_file,'r')
-            line=f.readline()
-            feature_selection_summary_f.write(f'{line}\n')
+            f = open(path_file, 'r')
+            line = f.readline()
+            feature_selection_summary_f.write(line)
             f.close()
             os.remove(path_file)
     feature_selection_summary_f.close()
 
 
 
-def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample,number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -182,7 +184,6 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     feature_selection_summary_f.write(f'model_number\tnum_of_features\tfinal_error_rate\n')
 
     sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
-    print(sampled_configurations)
     script_name = 'model_fitting/train_random_forest.py'
     num_of_expected_results = 0
     all_cmds_params = []
@@ -204,11 +205,11 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     executable = 'python'
     if len(all_cmds_params) > 0:
         for count, cmds_params in enumerate(all_cmds_params):
-            cmd = submit_pipeline_step(script_name,[cmds_params],
+            cmd = submit_pipeline_step(script_name, [cmds_params],
                                 logs_dir, '_done_train_random_forest.txt',
                                 queue_name, verbose, executable=executable)
             num_of_expected_results += 1  # a single job for each train random forest
-            if (count+1) % number_parallel_random_forest == 0 or (count+1) == num_of_configurations_to_sample:
+            if (count + 1) % number_parallel_random_forest == 0 or (count + 1) == num_of_configurations_to_sample:
                 print('Start waiting to the filles....')
                 wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                         error_file_path = error_path, suffix = '_done_train_random_forest.txt') 
@@ -216,7 +217,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
                 write_results_feature_selection_summary(feature_selection_summary_path, output_path)
                 #check if we found the best model and can stop run
                 models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
-                for feature, error in zip(models_stats['num_of_features'],models_stats['final_error_rate']):
+                for feature, error in zip(models_stats['num_of_features'], models_stats['final_error_rate']):
                     if min_value_error:
                         if feature == 1 and error == min_value_error:
                             break
