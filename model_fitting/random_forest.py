@@ -124,19 +124,18 @@ def save_model_features(X, feature_indexes, feature_names, sample_names, output_
 
 
 def write_results_feature_selection_summary(feature_selection_summary_path, path_dir):
-    feature_selection_summary_f = open(feature_selection_summary_path, 'w')
+    #feature_selection_summary_f = open(feature_selection_summary_path, 'a')
     models = sorted([x[0] for x in os.walk(path_dir)])
     del models[0]
-    for path_number_model in models:
-        path_file = f'{path_number_model}/feature_selection.txt'
-        if os.path.exists(path_file):
-            f = open(path_file, 'r')
-            line = f.readline()
-            feature_selection_summary_f.write(line)
-            f.close()
-            os.remove(path_file)
-    feature_selection_summary_f.close()
-
+    with open(feature_selection_summary_path, 'a') as feature_selection_summary_f:
+        for path_number_model in models:        
+            path_file = f'{path_number_model}/feature_selection.txt'
+            if os.path.exists(path_file):
+                with open(path_file) as infile:
+                    line=infile.readline()
+                    feature_selection_summary_f.write(line)
+                os.remove(path_file)
+    
 
 
 def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, argv):
@@ -182,6 +181,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
 
     feature_selection_summary_f = open(feature_selection_summary_path, 'w')
     feature_selection_summary_f.write(f'model_number\tnum_of_features\tfinal_error_rate\n')
+    feature_selection_summary_f.close()
 
     sampled_configurations = sample_configurations(hyperparameters_grid, num_of_configurations_to_sample, seed)
     script_name = 'model_fitting/train_random_forest.py'
@@ -204,6 +204,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     verbose = True
     executable = 'python'
     if len(all_cmds_params) > 0:
+        stop = False
         for count, cmds_params in enumerate(all_cmds_params):
             cmd = submit_pipeline_step(script_name, [cmds_params],
                                 logs_dir, '_done_train_random_forest.txt',
@@ -218,12 +219,11 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
                 #check if we found the best model and can stop run
                 models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
                 for feature, error in zip(models_stats['num_of_features'], models_stats['final_error_rate']):
-                    if min_value_error:
-                        if feature == 1 and error == min_value_error:
-                            break
-                    else:
-                        if feature == 1 and error == 0:
-                            break
+                    if feature == 1 and error == min_value_error:
+                        stop=True
+                        break
+        if stop:
+            break
  
     feature_selection_summary_f.close()
 
@@ -263,11 +263,6 @@ def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, 
         cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(cv_num_of_splits, shuffle=True)).mean()
         if cv_score == 1:
             logger.info('-' * 10 + f'{feature} has 100% accuracy!' + '-' * 10)
-        #     print(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])
-        #     print(f'min of other class: {min(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])}')
-        #     print(X_train[:, i].reshape(-1, 1).tolist()[8:12])
-        #     # print(y_train.tolist())
-        #     print('Accuracy is 1')
         feature_to_avg_accuracy[feature] = cv_score
 
     with open(f'{output_path}/single_feature_accuracy.txt', 'w') as f:
@@ -306,10 +301,9 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('logs_dir',help='A path for the log dir')
     parser.add_argument('error_path',help='Path for error file')
-    # parser.add_argument('n_splits', type=int, default=2, help='How manyfolds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest',default=20,type=int,help='How many random forest to run in parallel')
-    parser.add_argument('--min_value_error', type=float, help='A min value for error that the run can stop')
+    parser.add_argument('--min_value_error',default=0 ,type=float, help='A min value for error that the run can stop')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    

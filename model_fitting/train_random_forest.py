@@ -188,6 +188,7 @@ def pre_train(configuration_path, csv_file_path, is_hits_data, output_path_i, mo
     errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, output_path_i, cv_num_of_splits)
     plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
     feature_selection_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}\n')
+    feature_selection_f.close()
     
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
