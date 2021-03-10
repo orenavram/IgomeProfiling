@@ -100,7 +100,7 @@ def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_
     #else:  # p-values data
     #    train_data = -np.log2(df)
 
-    cm = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True)
+    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
     cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
