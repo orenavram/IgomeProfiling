@@ -132,7 +132,7 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
             path_file = f'{path_number_model}/feature_selection.txt'
             if os.path.exists(path_file):
                 with open(path_file) as infile:
-                    line=infile.readline()
+                    line = infile.readline()
                     feature_selection_summary_f.write(line)
                 os.remove(path_file)
     
@@ -198,7 +198,11 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
         cmds=[file_save_configuration, csv_file_path, is_hits_data, output_path_i,
                 model_number, done_file_path,
                 '--cv_num_of_splits', cv_num_of_splits]
-        all_cmds_params.append(cmds)       
+        if not os.path.exists(done_file_path):
+            all_cmds_params.append(cmds)
+        else: 
+            logger.debug(f'Skipping random forest train as {done_file_path} found')
+           
     
     queue_name = 'pupkoweb'
     verbose = True
@@ -220,11 +224,13 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
                 models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
                 for feature, error in zip(models_stats['num_of_features'], models_stats['final_error_rate']):
                     if feature == 1 and error == min_value_error:
-                        stop=True
+                        stop = True
                         break
         if stop:
             break
- 
+    else:
+         logger.info(f'Skipping random forest train, all found')
+
     feature_selection_summary_f.close()
 
     # find who was the best performing model
@@ -299,11 +305,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('logs_dir',help='A path for the log dir')
-    parser.add_argument('error_path',help='Path for error file')
+    parser.add_argument('logs_dir', help='A path for the log dir')
+    parser.add_argument('error_path', help='Path for error file')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--number_parallel_random_forest',default=20,type=int,help='How many random forest to run in parallel')
-    parser.add_argument('--min_value_error',default=0 ,type=float, help='A min value for error that the run can stop')
+    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest to run in parallel')
+    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A min value for error that the run can stop')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
@@ -316,4 +322,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.logs_dir,args.error_path, args.num_of_configurations_to_sample,args.number_parallel_random_forest, args.min_value_error,args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest, args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)

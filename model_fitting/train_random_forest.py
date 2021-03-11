@@ -167,7 +167,7 @@ def save_model_features(X, feature_indexes, feature_names, sample_names, output_
     return df
 
 def configuration_from_txt_to_dictionary(configuration_path):
-    configuration={}
+    configuration = {}
     with open(configuration_path, 'r') as f:
             for line in f:
                 (key, val) = line.split('=')
