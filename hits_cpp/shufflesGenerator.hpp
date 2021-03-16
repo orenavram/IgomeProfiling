@@ -1,7 +1,7 @@
 #pragma once
 
 #include "meme.hpp"
-
+#include <algorithm>
 using namespace std;
 
 class MemeShuffler {
@@ -32,11 +32,15 @@ public:
             iter++;
         }
         //check that we don't change place of the same data row:
+        cout << "currentShuffle: " << this->_currentShuffle <<endl;
         for (int i = 0; i < this->_source.getRows().size(); i++){
-            if (this->_source.getRows()[i] == meme.getRows()[i]){
+            auto max_source = max_element(this->_source.getRows()[i].begin(), this->_source.getRows()[i].end()) - this->_source.getRows()[i].begin();
+            auto max_shuffle = max_element(meme.getRows()[i].begin(), meme.getRows()[i].end()) - meme.getRows()[i].begin();
+            if (max_source == max_shuffle){
                 if (this->_source.getRows().size() > _maxShuffles){
                     _currentShuffle++;
                     _maxShuffles++;
+                    cout << "match in row: " << i <<endl;
                     auto meme_new = this->generate();
                     return meme_new;
                 }    
