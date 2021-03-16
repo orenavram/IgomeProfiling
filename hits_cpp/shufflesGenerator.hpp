@@ -31,6 +31,17 @@ public:
             meme.getRows().push_back(this->_source.getRows()[*iter]);
             iter++;
         }
+        //check that we don't change place of the same data row:
+        for (int i = 0; i < this->_source.getRows().size(); i++){
+            if (this->_source.getRows()[i] == meme.getRows()[i]){
+                if (this->_source.getRows().size() > _maxShuffles){
+                    _currentShuffle++;
+                    _maxShuffles++;
+                    auto meme_new = this->generate();
+                    return meme_new;
+                }    
+            }
+        }  
         return meme;
     }
 
