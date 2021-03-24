@@ -251,7 +251,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits)
     if perfect_feature_names:
         df = save_model_features(X_train, perfect_feature_indexes, perfect_feature_names, sample_names_train, f'{output_path}/perfect_feature_names')
-        generate_heat_map(df, df.shape[1], False, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
+        generate_heat_map(df, df.shape[1], is_hits_data, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
     else:
         # touch a file so we can see that there were no perfect features
         with open(f'{output_path}/perfect_feature_names', 'w') as f:
