@@ -130,7 +130,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, output_path, cv_num_
 
         generate_heat_map(df, number_of_features, hits_data, number_of_samples, f'{output_path}/{number_of_features}')
 
-        generate_roc_curve(X, y, rf, number_of_features, output_path)
+        #generate_roc_curve(X, y, rf, number_of_features, output_path)
 
         # save the model itself (serialized) for future use
         joblib.dump(model, os.path.join(output_path, f'Top_{number_of_features}_features_model.pkl'))

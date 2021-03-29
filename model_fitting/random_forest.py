@@ -226,8 +226,8 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
                     if feature == 1 and error == min_value_error:
                         stop = True
                         break
-        if stop:
-            break
+            if stop:
+                break
     else:
          logger.info(f'Skipping random forest train, all found')
 
