@@ -19,7 +19,7 @@ from auxiliaries.pipeline_auxiliaries import *
 def merge_csv(data_path, output_path, samplename2biologicalcondition_path, verbose):
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
-
+    dic={}
 
     list_hits=[]
     list_values=[]
@@ -31,13 +31,14 @@ def merge_csv(data_path, output_path, samplename2biologicalcondition_path, verbo
         bc_values=os.path.join(bc_dir_path,f'{bc}_values.csv')
         df_hits=pd.read_csv(bc_hits)
         df_value=pd.read_csv(bc_values)
+        dic[bc]=df_hits.columns
         if flag_firs_time:
             sample_name=df_hits['sample_name']
             flag_firs_time=False
         #remove the sample name and label.
         df_hits=df_hits.drop(['sample_name', 'label'],axis=1)
         df_value=df_value.drop(['sample_name', 'label'],axis=1)
-        
+        dic[bc]=df_hits.columns
         list_hits.append(df_hits)
         list_values.append(df_value)
     #merge all the df to one df. 
@@ -57,8 +58,16 @@ def merge_csv(data_path, output_path, samplename2biologicalcondition_path, verbo
     #save as csv file
     output_path_hits=os.path.join(output_path,'hits.csv')
     output_path_values=os.path.join(output_path,'values.csv')
-    hits_all.to_csv(output_path_hits)
-    values_all.to_csv(output_path_values)
+    output_path_columns=os.path.join(output_path,'columns.txt')
+    hits_all.to_csv(output_path_hits, index=None)
+    values_all.to_csv(output_path_values, index=None)
+    f=open(output_path_columns,'w')
+    for key in dic:
+        f.write(f"{key}:")
+        for val in dic[key]:
+            f.write(f'{val},')
+        f.write('\n')    
+    f.close()
 if __name__ == '__main__':
 
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
