@@ -407,7 +407,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         clstr_paths.append(f'{output_prefix}.clstr')
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
         if not os.path.exists(done_path):
-            cmds=[no_cys_faa_path, output_prefix, done_path , '--threshold', threshold, '--word_length', word_length, '--discard', discard]
+            cmds = [no_cys_faa_path, output_prefix, done_path , '--threshold', threshold, '--word_length', word_length, '--discard', discard]
             all_cmds_params.append(cmds)
         else:
             logger.debug(f'Skipping clustering as {done_path} exists')
@@ -609,4 +609,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.threshold, args.word_length, args.discard, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
+                 args.done_file_path, args.threshold, args.word_length, args.discard, args.queue,
+                 True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
