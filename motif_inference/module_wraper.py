@@ -323,7 +323,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, use_mapitope, argv):
+                 motif_inference_done_path, threshold, word_length, discard, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, use_mapitope, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -407,7 +407,8 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         clstr_paths.append(f'{output_prefix}.clstr')
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
         if not os.path.exists(done_path):
-            all_cmds_params.append([no_cys_faa_path, output_prefix, done_path])
+            cmds = [no_cys_faa_path, output_prefix, done_path , '--threshold', threshold, '--word_length', word_length, '--discard', discard]
+            all_cmds_params.append(cmds)
         else:
             logger.debug(f'Skipping clustering as {done_path} exists')
             num_of_expected_results += 1
@@ -579,7 +580,12 @@ if __name__ == '__main__':
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-
+    parser.add_argument('--threshold', default='0.5', help='Minimal sequence similarity threshold required',
+                        type=lambda x: float(x) if 0.4 <= float(x) <= 1
+                                                else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
+    parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
+                        help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
+    parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -603,4 +609,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
+                 args.done_file_path, args.threshold, args.word_length, args.discard, args.queue,
+                 True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
