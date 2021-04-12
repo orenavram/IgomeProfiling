@@ -47,7 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('fasta_file', help='A fasta file to collapse for unique sequences and their counts')
     parser.add_argument('output_prefix', help='A file prefix in which the 2 result files will use as an output path')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--threshold', default='0.5', help='Minimal sequence similarity threshold required',
+    parser.add_argument('--threshold', default='0.7', help='Minimal sequence similarity threshold required',
                         type=lambda x: float(x) if 0.4 <= float(x) <= 1
                                                 else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],

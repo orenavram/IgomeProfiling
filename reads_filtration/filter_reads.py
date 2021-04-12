@@ -200,7 +200,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                 num_of_mismatches_on_the_right = str_diff(rest_of_read, right_construct)
                 if num_of_mismatches_on_the_right > max_mismatches_allowed - num_of_mismatches_on_the_left:
                     barcode2statistics[barcode]['too_many_mistakes'] += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\tflanking constructs have {num_of_mismatches_on_the_left + num_of_mismatches_on_the_right} (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct} {rest_of_read[:right_construct_length]}\n")
+                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t random dna end: {random_dna_end} and random pep seq: {random_peptide} and rest of read: {rest_of_read} \n flanking constructs have {num_of_mismatches_on_the_left} mismatches with the left construct and {num_of_mismatches_on_the_right} mismatches on the right construct (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct} {rest_of_read[:right_construct_length]}\n")
                     # all set and documented. We can continue to the next read...
                     continue
 
