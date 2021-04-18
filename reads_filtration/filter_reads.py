@@ -89,7 +89,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                  min_sequencing_quality, minimal_length_required, gz):
 
     start_time = datetime.datetime.now()
-    from auxiliaries.pipeline_auxiliaries import nnk_table
+    from auxiliaries.pipeline_auxiliaries import nnk_table, codon_table
 
     left_construct_length = len(left_construct)
     right_construct_length = len(right_construct)
@@ -181,11 +181,13 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                         break
                     if len(codon) < 3:
                         break
-                    if codon[0] not in 'ACGT' or codon[1] not in 'ACGT':  # unrecognized dna base, e.g., N
+                    if codon[0] == 'N' or codon[1] == "N" or codon[2] == 'N':  # unrecognized dna base, e.g., N
                         break
-                    if codon[2] not in 'GT':  # K group (of NNK) = G or T
-                        break
-                    random_peptide += nnk_table[codon]
+                    #if codon[0] not in 'ACGT' or codon[1] not in 'ACGT':  # unrecognized dna base, e.g., N
+                        #break
+                    #if codon[2] not in 'GT':  # K group (of NNK) = G or T
+                        #break
+                    random_peptide += codon_table[codon]
                     if codon == 'TAG':
                         q_in_peptide = True
 
