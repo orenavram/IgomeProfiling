@@ -44,7 +44,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, minimal_length_required,first_phase_done_path,
+                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
                              '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],

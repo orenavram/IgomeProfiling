@@ -13,7 +13,7 @@ from auxiliaries.pipeline_auxiliaries import *
 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, data_type):
+                             motif_inference_output_path, logs_dir, minimal_number_of_columns_required, error_path, queue_name, verbose, data_type):
     # For each sample, align each cluster
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: aligning clusters in each sample')
@@ -473,7 +473,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap_frequency,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, 'samples')
+                             motif_inference_output_path, logs_dir, minimal_number_of_columns_required, error_path, queue_name, verbose, 'samples')
 
     # Merge memes of the same biological condition
     logger.info('_'*100)
@@ -544,7 +544,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
     align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap_frequency,
-                             motif_inference_output_path, logs_dir, error_path, queue_name, verbose, 'biological_conditions')
+                             motif_inference_output_path, logs_dir, minimal_number_of_columns_required, error_path, queue_name, verbose, 'biological_conditions')
 
     if concurrent_cutoffs:
         split_then_compute_cutoffs(biological_conditions, meme_split_size,
