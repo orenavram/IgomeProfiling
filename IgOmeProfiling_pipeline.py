@@ -12,7 +12,7 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import *
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
-                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
+                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, number_of_random_pssms,
@@ -43,7 +43,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
                              max_mismatches_allowed, min_sequencing_quality, minimal_length_required,first_phase_done_path,
-                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
+                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
                              logs_dir, f'{exp_name}_reads_filtration',
@@ -140,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('--minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')                             
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
+    parser.add_argument('--rpm', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
 
     # optional parameters for the motif inference
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
@@ -192,7 +193,7 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False, args.rpm,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
