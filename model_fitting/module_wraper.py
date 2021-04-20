@@ -23,7 +23,8 @@ def repeat_items(list):
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, shuffles_percent, shuffles_digits, queue_name, verbose, error_path, use_mapitope, argv):
+                     shuffles, shuffles_percent, shuffles_digits, num_of_configurations_to_sample, cv_num_of_splits, seed,
+                     queue_name, verbose, error_path, use_mapitope, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -156,8 +157,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
         
-        value_cmd = [aggregated_values_path, pvalues_done_path]
-        hits_cmd = [aggregated_hits_path, hits_done_path]
+        value_cmd = [aggregated_values_path, pvalues_done_path, f'--num_of_configurations_to_sample {num_of_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed}']
+        hits_cmd = [aggregated_hits_path, hits_done_path, f'--num_of_configurations_to_sample {num_of_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed}']
         if rank_method == 'tfidf' or rank_method == 'shuffles':
             value_cmd.append('--tfidf')
             hits_cmd.append('--tfidf')
@@ -223,6 +224,9 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
+    parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
+    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -241,4 +245,6 @@ if __name__ == '__main__':
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
                      args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
-                     args.shuffles, args.shuffles_percent, args.shuffles_digits, args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
+                     args.shuffles, args.shuffles_percent, args.shuffles_digits, args.num_of_configurations_to_sample,
+                     args.cv_num_of_splits, args.seed, args.queue,
+                     True if args.verbose else False, error_path, args.mapitope, sys.argv)
