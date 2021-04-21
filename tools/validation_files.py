@@ -1,12 +1,17 @@
 import sys
 from auxiliaries.pipeline_auxiliaries import *
+import os
 
 def is_same_samples(samples2bc_path,barcode2samples_path):
     #verify that file sample2biologicalcondition and file barcode2sample have the same samples.
-    samples_from_s2bc=sorted(load_table_to_dict(samples2bc_path,'Samples {} belongs to more than one bc!!').keys())
-    samples_from_b2s=load_table_to_dict(barcode2samples_path,'Barcode {} belongs to more than one sample!!').values()
-    samples_from_b2s=sorted(samples_from_b2s)
-    return samples_from_b2s==samples_from_s2bc
+    filename, file_extension = os.path.splitext(samples2bc_path)
+    samples_from_sample2bc=[]
+    if file_extension=='txt':
+        samples_from_sample2bc=sorted(load_table_to_dict(samples2bc_path,'Samples {} belongs to more than one bc!!').keys())
+    #else: #json file
+        #TODO call to function that return dict from json file
+    samples_from_barcode2sample=sorted(load_table_to_dict(barcode2samples_path,'Barcode {} belongs to more than one sample!!').values())
+    return samples_from_sample2bc==samples_from_barcode2sample
 
 def is_valid_structure_file(file_path):
     #verift the structure of the file, should look like: word\tword\n
@@ -29,3 +34,13 @@ def is_valid_structure_file(file_path):
             b=f.read(1)
     return True        
 
+def is_validation_files(samples2bc_path, barcode2samples_path):
+    samples2bc_valid=True
+    filename, file_extension = os.path.splitext(samples2bc_path)
+    if file_extension=='txt':
+        samples2bc_valid = is_same_samples(samples2bc_path)
+    barcode2samples_valid = is_same_samples(barcode2samples_path)
+    if samples2bc_valid and barcode2samples_valid:
+        return is_same_samples(samples2bc_path, barcode2samples_path)
+    else:
+        return False
