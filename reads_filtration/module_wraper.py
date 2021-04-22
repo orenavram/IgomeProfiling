@@ -32,6 +32,9 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     num_of_expected_result = 0
 
     if many_exp_together:
+        #open the json file and make a dictionary
+        f = open(many_exp_together)
+        fastq_and_barcode2samplename_dict = json.load(f)
         path_folder_fastq = fastq_and_barcode2samplename_dict['configuration']['input_fatsq']
         path_folder_barcode2samplename = fastq_and_barcode2samplename_dict['configuration']['input_bc2barcode']
         for exp,list_args in fastq_and_barcode2samplename_dict['runs'].items():
