@@ -291,7 +291,7 @@ def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
             table[key] = value
     return table
 
-def load_json_to_dict(json_path, error_msg)
+def load_json_to_dict(json_path, error_msg):
     table = {}
     dict_json = json.load(open(json_path))
     for key in dict_json:
@@ -300,7 +300,7 @@ def load_json_to_dict(json_path, error_msg)
                 assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
             table[val] = key  
     return table
-              
+
 def fail(error_path, e):
     exc_type, exc_obj, exc_tb = sys.exc_info()
     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
