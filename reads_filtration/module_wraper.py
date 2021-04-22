@@ -34,7 +34,37 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     if many_exp_together:
         path_folder_fastq = fastq_and_barcode2samplename_dict['configuration']['input_fatsq']
         path_folder_barcode2samplename = fastq_and_barcode2samplename_dict['configuration']['input_bc2barcode']
-
+        for exp,list_args in fastq_and_barcode2samplename_dict['runs'].items():
+        #get current paths
+            barcode2samplename_path = os.path.join(path_folder_barcode2samplename, list_args[0])
+            fastq_path = os.path.join(path_folder_fastq, list_args[1])
+            done_path=os.path.join(logs_dir,f'{exp}_filter_reads_done.txt')
+            if not os.path.exists(done_path):
+                cmds = [fastq_path, first_phase_output_path, logs_dir,
+                        done_path, barcode2samplename_path, f'{exp}_summary_log.txt',
+                        f'--error_path {error_path}',
+                        f'--left_construct {left_construct}',
+                        f'--right_construct {right_construct}',
+                        f'--max_mismatches_allowed {max_mismatches_allowed}',
+                        f'--min_sequencing_quality {min_sequencing_quality}',
+                        f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
+                all_cmds_params.append(cmds)
+            else:
+                logger.debug(f'skipping filter reads as {done_path} found')
+                num_of_expected_results += 1
+    
+        if len(all_cmds_params)>0:
+            executable='python'
+            script_path=f'{src_dir}/reads_filtration/{script_name}'
+            for cmds_params,exp in zip(all_cmds_params,fastq_and_barcode2samplename_dict['runs'].keys()):
+                cmd = submit_pipeline_step(script_path,[cmds_params],
+                                    logs_dir, f'{exp}_read_filteration',
+                                    queue, verbose, executable=executable)
+                num_of_expected_results+= 1
+            wait_for_results(script_name, logs_dir, num_of_expected_results,
+                            error_file_path=error_path, suffix='_filter_reads_done.txt')
+        else:
+            logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py, all reads exists')
 
         with open(demultiplexing_done_path, 'w') as f:
             f.write(' '.join(argv) + '\n')
