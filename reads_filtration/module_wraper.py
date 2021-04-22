@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -15,7 +16,7 @@ from global_params import src_dir
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
+                    many_exp_together, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -24,13 +25,25 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
         return
 
-    done_path = f'{logs_dir}/done_demultiplexing.txt'
+    demultiplexing_done_path = f'{logs_dir}/done_demultiplexing.txt'
     logger.info('_' * 100)
     logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {first_phase_output_path}')
-    if not os.path.exists(done_path):
+    script_name = 'filter_reads.py'
+    num_of_expected_result = 0
+
+    if many_exp_together:
+        path_folder_fastq = fastq_and_barcode2samplename_dict['configuration']['input_fatsq']
+        path_folder_barcode2samplename = fastq_and_barcode2samplename_dict['configuration']['input_bc2barcode']
+
+
+        with open(demultiplexing_done_path, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+    
+    #filter read only one  exp.
+    if not os.path.exists(demultiplexing_done_path):
         # run filter_reads.py
         parameters = [fastq_path, first_phase_output_path, logs_dir,
-                      done_path, barcode2samplename,
+                      done_path, barcode2samplename,'summary_log.txt'
                       f'--error_path {error_path}',
                       f'--left_construct {left_construct}',
                       f'--right_construct {right_construct}',
@@ -40,8 +53,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
         fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
                   parameters, verbose, error_path)
-        num_of_expected_results = 1
-        wait_for_results('filter_reads.py', logs_dir, num_of_expected_results,
+        num_of_expected_results+=1
+        wait_for_results(script_name, logs_dir, num_of_expected_results,
                          error_file_path=error_path, suffix='demultiplexing.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
@@ -143,7 +156,8 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
-
+    
+    parser.add_argument('--many_exp_together', type=str, help='a path to file that defines all the experement to run')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -163,5 +177,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
+                    args.min_sequencing_quality, args.minimal_length_required, args.many_exp_together, True if args.gz else False,
                     True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
