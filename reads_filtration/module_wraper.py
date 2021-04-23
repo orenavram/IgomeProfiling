@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
 
-    parser.add_argument('--rpm', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -169,4 +169,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
-                    True if args.verbose else False, args.mapitope, args.rpm, error_path, args.queue, sys.argv)
+                    True if args.verbose else False, args.mapitope, True if args.rpm else False, error_path, args.queue, sys.argv)

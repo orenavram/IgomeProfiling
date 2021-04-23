@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')                             
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
-    parser.add_argument('--rpm', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
 
     # optional parameters for the motif inference
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
@@ -219,7 +219,7 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False, args.rpm,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False, True if args.rpm else False,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
