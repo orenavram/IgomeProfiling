@@ -10,7 +10,7 @@ elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
 else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict
 
 import logging
 logger = logging.getLogger('main')
@@ -32,7 +32,6 @@ def merge_meme_files(motif_inference_path, biological_condition, merged_meme_pat
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path,
                                                 'Barcode {} belongs to more than one sample_name!!')
     list_sample_of_bc=[i for i in samplename2biologicalcondition if samplename2biologicalcondition[i]==biological_condition]
-    print(list_sample_of_bc)                                            
     for sample_name in sorted(list_sample_of_bc):  # sample name of the specific bc
         dir_path = os.path.join(motif_inference_path, sample_name)
         if not os.path.isdir(dir_path):
