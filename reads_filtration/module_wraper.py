@@ -15,11 +15,10 @@ from global_params import src_dir
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose, error_path, queue, argv='no_argv'):
+                    gz, verbose, stop_machines, type_machines_to_stop, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
-
     if os.path.exists(first_phase_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
         return
@@ -90,6 +89,15 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
 
+
+    if stop_machines:
+        name_script = 'tools/stop_machine_aws.py'
+        done_path = f'{logs_dir}/stop_machines_done.txt'
+        module_parameters = [done_path,f'--type_machines {type_machines_to_stop}' '-v' if verbose else '']
+        cmd = fetch_cmd(name_script,[module_parameters],verbose,error_path, done_path )
+        wait_for_results('stop_machine_aws', logs_dir, num_of_expected_results=1, example_cmd=cmd,
+                         error_file_path=error_path, suffix='stop_machines_done.txt')
+
     with open(first_phase_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
@@ -111,7 +119,8 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-
+    parser.add_argument('--stop_machines', action='store_true', help='if to stop the machines in AWS in the end of the running.')
+    parser.add_argument('--type_machines_to_stop', type=str, default='' , help='')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -131,4 +140,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, True if args.gz else False,
-                    True if args.verbose else False, error_path, args.queue, sys.argv)
+                    True if args.verbose else False, True if args.stop_machines else False, args.type_machines_to_stop, error_path, args.queue, sys.argv)

@@ -106,6 +106,13 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
+    name_script = 'tools/stop_machine_aws.py'
+    done_path = f'{logs_dir}/stop_machines_done.txt'
+    module_parameters = [done_path, '-v' if verbose else '']
+    cmd = fetch_cmd(name_script,[module_parameters],verbose,error_path, done_path )
+    wait_for_results('stop_machine_aws', logs_dir, num_of_expected_results=1, example_cmd=cmd,
+                         error_file_path=error_path, suffix='stop_machines_done.txt')
+
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
     f_run_summary_path.close()
