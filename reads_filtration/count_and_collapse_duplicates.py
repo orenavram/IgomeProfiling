@@ -55,7 +55,8 @@ def get_sequences_frequency_counter(fasta_file, open_function, mode):
         for line in f:
             # skip headers. Read only sequences.
             sequence = f.readline().rstrip()
-            sequences_to_counts[sequence] = sequences_to_counts.get(sequence, 0) + 1
+            if sequence[:-3:-1] != 'GG':
+                sequences_to_counts[sequence] = sequences_to_counts.get(sequence, 0) + 1
     return sequences_to_counts
 
 
