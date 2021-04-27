@@ -93,8 +93,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     if stop_machines:
         name_script = 'tools/stop_machine_aws.py'
         done_path = f'{logs_dir}/stop_machines_done.txt'
-        module_parameters = [done_path,f'--type_machines {type_machines_to_stop}' '-v' if verbose else '']
-        cmd = fetch_cmd(name_script,[module_parameters],verbose,error_path, done_path )
+        module_parameters = [done_path,'--type_machines', type_machines_to_stop, '-v' if verbose else '']
+        cmd = fetch_cmd(name_script, module_parameters,verbose, error_path, done_path )
         wait_for_results('stop_machine_aws', logs_dir, num_of_expected_results=1, example_cmd=cmd,
                          error_file_path=error_path, suffix='stop_machines_done.txt')
 
@@ -120,7 +120,7 @@ if __name__ == '__main__':
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     parser.add_argument('--stop_machines', action='store_true', help='if to stop the machines in AWS in the end of the running.')
-    parser.add_argument('--type_machines_to_stop', type=str, default='' , help='')
+    parser.add_argument('--type_machines_to_stop', type=str, default='t2.medium_t2.2xlarge_m5a.24xlarge', help='Choose witch type of machine to stop')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

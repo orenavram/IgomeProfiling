@@ -17,7 +17,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, concurrent_cutoffs, meme_split_size, number_of_random_pssms,
                  rank_method, tfidf_method, tfidf_factor, shuffles,
-                 run_summary_path, error_path, queue, verbose, argv):
+                 type_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -108,8 +108,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
     name_script = 'tools/stop_machine_aws.py'
     done_path = f'{logs_dir}/stop_machines_done.txt'
-    module_parameters = [done_path, '-v' if verbose else '']
-    cmd = fetch_cmd(name_script,[module_parameters],verbose,error_path, done_path )
+    module_parameters = [done_path,'--type_machines', type_machines_to_stop, '-v' if verbose else '']
+    cmd = fetch_cmd(name_script, module_parameters, verbose,error_path, done_path)
     wait_for_results('stop_machine_aws', logs_dir, num_of_expected_results=1, example_cmd=cmd,
                          error_file_path=error_path, suffix='stop_machines_done.txt')
 
@@ -172,6 +172,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
 
     # general optional parameters
+    parser.add_argument('--type_machines_to_stop', type=str, default='t2.medium_t2.2xlarge_m5a.24xlarge', help='Choose witch type of machine to stop')
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
@@ -199,5 +200,5 @@ if __name__ == '__main__':
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.number_of_random_pssms,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
-                 run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
+                 args.type_machines_to_stop, run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
 

@@ -1,5 +1,4 @@
 import subprocess
-import paramiko
 import boto3 
 import os
 import sys
@@ -15,9 +14,9 @@ def stop(instance, verbose):
                 logger.info('After stop function:\n')
                 logger.info("Id: {0}, Platform: {1}, Type: {2}, Public IPv4: {3}, AMI: {4}, State: {5}\n".format(instance.id, instance.platform, instance.instance_type, instance.public_ip_address, instance.image.id, instance.state))
 
-def stop_machines(done_path, type_machine, verbose):
+def stop_machines(done_path, type_machine, verbose, argv):
     print('Stop machines...')
-    ec2 = boto3.resource('ec2')
+    ec2 = boto3.resource('ec2', region_name='us-west-2')
     list_instances = ec2.instances.all()  
     types=type_machine.split('_')
     for instance in list_instances:
@@ -41,4 +40,4 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-    stop_machines(args.done_path, args.type_machine, args.verbose)
+    stop_machines(args.done_path, args.type_machines, args.verbose, sys.argv)
