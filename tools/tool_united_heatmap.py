@@ -5,6 +5,8 @@ import numpy as np
 import logging
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
@@ -19,68 +21,66 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
 
-def generate_color(mount_bc):
-    color = []
-    for i in range(0, len(mount_bc)+1):
-        color.append(tuple(np.random.choice(range(0, 2), size=3)))
-    return color
+def generate_color(biological_conditions):
+    colors = []
+    color=iter(plt.cm.rainbow(np.linspace(0,1,len(biological_conditions))))
+    for i in range(len(biological_conditions)):
+        colors.append(next(color))
+    print(colors)
+    return colors  
 
 def united_csv(input_path, output_path, samplename2biologicalcondition_path, verbose):
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
-    dic = {}
+    color_name = generate_color(biological_conditions)
+    dict_color = dict(zip(biological_conditions, color_name))
     list_hits = []
     list_values = []
-    sample_name = []
-    flag_firs_time = True
-    for bc in biological_conditions:
+    color_motifs = []
+    for bc,color in zip(biological_conditions, color_name):
         bc_dir_path = os.path.join(input_path, bc)
         bc_hits = os.path.join(bc_dir_path,f'{bc}_hits.csv')
         bc_values = os.path.join(bc_dir_path,f'{bc}_values.csv')
-        df_hits = pd.read_csv(bc_hits)
-        df_value = pd.read_csv(bc_values)
-        dic[bc] = df_hits.columns
-        if flag_firs_time:
-            sample_name = df_hits['sample_name']
-            flag_firs_time = False
-        #remove the sample name and label.
-        df_hits = df_hits.drop(['sample_name', 'label'],axis=1)
-        df_value = df_value.drop(['sample_name', 'label'],axis=1)
-        dic[bc] = df_hits.columns
+        df_hits = pd.read_csv(bc_hits, index_col=0)
+        df_value = pd.read_csv(bc_values, index_col=0)
+        df_hits = df_hits.drop(['label'],axis=1)
+        df_value = df_value.drop(['label'],axis=1)
+        #number of motifs is the same for hits and values. 
+        number_of_motifs = len(df_hits.columns)
+        color_motifs.append([color] * number_of_motifs)
         list_hits.append(df_hits)
         list_values.append(df_value)
     #merge all the df to one df. 
     hits_all=pd.concat(list_hits, axis=1) 
-    values_all=pd.concat(list_values,axis=1)
-    #add columns sample name and label
-    loc=0
-    column_sample_name = 'sample_name'
-    #column_label = 'label'
-    #label = []
-    #for i in sample_name:
-    #    label.append(samplename2biologicalcondition[i])
-    #hits_all.insert(loc, column_label, label)
-    #values_all.insert(loc, column_label, label)
-    hits_all.insert(loc, column_sample_name, sample_name)
-    values_all.insert(loc, column_sample_name, sample_name)
-    #save as csv file
-    #output_path_hits=os.path.join(output_path,'hits.csv')
-    #output_path_values=os.path.join(output_path,'values.csv')
-    #hits_all.to_csv(output_path_hits, index=None)
-    #values_all.to_csv(output_path_values, index=None)
+    values_all = pd.concat(list_values, axis=1)
+    hits_all = hits_all.reset_index()
+    values_all = values_all.reset_index()
 
-    return hits_all, values_all
+    color_motifs = sum(color_motifs, [])
+    return hits_all, values_all, color_motifs, dict_color
 
 
 
-def generate_heat_map(df, hits_data, number_of_samples, output_path):
+def generate_heat_map(df, hits_data, number_of_samples, output_path, color_list, dict_color):
     df = df.set_index(df.columns[0])
     train_data = np.log2(df+1) if hits_data else df 
-    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
+    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True, col_colors=color_list)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
-    cm.ax_heatmap.set_title(f"A heat-map of the all biological condition discriminatory motifs")
+    handles = [Patch(facecolor=dict_color[bc]) for bc in dict_color]
+    plt.legend(handles, dict_color, title='BC',
+           bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
+    cm.ax_heatmap.set_title(f"A heat-map of the all biological condition discriminatory motifs", pad=25.0)
     cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
     plt.close()
+
+def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, verbose):
+    hits,values,color_motifs,dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, verbose)
+    
+    output_path_hits = os.path.join(output_path,'hits_all_bc')
+    output_path_values = os.path.join(output_path,'values_all_bc')
+
+    generate_heat_map(hits, True, len(hits), output_path_hits, color_motifs, dict_color)
+    generate_heat_map(values, False, len(values), output_path_values, color_motifs, dict_color)
 
 if __name__ == '__main__':
 
@@ -100,11 +100,7 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
-
-    hits,values = united_csv(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.verbose)
     
-    output_path_hits = os.path.join(args.output_path,'hits_all_bc')
-    output_path_values = os.path.join(args.output_path,'values_all_bc')
-
-    generate_heat_map(hits, True, len(hits), output_path_hits)
-    generate_heat_map(values, False, len(values), output_path_values)
+    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.verbose)
+    
+    
