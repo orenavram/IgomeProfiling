@@ -10,6 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
+from tools.validation_files import is_validation_files
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
@@ -18,6 +19,12 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  allowed_gap_frequency, concurrent_cutoffs, meme_split_size, number_of_random_pssms,
                  rank_method, tfidf_method, tfidf_factor, shuffles,
                  run_summary_path, error_path, queue, verbose, argv):
+    
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    check_files = is_validation_files(samples2bc_path=samplename2biologicalcondition_path,barcode2samples_path=barcode2samplename_path)
+    if not check_files:
+        logger.info(f'{datetime.datetime.now()}: The files {samplename2biologicalcondition_path} and {barcode2samplename_path} not valid\n')
+        return
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -42,8 +49,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path,
-                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '']
+                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, 
+                             '--check_files' if check_files else '', '--gz' if gz else '',
+                             f'--error_path {error_path}', '-v' if verbose else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
                              logs_dir, f'{exp_name}_reads_filtration',
@@ -64,7 +72,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                              allowed_gap_frequency, second_phase_done_path,
-                             f'--meme_split_size {meme_split_size}',
+                             '--check_files' if check_files else '', f'--meme_split_size {meme_split_size}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
@@ -86,7 +94,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--rank_method {rank_method}', f'--error_path {error_path}', 
+                             third_phase_done_path,'--check_files' if check_files else '', f'--rank_method {rank_method}', f'--error_path {error_path}', 
                              '-v' if verbose else '', f'-q {queue}']
         if rank_method == 'tfidf':
             if tfidf_method:

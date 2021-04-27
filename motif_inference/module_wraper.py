@@ -323,8 +323,12 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
+                 motif_inference_done_path, check_files, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
 
+    if not check_files and not is_validation_files(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
+        logger.info(f'{datetime.datetime.now()}: The file {samplename2biologicalcondition_path} not valid\n')
+        return
+        
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -578,7 +582,8 @@ if __name__ == '__main__':
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-
+    
+    parser.add_argument('--check_files', action='store_true', help='the files are already checked')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -601,4 +606,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)
+                 args.done_file_path, True if args.check_files else False, args.queue, True if args.verbose else False,
+                 concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)

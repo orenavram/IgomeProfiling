@@ -22,8 +22,13 @@ def repeat_items(list):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
+                     fitting_done_path, check_files, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
                      shuffles, queue_name, verbose, error_path, argv):
+    
+    if not check_files and not is_validation_files(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
+        logger.info(f'{datetime.datetime.now()}: The file {samplename2biologicalcondition_path} not valid\n')
+        return
+
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -216,7 +221,8 @@ if __name__ == '__main__':
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-
+    
+    parser.add_argument('--check_files', action='store_true', help='the files are already checked')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
@@ -237,5 +243,5 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
+                     True if args.check_files else False, args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
                      args.shuffles, args.queue, True if args.verbose else False, error_path, sys.argv)
