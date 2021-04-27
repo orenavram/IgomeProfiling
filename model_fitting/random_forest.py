@@ -20,8 +20,9 @@ elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
 else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
+import datetime
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import submit_pipeline_step, wait_for_results
 
 
 def parse_data(file_path):
@@ -96,16 +97,7 @@ def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample,
 
 
 def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_tfidf, output_path):
-    # plt.figure(dpi=1000)
-    # transform the data for better contrast in the visualization
     train_data = np.log2(df+1) if hits_data else df 
-    
-    
-    #elif use_tfidf: # tfidf data
-    #    train_data = -np.log2(df+0.0001) 
-    #else:  # p-values data
-    #    train_data = -np.log2(df)
-
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -321,5 +313,6 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
-
+    print(datetime.datetime.now())
     train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest, args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    print(datetime.datetime.now())
