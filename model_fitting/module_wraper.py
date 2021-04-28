@@ -21,10 +21,11 @@ def repeat_items(list):
 
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
-                     classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, stop_random_forest, num_of_configurations_to_sample,
+                     classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
+                     fitting_done_path, stop_random_forest, num_of_configurations_to_sample,
                      number_parallel_random_forest, min_value_error_random_forest, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, queue_name, verbose, seed_random_forest_classifier, error_path, use_mapitop, argv):
+                     shuffles, shuffles_percent, shuffles_digits, seed_random_forest_classifier,queue_name, verbose, seed_random_forest_classifier, error_path, use_mapitop, argv):
+
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -61,7 +62,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             cutoffs_file_path = os.path.join(cutoffs_path, file_name)
             for sample_name in sample_names:
                 sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
-                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitop)
+                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
                 output_path = os.path.join(classification_output_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
@@ -69,7 +70,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                     cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms)]
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
-                    cmd += [output_path, done_path]
+                    cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits, output_path, done_path]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
@@ -143,7 +144,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     else:
         logger.info(f'skipping aggregating scores, all scores found')
 
-
+    
     # fitting a random forest model (hits and values)
     if not stop_random_forest:
         print('not stop')
@@ -200,7 +201,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         f.write(' '.join(argv) + '\n')
 
 
-def get_faa_file_name_from_path(path, use_mapitop):
+def get_faa_file_name_from_path(path, use_mapitope):
     for file_name in os.listdir(path):
         if file_name.endswith('faa') and 'unique' not in file_name and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
@@ -230,6 +231,8 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
+    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -247,8 +250,8 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
-                     args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, True if args.stop_random_forest else False, args.num_of_configurations_to_sample,
+                     args.logs_dir, args.samplename2biologicalcondition_path, args.number_of_random_pssms, args.done_file_path,
+                     True if args.stop_random_forest else False, args.num_of_configurations_to_sample,
                      args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
-                     args.tfidf_method, args.tfidf_factor, args.shuffles, args.queue,True if args.verbose else False,
-                     seed_random_forest_classifier, error_path, args.mapitope, sys.argv)
+                     args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits, args.seed_random_forest_classifier,
+                     args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
