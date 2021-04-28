@@ -20,7 +20,6 @@ elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
 else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
-import datetime
 
 from auxiliaries.pipeline_auxiliaries import submit_pipeline_step, wait_for_results
 
@@ -130,7 +129,7 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
     
 
 
-def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, seed_random_forest_classifier, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -188,7 +187,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
         done_file_path=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
         cmds=[file_save_configuration, csv_file_path, is_hits_data, output_path_i,
-                model_number, done_file_path,
+                model_number, done_file_path, '--seed_random_forest_classifier', seed_random_forest_classifier,
                 '--cv_num_of_splits', cv_num_of_splits]
         if not os.path.exists(done_file_path):
             all_cmds_params.append(cmds)
@@ -305,6 +304,7 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
+    parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
     import logging
@@ -313,6 +313,6 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
-    print(datetime.datetime.now())
-    train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest, args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
-    print(datetime.datetime.now())
+
+    train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest,
+     args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, args.seed_random_forest_classifier, argv=sys.argv)

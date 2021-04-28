@@ -179,11 +179,11 @@ def configuration_from_txt_to_dictionary(configuration_path):
                     configuration[key] = int(val)
     return configuration                
 
-def pre_train(configuration_path, csv_file_path, is_hits_data, output_path_i, model_number, done_file_path, cv_num_of_splits, argv):
+def pre_train(configuration_path, csv_file_path, is_hits_data, output_path_i, model_number, done_file_path, seed_random_forest_classifier, cv_num_of_splits, argv):
     configuration = configuration_from_txt_to_dictionary(configuration_path)
     print(f'Start run random forest for model number {model_number}:')
     feature_selection_f = open(f'{output_path_i}/feature_selection.txt', 'w')
-    rf = RandomForestClassifier(**configuration)
+    rf = RandomForestClassifier(**configuration, random_state=seed_random_forest_classifier)
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
     errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, output_path_i, cv_num_of_splits)
     plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
@@ -205,6 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('output_path_i', type=str, help='A path for the results of this model')
     parser.add_argument('model_number', type=str, help='number of model')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully')
+    parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
     #parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='number of CV folds')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -217,4 +218,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
    
-    pre_train(args.configuration_path, args.csv_file_path, args.is_hits_data, args.output_path_i, args.model_number, args.done_file_path, args.cv_num_of_splits, argv=sys.argv)
+    pre_train(args.configuration_path, args.csv_file_path, args.is_hits_data, args.output_path_i, args.model_number, args.done_file_path, args.seed_random_forest_classifier, args.cv_num_of_splits, argv=sys.argv)

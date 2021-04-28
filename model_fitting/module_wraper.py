@@ -24,7 +24,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, stop_random_forest, num_of_configurations_to_sample,
                      number_parallel_random_forest, min_value_error_random_forest, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, queue_name, verbose, error_path, use_mapitop, argv):
+                     shuffles, queue_name, verbose, seed_random_forest_classifier, error_path, use_mapitop, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -158,8 +158,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
             
-            value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_configurations_to_sample,'--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest]
-            hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_configurations_to_sample,'--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest]
+            value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_configurations_to_sample,
+                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest, '--seed_random_forest_classifier', seed_random_forest_classifier]
+            hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_configurations_to_sample,
+                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest, '--seed_random_forest_classifier', seed_random_forest_classifier]
             if rank_method == 'tfidf' or rank_method == 'shuffles':
                 value_cmd.append('--tfidf')
                 hits_cmd.append('--tfidf')
@@ -228,6 +230,7 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -248,4 +251,4 @@ if __name__ == '__main__':
                      args.number_of_random_pssms, True if args.stop_random_forest else False, args.num_of_configurations_to_sample,
                      args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
                      args.tfidf_method, args.tfidf_factor, args.shuffles, args.queue,True if args.verbose else False,
-                     error_path, args.mapitope, sys.argv)
+                     seed_random_forest_classifier, error_path, args.mapitope, sys.argv)
