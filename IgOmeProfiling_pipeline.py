@@ -17,7 +17,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, concurrent_cutoffs, meme_split_size, number_of_random_pssms,
                  rank_method, tfidf_method, tfidf_factor, shuffles,
-                 type_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
+                 stop_machines, type_machines_to_stop, name_machines_to_stop,
+                 run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -86,8 +87,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--rank_method {rank_method}', f'--error_path {error_path}', 
-                             '-v' if verbose else '', f'-q {queue}']
+                             third_phase_done_path, f'--rank_method {rank_method}', '--stop_machines',
+                             f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -106,12 +108,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
-    name_script = 'tools/stop_machine_aws.py'
-    done_path = f'{logs_dir}/stop_machines_done.txt'
-    module_parameters = [done_path,'--type_machines', type_machines_to_stop, '-v' if verbose else '']
-    cmd = fetch_cmd(name_script, module_parameters, verbose,error_path, done_path)
-    wait_for_results('stop_machine_aws', logs_dir, num_of_expected_results=1, example_cmd=cmd,
-                         error_file_path=error_path, suffix='stop_machines_done.txt')
 
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
@@ -170,9 +166,10 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
-
+    parser.add_argument('--stop_machines', action=True, help='Do turn off the machines in AWS at the end of the running?')
+    parser.add_argument('--type_machines_to_stop', defualt='all', type=str, help='To stop machines by type. string with _ for separate.')
+    parser.add_argument('--name_machines_to_stop', defualt='all', type=str, help='To stop machines by name. string with _ for separate.')
     # general optional parameters
-    parser.add_argument('--type_machines_to_stop', type=str, default='t2.medium_t2.2xlarge_m5a.24xlarge', help='Choose witch type of machine to stop')
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
@@ -200,5 +197,6 @@ if __name__ == '__main__':
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.number_of_random_pssms,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles,
-                 args.type_machines_to_stop, run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
+                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
+                 run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
 
