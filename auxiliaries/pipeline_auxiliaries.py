@@ -4,6 +4,7 @@ from subprocess import call, run, Popen, PIPE
 from time import time, sleep
 import global_params
 import logging
+import json 
 
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
@@ -279,16 +280,26 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
     table = {}
-    with open(table_path) as f:
-        for line in f:
-            if line.isspace():  # empty line
-                continue
-            if line.startswith('#'):  # ignore symbol
-                continue
-            key, value = line.strip().split(delimiter)
-            if key in table:
-                assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
-            table[key] = value
+    filename, file_extension = os.path.splitext(table_path)
+    if file_extension == '.txt':
+        with open(table_path) as f:
+            for line in f:
+                if line.isspace():  # empty line
+                    continue
+                if line.startswith('#'):  # ignore symbol
+                    continue
+                key, value = line.strip().split(delimiter)
+                if key in table:
+                    assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
+                table[key] = value
+    else:
+        f = open(table_path, 'r')
+        dict_table = json.load(f)
+        for key in dict_table:
+            for val in dict_table[key]:
+                if val in table:
+                    assert False, error_msg.replace('{}', val)  # TODO: write to a global error log file
+                table[val] = key
     return table
 
 

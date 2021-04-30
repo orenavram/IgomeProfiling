@@ -10,7 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-
+from tools.validation_files import is_input_files_valid 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
                              motif_inference_output_path, logs_dir, error_path, queue_name, verbose, data_type):
@@ -323,10 +323,9 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, check_files, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
+                 motif_inference_done_path, check_files_valid, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
 
-    if not check_files and not is_validation_files(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
-        logger.info(f'{datetime.datetime.now()}: The file {samplename2biologicalcondition_path} not valid\n')
+    if check_files_valid and not is_input_files_valid(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
         return
         
     os.makedirs(motif_inference_output_path, exist_ok=True)
@@ -583,7 +582,7 @@ if __name__ == '__main__':
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     
-    parser.add_argument('--check_files', action='store_true', help='the files are already checked')
+    parser.add_argument('--check_files_valid', action='store_true', help='the files are already checked')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -606,5 +605,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, True if args.check_files else False, args.queue, True if args.verbose else False,
+                 args.done_file_path, args.check_files_valid, args.queue, True if args.verbose else False,
                  concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)

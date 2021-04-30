@@ -11,16 +11,15 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from global_params import src_dir
-from tools.validation_files import is_validation_files
+from tools.validation_files import is_input_files_valid 
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    check_files, gz, verbose, error_path, queue, argv='no_argv'):
+                    check_files_valid, gz, verbose, error_path, queue, argv='no_argv'):
 
         # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    if not check_files and not is_validation_files(samples2bc_path='', barcode2samples_path=barcode2samplename):
-        logger.info(f'{datetime.datetime.now()}: The file {barcode2samplename} not valid\n')
+    if check_files_valid and not is_input_files_valid(samples2bc_path='', barcode2samples_path=barcode2samplename):
         return
 
     os.makedirs(first_phase_output_path, exist_ok=True)
@@ -117,7 +116,7 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-    parser.add_argument('--check_files', action='store_true', help='the files are already checked')
+    parser.add_argument('--check_files_valid', action='store_true', help='the files are already checked')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -136,5 +135,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, True if args.check_files else False, True if args.gz else False,
+                    args.min_sequencing_quality, args.check_files_valid, True if args.gz else False,
                     True if args.verbose else False, error_path, args.queue, sys.argv)
