@@ -21,33 +21,60 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
 
-def generate_color(biological_conditions):
-    colors = []
-    color=iter(plt.cm.rainbow(np.linspace(0,1,len(biological_conditions))))
-    for i in range(len(biological_conditions)):
-        colors.append(next(color))
-    print(colors)
-    return colors  
 
-def united_csv(input_path, output_path, samplename2biologicalcondition_path, verbose):
+def get_motifs_importance(biological_condition, bc_dir_path, hits_or_values, min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif):
+    list_motifs = []
+    motif_importance_path = os.path.join(bc_dir_path, f'{biological_condition}_{hits_or_values}_model','best_model','feature_importance.txt')
+    dict_importance = load_table_to_dict(motif_importance_path, 'Motif {} is not unique!!')
+    first_val = 0
+    last_val = 0
+    first_time = True
+    count_motifs = 0
+    for key,value in dict_importance.items():
+        if first_time:
+            first_val = float(value)
+            last_val = float(value)
+            list_motifs.append(key)
+            first_time = False
+            count_motifs+=1
+            continue 
+        float_val=float(value)    
+        if count_motifs > max_num_motifs or first_val - float_val >  difference_from_last_motif or last_val - float_val > difference_from_fitst_motif:
+            break
+        list_motifs.append(key)
+        count_motifs+=1
+    if count_motifs < min_num_motifs:
+        list_motifs = dict_importance.keys()[:min_num_motifs]
+    return list_motifs    
+
+
+
+
+
+def united_csv(input_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif):
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
-    color_name = generate_color(biological_conditions)
+    color_name = sns.color_palette(None, len(biological_conditions))
     dict_color = dict(zip(biological_conditions, color_name))
     list_hits = []
     list_values = []
-    color_motifs = []
+    color_motifs_hits = []
+    color_motifs_values = []
     for bc,color in zip(biological_conditions, color_name):
         bc_dir_path = os.path.join(input_path, bc)
+        list_motifs_hits = get_motifs_importance(bc, bc_dir_path, 'hits', min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif)
+        list_motifs_values = get_motifs_importance(bc, bc_dir_path, 'values', min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif)
         bc_hits = os.path.join(bc_dir_path,f'{bc}_hits.csv')
         bc_values = os.path.join(bc_dir_path,f'{bc}_values.csv')
         df_hits = pd.read_csv(bc_hits, index_col=0)
         df_value = pd.read_csv(bc_values, index_col=0)
-        df_hits = df_hits.drop(['label'],axis=1)
-        df_value = df_value.drop(['label'],axis=1)
-        #number of motifs is the same for hits and values. 
-        number_of_motifs = len(df_hits.columns)
-        color_motifs.append([color] * number_of_motifs)
+        df_hits = df_hits[list_motifs_hits]
+        df_value = df_value[list_motifs_values]
+        
+        number_of_motifs_hits = len(list_motifs_hits)
+        number_of_motifs_values = len(list_motifs_values)
+        color_motifs_hits.append([color] * number_of_motifs_hits)
+        color_motifs_values.append([color] * number_of_motifs_values)
         list_hits.append(df_hits)
         list_values.append(df_value)
     #merge all the df to one df. 
@@ -56,8 +83,9 @@ def united_csv(input_path, output_path, samplename2biologicalcondition_path, ver
     hits_all = hits_all.reset_index()
     values_all = values_all.reset_index()
 
-    color_motifs = sum(color_motifs, [])
-    return hits_all, values_all, color_motifs, dict_color
+    color_motifs_hits = sum(color_motifs_hits, [])
+    color_motifs_values = sum(color_motifs_values, [])
+    return hits_all, values_all, color_motifs_hits, color_motifs_values, dict_color
 
 
 
@@ -73,14 +101,14 @@ def generate_heat_map(df, hits_data, number_of_samples, output_path, color_list,
     cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
     plt.close()
 
-def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, verbose):
-    hits,values,color_motifs,dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, verbose)
+def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif):
+    hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, difference_from_last_motif, difference_from_fitst_motif)
     
     output_path_hits = os.path.join(output_path,'hits_all_bc')
     output_path_values = os.path.join(output_path,'values_all_bc')
 
-    generate_heat_map(hits, True, len(hits), output_path_hits, color_motifs, dict_color)
-    generate_heat_map(values, False, len(values), output_path_values, color_motifs, dict_color)
+    generate_heat_map(hits, True, len(hits), output_path_hits, color_motifs_hits, dict_color)
+    generate_heat_map(values, False, len(values), output_path_values, color_motifs_values, dict_color)
 
 if __name__ == '__main__':
 
@@ -92,6 +120,10 @@ if __name__ == '__main__':
     parser.add_argument('data_path', type=str, help='A path for all the csv files with data matrix to model ')
     parser.add_argument('output_path', type=str, help='A path for folder to put the output')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='Path for a file samplename2biologicalcondition')
+    parser.add_argument('--min_num_motifs', type=int, default=1, help='Minimum number of motifs to united from every BC')
+    parser.add_argument('--max_num_motifs', type=int, default=5, help='Maximum number of motifs to united from every BC')
+    parser.add_argument('--difference_from_last_motif', type=float, default=0.2, help='Take the motif if the difference of his importent values is less than the last motif')
+    parser.add_argument('--difference_from_fitst_motif', type=float, default=0.5, help='Take the motif if the difference of his importent values is less than the first motif')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -101,6 +133,6 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
     
-    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.verbose)
+    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, args.difference_from_last_motif, args.difference_from_fitst_motif)
     
     
