@@ -121,9 +121,9 @@ if __name__ == '__main__':
     parser.add_argument('output_path', type=str, help='A path for folder to put the output')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='Path for a file samplename2biologicalcondition')
     parser.add_argument('--min_num_motifs', type=int, default=1, help='Minimum number of motifs to united from every BC')
-    parser.add_argument('--max_num_motifs', type=int, default=5, help='Maximum number of motifs to united from every BC')
-    parser.add_argument('--difference_from_last_motif', type=float, default=0.2, help='Take the motif if the difference of his importent values is less than the last motif')
-    parser.add_argument('--difference_from_fitst_motif', type=float, default=0.5, help='Take the motif if the difference of his importent values is less than the first motif')
+    parser.add_argument('--max_num_motifs', type=int, default=10, help='Maximum number of motifs to united from every BC')
+    parser.add_argument('--difference_from_last_motif', type=float, default=0.01, help='Take the motif if the difference of his importent values is less than the last motif')
+    parser.add_argument('--difference_from_fitst_motif', type=float, default=0.05, help='Take the motif if the difference of his importent values is less than the first motif')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
