@@ -7,13 +7,12 @@ using namespace std;
 class MemeShuffler {
 public:
     MemeShuffler(Meme& source, int maxShuffles, ShufflePatterns& patterns) :
-        _source(source), _patterns(patterns), _currentShuffle(-1), _lenPatterns(patterns.size()) {
+        _source(source), _patterns(patterns), _currentShuffle(-1), _lenPatterns(patterns.size()), _numPattern(-1) {
         auto len = patterns.size();
         if (len < maxShuffles) {
             maxShuffles = len;
         }
         this->_maxShuffles = maxShuffles;
-        this->_numPattern=-1;
     }
 
     bool next() {
