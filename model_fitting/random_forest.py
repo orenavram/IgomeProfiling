@@ -129,7 +129,7 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
     
 
 
-def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, seed_random_forest_classifier, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, random_forest_seed, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -137,7 +137,6 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     os.makedirs(output_path, exist_ok=True)
 
     best_model_path = os.path.join(output_path, f'best_model')
-    # shutil.rmtree(best_model_path, ignore_errors=True)
 
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
 
@@ -187,7 +186,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
         done_file_path=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
         cmds=[file_save_configuration, csv_file_path, is_hits_data, output_path_i,
-                model_number, done_file_path, '--seed_random_forest_classifier', seed_random_forest_classifier,
+                model_number, done_file_path, '--random_forest_seed', random_forest_seed,
                 '--cv_num_of_splits', cv_num_of_splits]
         if not os.path.exists(done_file_path):
             all_cmds_params.append(cmds)
@@ -250,13 +249,10 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
 
 def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits):
     feature_to_avg_accuracy = {}
-    # df = pd.read_csv(f'{output_path}/Top_149_features.csv', index_col='sample_name')
     rf = RandomForestClassifier(random_state=np.random.seed(seed))
 
     for i, feature in enumerate(feature_names):
-        # if i % 10 == 0:
         logger.info(f'Checking feature {feature} number {i}')
-        # assert df.columns[i] == feature
         cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(cv_num_of_splits, shuffle=True)).mean()
         if cv_score == 1:
             logger.info('-' * 10 + f'{feature} has 100% accuracy!' + '-' * 10)
@@ -299,12 +295,12 @@ if __name__ == '__main__':
     parser.add_argument('logs_dir', help='A path for the log dir')
     parser.add_argument('error_path', help='Path for error file')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest to run in parallel')
-    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A min value for error that the run can stop')
+    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many rando forest configurations to run in parallel')
+    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
-    parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
+    parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
     import logging
@@ -315,4 +311,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest,
-     args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, args.seed_random_forest_classifier, argv=sys.argv)
+     args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, args.random_forest_seed, argv=sys.argv)

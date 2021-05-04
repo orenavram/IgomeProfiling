@@ -160,10 +160,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            # submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-            #                      current_batch,
-            #                      logs_dir, f'weblogo_{i}th_batch',
-            #                      queue_name='pupkolab', verbose=verbose)
+
 
     # wait for the memes!! (previous logical block!)
     # (no need to wait for weblogos..)
@@ -610,4 +607,4 @@ if __name__ == '__main__':
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
                  args.done_file_path, args.threshold, args.word_length, args.discard, args.queue,
-                 True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, True if args.mapitope else False, sys.argv)
+                 args.verbose, concurrent_cutoffs, args.meme_split_size, error_path, args.mapitope, sys.argv)

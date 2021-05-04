@@ -163,5 +163,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
-                    True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
+                    args.min_sequencing_quality, args.minimal_length_required, args.gz,
+                    args.verbose, args.mapitope, error_path, args.queue, sys.argv)

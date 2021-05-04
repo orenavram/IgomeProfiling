@@ -16,9 +16,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
                  max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, stop_random_forest, number_of_random_pssms,
+                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, stop_before_random_forest, number_of_random_pssms,
                  number_parallel_random_forest, min_value_error_random_forest,
-                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits, seed_random_forest_classifier,
+                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits, random_forest_seed,
                  run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
@@ -88,10 +88,10 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, '--stop_random_forest' if stop_random_forest else '',
+                             third_phase_done_path, '--stop_before_random_forest' if stop_before_random_forest else '',
                              f'--number_parallel_random_forest' {number_parallel_random_forest}, f'--min_value_error_random_forest' {min_value_error_random_forest},
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}'
-                             f'--rank_method {rank_method}', f'--seed_random_forest_classifier {seed_random_forest_classifier}', f'--error_path {error_path}', '-v' if verbose else '',
+                             f'--rank_method {rank_method}', f'--random_forest_seed {random_forest_seed}', f'--error_path {error_path}', '-v' if verbose else '',
                              f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -166,17 +166,17 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
 
     # optional parameters for the modelling step
-    parser.add_argument('--stop_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
+    parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
-    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest to run in parallel')
-    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A min value for error that the run can stop in the random forest')
+    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many rando forest configurations to run in parallel')
+    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
-    parser.add_argument('--seed_random_forest_classifier', defual=123 , type=int, help='A number for create the random forest stable when run the same configuration')
+    parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
       
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -201,10 +201,10 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope,True if args.stop_random_forest else False,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.stop_before_random_forest,
                  args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
-                 args.seed_random_forest_classifier, run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
+                 args.random_forest_seed, run_summary_path, error_path, args.queue, args.verbose, sys.argv)
