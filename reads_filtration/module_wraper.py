@@ -114,9 +114,9 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-    parser.add_argument('--stop_machines', action=True, help='Do turn off the machines in AWS at the end of the running?')
-    parser.add_argument('--type_machines_to_stop', default='all', type=str, help='To stop machines by type. string with _ for separate.')
-    parser.add_argument('--name_machines_to_stop', default='all', type=str, help='To stop machines by name. string with _ for separate.')
+    parser.add_argument('--stop_machines', action='store_true', help='Do turn off the machines in AWS at the end of the running?')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
