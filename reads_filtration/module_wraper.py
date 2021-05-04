@@ -15,7 +15,7 @@ from global_params import src_dir
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
+                    rpm, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -95,8 +95,12 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
                 factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
-                rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
-                parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
+                parameters = [file_path, output_file_path, done_path]
+                if rpm:
+                    rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
+                    parameters.append('--rpm')
+                    parameters.append(rpm_factors_path)
+
                 fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
                           
                 # file_path = output_file_path
@@ -144,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
 
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -163,5 +168,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, args.gz,
+                    args.min_sequencing_quality, args.minimal_length_required, args.rpm, args.gz,
                     args.verbose, args.mapitope, error_path, args.queue, sys.argv)

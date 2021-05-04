@@ -13,12 +13,13 @@ from auxiliaries.pipeline_auxiliaries import *
   
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
-                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
-                 max_msas_per_sample, max_msas_per_bc,
-                 max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, stop_before_random_forest, number_of_random_pssms,
-                 number_parallel_random_forest, min_value_error_random_forest,
-                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits, random_forest_seed,
+                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
+                 max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
+                 allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
+                 stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
+                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
+                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,          
                  run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
@@ -44,8 +45,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, minimal_length_required,first_phase_done_path,
-                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
+                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
+                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
                              logs_dir, f'{exp_name}_reads_filtration',
@@ -66,7 +67,10 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                              allowed_gap_frequency, second_phase_done_path,
-                             f'--meme_split_size {meme_split_size}',
+                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}', f'--prefix_length_in_clstr {prefix_length_in_clstr}',
+                             f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
+                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
+                             f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
@@ -85,14 +89,17 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         os.makedirs(third_phase_output_path, exist_ok=True)
         third_phase_logs_path = os.path.join(logs_dir, 'model_fitting')
         os.makedirs(third_phase_logs_path, exist_ok=True)
-
+          
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
                              third_phase_done_path, '--stop_before_random_forest' if stop_before_random_forest else '',
+                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}',
                              f'--number_parallel_random_forest' {number_parallel_random_forest}, f'--min_value_error_random_forest' {min_value_error_random_forest},
-                             f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}'
-                             f'--rank_method {rank_method}', f'--random_forest_seed {random_forest_seed}', f'--error_path {error_path}', '-v' if verbose else '',
+                             f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
+                             f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
+                             f'--random_forest_seed_configurations {random_forest_seed_configurations}',f'--error_path {error_path}', '-v' if verbose else '',
                              f'-q {queue}','-m' if use_mapitope else '']
+
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -145,6 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')                             
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
 
     # optional parameters for the motif inference
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
@@ -159,11 +167,27 @@ if __name__ == '__main__':
                         help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
+    parser.add_argument('--threshold', default='0.5', help='Minimal sequence similarity threshold required',
+                        type=lambda x: float(x) if 0.4 <= float(x) <= 1
+                                                else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
+    parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
+                        help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
+    parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
+    parser.add_argument('--aln_cutoff', default='20', help='The cutoff for pairwise alignment score to unite motifs of BC') 
+    parser.add_argument('--pcc_cutoff', default='0.6', help='Minimal PCC R to unite motifs of BC')
+    parser.add_argument('--skip_sample_merge_meme', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
+                        help='A sample name that should be skipped in merge meme files, e.g., for testing purposes. More than one sample '
+                             'name should be separated by commas but no spaces. '
+                             'For example: 17b_05,17b_05_test,another_one')
+    parser.add_argument('--minimal_number_of_columns_required_create_meme', default=1, type=int,
+                        help='MSAs with less than the number of required columns will be skipped')
+    parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
+                        help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
 
     # optional parameters for the modelling step
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
@@ -176,8 +200,10 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
-    parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
-      
+    parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
+    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
+    parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
@@ -201,10 +227,12 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz,
-                 args.max_msas_per_sample, args.max_msas_per_bc,
-                 args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.stop_before_random_forest,
-                 args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz, args.rpm,
+                 args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
+                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
+                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
+                 args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
-                 args.random_forest_seed, run_summary_path, error_path, args.queue, args.verbose, sys.argv)
+                 args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
+                 run_summary_path, error_path, args.queue, args.verbose, sys.argv)
+                
