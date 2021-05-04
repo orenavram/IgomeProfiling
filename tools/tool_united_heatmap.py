@@ -34,10 +34,11 @@ def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_
             last_val = float(value)
             important_motifs.append(key)
             continue 
-        float_val=float(value)    
-        if len(important_motifs) > max_num_motifs or first_val - float_val >  max_difference_from_last_motif or last_val - float_val > max_difference_from_fitst_motif:
+        current_val=float(value)    
+        if len(important_motifs) >= max_num_motifs or first_val - current_val >=  max_difference_from_fitst_motif or last_val - current_val >= max_difference_from_last_motif:
             break
         important_motifs.append(key)
+        last_val = current_val
     if len(important_motifs) <= min_num_motifs:
         important_motifs = dict_importance.keys()[:min_num_motifs]
     return important_motifs    
