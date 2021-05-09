@@ -325,7 +325,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
                  motif_inference_done_path, check_files_valid, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
 
-    if check_files_valid and not is_input_files_valid(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=''):
         return
         
     os.makedirs(motif_inference_output_path, exist_ok=True)
@@ -582,7 +582,7 @@ if __name__ == '__main__':
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     
-    parser.add_argument('--check_files_valid', action='store_true', help='the files are already checked')
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,

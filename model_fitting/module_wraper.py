@@ -25,7 +25,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      fitting_done_path, check_files_valid, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
                      shuffles, queue_name, verbose, error_path, argv):
     
-    if check_files_valid and not is_input_files_valid(samples2bc_path=samplename2biologicalcondition_path, barcode2samples_path=''):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=''):
         return
 
     is_pval = rank_method == 'pval'
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     
-    parser.add_argument('--check_files_valid', action='store_true', help='the files are already checked')
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')

@@ -19,7 +19,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                     check_files_valid, gz, verbose, error_path, queue, argv='no_argv'):
 
         # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    if check_files_valid and not is_input_files_valid(samples2bc_path='', barcode2samples_path=barcode2samplename):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename):
         return
 
     os.makedirs(first_phase_output_path, exist_ok=True)
@@ -116,7 +116,8 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-    parser.add_argument('--check_files_valid', action='store_true', help='the files are already checked')
+    
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

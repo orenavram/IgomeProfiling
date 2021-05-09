@@ -21,7 +21,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  run_summary_path, error_path, queue, verbose, argv):
     
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    files_are_valid = is_input_files_valid(samples2bc_path=samplename2biologicalcondition_path,barcode2samples_path=barcode2samplename_path)
+    files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path)
     if not files_are_valid:
         return
 
