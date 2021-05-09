@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -22,10 +23,18 @@ def repeat_items(list):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
-                     fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
+                     fitting_done_path, cross_experiments, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
                      shuffles, shuffles_percent, shuffles_digits, queue_name, verbose, error_path, use_mapitope, argv):
+    if cross_experiments:
+        cross_experiments_dict = json.load(open(cross_experiments))
+        input_path = cross_experiments_dict['configuration']['dataDirectories']
+        output_path = cross_experiments_dict['configuration']['outputDirectory']
+        runs = cross_experiments_dict['runs'].keys()
+
+    output_folder_path= output_path if cross_experiments else classification_output_path
+    
     is_pval = rank_method == 'pval'
-    os.makedirs(classification_output_path, exist_ok=True)
+    os.makedirs(output_folder_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
     if os.path.exists(fitting_done_path):
@@ -37,7 +46,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
     for bc in biological_conditions:
-        bc_dir_path = os.path.join(classification_output_path, bc)
+        bc_dir_path = os.path.join(output_folder_path, bc)
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
@@ -62,7 +71,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             for sample_name in sample_names:
                 sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
                 faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
-                output_path = os.path.join(classification_output_path, bc, 'scanning',
+                output_path = os.path.join(output_folder_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
@@ -217,6 +226,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
+    parser.add_argument('--cross_experiments', type=str, help='A path for Json file determin the cross motifs')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
@@ -240,5 +250,5 @@ if __name__ == '__main__':
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                     args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
+                     args.cross_experiments, args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
                      args.shuffles, args.shuffles_percent, args.shuffles_digits, args.queue, True if args.verbose else False, error_path, args.mapitope, sys.argv)
