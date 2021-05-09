@@ -3,7 +3,6 @@ from auxiliaries.pipeline_auxiliaries import load_table_to_dict
 import os
 import re
 import json
-import jsonschema
 from jsonschema import validate
 
 # Describe what kind of json you expect.
