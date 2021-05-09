@@ -24,8 +24,8 @@ def get_sorted_features(feature_importance_path: str):
     features = sorted(features, key=lambda x: float(x[1]), reverse=True)
     return features
 
-def is_artifact(motif: str, input_data: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int, txt_file_out: str):
-    data = input_data[['label', 'sample_name', motif]]
+def is_artifact(motif: str, df: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int, txt_file_out: str):
+    data = df[['label', 'sample_name', motif]]
     other_max = data.loc[data['label'] == 'other', motif].max()
     bc_min = data.loc[data['label'] == bio_cond, motif].min()
     artifact = bc_min < other_max
@@ -58,8 +58,7 @@ def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str ,is_hi
     map = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True, col_colors=colors)
     plt.setp(map.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150 / number_of_samples)
     handles = [Patch(facecolor=colors_map[name]) for name in colors_map]
-    plt.legend(handles, colors_map, title='Type',
-           bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
+    plt.legend(handles, colors_map, title='Type', bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
     map.ax_heatmap.set_title(title, pad=25, fontsize=14)
     map.savefig(map_path, format='svg', bbox_inches="tight")
     plt.close()
@@ -72,12 +71,12 @@ def save_output(base_path: str, data):
     df.to_csv(output_path, index=False)
 
 
-def extract_distinctive_motifs(input_path: str, count: int, feature_importance_path: str, biological_condition: str, output_base_path: str, title_heatmap: str, 
+def extract_distinctive_motifs(data_path: str, count: int, feature_importance_path: str, biological_condition: str, output_base_path: str, title_heatmap: str, 
                            invalid_mix: str, epsilon: float, min_importance_score: float):
     
     features = get_sorted_features(feature_importance_path)
-    input_data = pd.read_csv(input_path)
-    is_hits= True if input_path.find('hits')>0 else False
+    data_df = pd.read_csv(data_path)
+    is_hits= True if data_path.find('hits')>0 else False
     
     total = 0
     last_score = 0
@@ -100,7 +99,7 @@ def extract_distinctive_motifs(input_path: str, count: int, feature_importance_p
         score = float(feature[1])
         if score < min_importance_score:
             break
-        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, input_data, biological_condition, invalid_mix, score, i, txt_file_out)
+        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, data_df, biological_condition, invalid_mix, score, i, txt_file_out)
         if total >= count and score + epsilon < last_score:
             break
         if artifact:
@@ -138,7 +137,7 @@ def extract_distinctive_motifs(input_path: str, count: int, feature_importance_p
     
     if output_base_path:
         columns = ['sample_name'] + [x[0] for x in features[:count]]
-        generate_heatmap(output_base_path, input_data[columns], colors, title_heatmap, is_hits)
+        generate_heatmap(output_base_path, data_df[columns], colors, title_heatmap, is_hits)
         save_output(output_base_path, output)
     
     txt_file_out.write(f'\nDistinctive motifs ({len(distinctive_motifs)}/{last_order} tested): {distinctive_motifs}\n')
@@ -153,7 +152,7 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_path', type=str, help='A csv file of values or hits')
+    parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
     parser.add_argument('count', type=int, help='number of motifs at the end') #all=1000, top_10 =10
     parser.add_argument('feature_importance_path', type=str, help='A path for the feature importance path for specifice biological condition')
     parser.add_argument('biological_condition', type=str, help='A name of biological condition, can be a many names that split by comma.')
@@ -171,7 +170,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    extract_distinctive_motifs(args.input_path, args.count, args.feature_importance_path, args.biological_condition, args.output_base_path, args.title_heatmap,
+    extract_distinctive_motifs(args.data_path, args.count, args.feature_importance_path, args.biological_condition, args.output_base_path, args.title_heatmap,
                                 args.invalid_mix, args.epsilon, args.min_importance_score)
     
     
