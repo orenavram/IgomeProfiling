@@ -8,6 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys 
+import logging
+from matplotlib.patches import Patch
+
 colors_map = {
     'perfect': 'green',
     'mixed': 'blue',
@@ -21,9 +24,8 @@ def get_sorted_features(feature_importance_path: str):
     features = sorted(features, key=lambda x: float(x[1]), reverse=True)
     return features
 
-
-def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int, txt_file_out: str):
-    data = values[['label', 'sample_name', motif]]
+def is_artifact(motif: str, input_data: pd.DataFrame, bio_cond: str, invalid_mix: str, score: float, order: int, txt_file_out: str):
+    data = input_data[['label', 'sample_name', motif]]
     other_max = data.loc[data['label'] == 'other', motif].max()
     bc_min = data.loc[data['label'] == bio_cond, motif].min()
     artifact = bc_min < other_max
@@ -46,40 +48,36 @@ def is_artifact(motif: str, values: pd.DataFrame, bio_cond: str, invalid_mix: st
 
 
 def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str ,is_hit: bool):
-    print('Generating heatmap...')
-    if is_hit:
-        sample_name=df['sample_name']
-        df= df.drop(columns=['sample_name'])
-        df=np.log2(df+1)
-        df.insert(loc=0, column='sample_name', value=sample_name)
-
+    logger.info('Generating heatmap...')
     df.set_index('sample_name', inplace=True)
+    df = np.log2(df+1) if is_hit else df
+
     map_path = f'{base_path}.svg'
     number_of_samples = df.shape[0]
 
     map = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True, col_colors=colors)
     plt.setp(map.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150 / number_of_samples)
+    handles = [Patch(facecolor=colors_map[name]) for name in colors_map]
+    plt.legend(handles, colors_map, title='Type',
+           bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
     map.ax_heatmap.set_title(title, pad=25, fontsize=14)
     map.savefig(map_path, format='svg', bbox_inches="tight")
     plt.close()
 
 
 def save_output(base_path: str, data):
-    print('Saving results...')
+    logger.info('Saving results...')
     output_path = f'{base_path}.csv'
     df = pd.DataFrame(data, columns=['motif', 'label', 'is_artifact', 'is_perfect', 'is_valid_mix', 'mixed_samples', 'importance', 'order'])
     df.to_csv(output_path, index=False)
 
 
-def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_path: str, values_path: str, hits_path: str, invalid_mix: str, min_importance_score: float, output_base_path: str, heatmap_title: str):
+def extract_distinctive_motifs(input_path: str, count: int, feature_importance_path: str, biological_condition: str, output_base_path: str, title_heatmap: str, 
+                           invalid_mix: str, epsilon: float, min_importance_score: float):
+    
     features = get_sorted_features(feature_importance_path)
-    values = pd.read_csv(values_path)
-    is_hits= True if values_path.find('hits')>0 else False
-    # hits = pd.read_csv(hits_path, index_col=[1,0])
-    # TODO check if motif is backed by hits (only log, no filter)
-    bio_conds = list(values['label'].unique())
-    bio_conds.remove('other')
-    bio_cond = bio_conds[0]
+    input_data = pd.read_csv(input_path)
+    is_hits= True if input_path.find('hits')>0 else False
     
     total = 0
     last_score = 0
@@ -94,15 +92,15 @@ def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_pa
     output = []
     output_label = ''
     #create txt file for all the prints
-    out_txt_path = f'{output_base_path}.txt'
-    txt_file_out=open(out_txt_path,'w')
+    output_file_results = output_base_path + '.txt'
+    txt_file_out = open(output_file_results, 'w')
     for feature in features:
         i += 1
         motif = feature[0]
         score = float(feature[1])
         if score < min_importance_score:
             break
-        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, values, bio_cond, invalid_mix, score, i,txt_file_out)
+        artifact, is_perfect, is_valid_mix, mixed_samples = is_artifact(motif, input_data, biological_condition, invalid_mix, score, i, txt_file_out)
         if total >= count and score + epsilon < last_score:
             break
         if artifact:
@@ -139,9 +137,8 @@ def extract_distinctive_motifs(count: int, epsilon: float, feature_importance_pa
             last_score = score
     
     if output_base_path:
-        #columns = ['sample_name'] + [x[0] for x in features[:i-1]]
         columns = ['sample_name'] + [x[0] for x in features[:count]]
-        generate_heatmap(output_base_path, values[columns], colors, heatmap_title,is_hits)
+        generate_heatmap(output_base_path, input_data[columns], colors, title_heatmap, is_hits)
         save_output(output_base_path, output)
     
     txt_file_out.write(f'\nDistinctive motifs ({len(distinctive_motifs)}/{last_order} tested): {distinctive_motifs}\n')
@@ -156,28 +153,25 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('base_path', type=str, help='A path in which each subfolder corresponds to a results of the last level')
-    # example:'/mnt/d/workspace/data/webiks/igome/results/exp4+9_all_half_gaps/model_fitting'
-    parser.add_argument('count',type=int ,help='number of motifs at the end') #all=1000, top_10 =10
+    parser.add_argument('input_path', type=str, help='A csv file of values or hits')
+    parser.add_argument('count', type=int, help='number of motifs at the end') #all=1000, top_10 =10
     parser.add_argument('feature_importance_path', type=str, help='A path for the feature importance path for specifice biological condition')
-    # example:'Naive/Naive_values_exp9_model/best_model/sorted_feature_importance.txt'
-    parser.add_argument('values_path',type=str ,help='A csv file of values')
-    #exmple:'Naive/Naive_values_exp9.csv'    
-    parser.add_argument('hits_path',type=str ,help='A csv file of hits')
-    #exmple:'Naive/Naive_hits_exp9.csv'  
-    parser.add_argument('output_base_path',type=str, help='A path for puting the results files in')
-    #exmaple:'Naive/distinctive_motifs_all'
-    parser.add_argument('--invalid_mix',type=str,default=None,help='A argument to know if there is compare to naive')
-    parser.add_argument('--epsilon',type=int, default=0, help='range of mistake')
+    parser.add_argument('biological_condition', type=str, help='A name of biological condition, can be a many names that split by comma.')
+    parser.add_argument('output_base_path', type=str, help='A path for file to puting the results files in')
+    parser.add_argument('title_heatmap', type=str, help='A title name for the heatmap result.')
+    parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
+    parser.add_argument('--epsilon', type=int, default=0, help='range of mistake')
     parser.add_argument('--min_importance_score',type=int, default=0)
+    parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
-    feature_importance_path= path.join(args.base_path, args.feature_importance_path)
-    values_path=path.join(args.base_path,args.values_path)
-    hits_path=path.join(args.base_path,args.hits_path)
-    output_base_path=path.join(args.base_path,args.output_base_path)
-    heatmap_title='Exp 7/8 motifs (all) 234_N_HIV on 27/28 samples hits Distinctive Motifs (hits - top 10)' #change the title heatmap
-    extract_distinctive_motifs(args.count, args.epsilon, feature_importance_path, values_path, hits_path, args.invalid_mix, args.min_importance_score, output_base_path, heatmap_title)
-    
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger('main')
+
+    extract_distinctive_motifs(args.input_path, args.count, args.feature_importance_path, args.biological_condition, args.output_base_path, args.title_heatmap,
+                                args.invalid_mix, args.epsilon, args.min_importance_score)
     
     
