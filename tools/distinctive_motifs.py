@@ -161,7 +161,7 @@ if __name__ == '__main__':
     parser.add_argument('title_heatmap', type=str, help='A title name for the heatmap result.')
     parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
     parser.add_argument('--epsilon', type=int, default=0, help='range of mistake')
-    parser.add_argument('--min_importance_score',type=int, default=0)
+    parser.add_argument('--min_importance_score',type=int, default=0, help='The minimun score of motifs to take.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
