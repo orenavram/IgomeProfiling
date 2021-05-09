@@ -1,9 +1,4 @@
-import subprocess
 import boto3 
-import os
-import sys
-import logging
-import argparse
 import datetime
 import re
 
@@ -31,8 +26,7 @@ def stop_machines(type_machine, name_machines, logger):
     names = name_machines.split(',') if name_machines else ''
 
     for instance in list_instances:
-        if not instance.state['Name'] == 'stopped' and ((types and names) and (instance.instance_type in types or is_match_name_instance(names, instance))) or ((not types or instance.instance_type in types) and (not names or is_match_name_instance(names, instance))):
-            
+        if not instance.state['Name'] == 'stopped' and (((types and names) and (instance.instance_type in types or is_match_name_instance(names, instance))) or ((not types or instance.instance_type in types) and (not names or is_match_name_instance(names, instance)))):
             stop(instance, logger)
         else:
             logger.info(f'{datetime.datetime.now()}: Skipping on instance -  {instance.id} and not stop it.')
