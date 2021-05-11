@@ -32,7 +32,7 @@ def is_valid_data(path_file ,dict_data, logger):
     for key, value in  dict_data.items():
         match_key = re.match(regex, key)
         match_value = re.match(regex, value)
-        if match_key == None or match_value == None:
+        if match_key is None or match_value is None:
             logger.info(f'The structure of file: {path_file} is not valid')
             return False
     return True        
