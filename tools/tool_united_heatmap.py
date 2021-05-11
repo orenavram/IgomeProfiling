@@ -29,12 +29,12 @@ def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_
     first_val = None
     last_val = 0
     for key, value in dict_importance.items():
-        if first_val == None:
+        if first_val is None:
             first_val = float(value)
-            last_val = float(value)
+            last_val = first_val
             important_motifs.append(key)
             continue 
-        current_val=float(value)    
+        current_val = float(value)    
         if len(important_motifs) >= max_num_motifs or first_val - current_val >=  max_difference_from_fitst_motif or last_val - current_val >= max_difference_from_last_motif:
             break
         important_motifs.append(key)
@@ -54,8 +54,8 @@ def united_csv(input_path, output_path, samplename2biologicalcondition_path, min
     color_motifs_values = []
     for bc, color in zip(biological_conditions, color_name):
         bc_dir_path = os.path.join(input_path, bc)
-        list_motifs_hits = get_motifs_importance(bc, bc_dir_path, 'hits', min_num_motifs, max_num_motifs,  max_difference_from_last_motif, max_difference_from_fitst_motif)
-        list_motifs_values = get_motifs_importance(bc, bc_dir_path, 'values', min_num_motifs, max_num_motifs,  max_difference_from_last_motif, max_difference_from_fitst_motif)
+        list_motifs_hits = get_motifs_importance(bc, bc_dir_path, 'hits', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
+        list_motifs_values = get_motifs_importance(bc, bc_dir_path, 'values', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
         bc_hits = os.path.join(bc_dir_path,f'{bc}_hits.csv')
         bc_values = os.path.join(bc_dir_path,f'{bc}_values.csv')
         df_hits = pd.read_csv(bc_hits, index_col=0)
@@ -92,7 +92,8 @@ def generate_heat_map(df, hits_data, number_of_samples, output_path, color_list,
     plt.close()
 
 def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
-    hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs,  max_difference_from_last_motif, max_difference_from_fitst_motif)
+    hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs,
+                                                                                  max_difference_from_last_motif, max_difference_from_fitst_motif)
     output_path_hits = os.path.join(output_path,'hits_all_bc')
     output_path_values = os.path.join(output_path,'values_all_bc')
     generate_heat_map(hits, True, len(hits), output_path_hits, color_motifs_hits, dict_color)
@@ -119,5 +120,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
     
     united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, args.max_difference_from_last_motif, args.max_difference_from_fitst_motif)
-    
     
