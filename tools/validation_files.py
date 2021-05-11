@@ -16,12 +16,12 @@ def is_valid_Json_file(json_path, schema, logger):
     return True
 
 
-def is_same_samples(samples2bc_path, barcode2samples_path, logger):
+def is_same_samples(samples2bc_dict, barcode2samples_dict, samplename2biologicalcondition_path, barcode2samplename_path, logger):
     # verify that file sample2biologicalcondition and file barcode2sample have the same samples.
-    samples_from_sample2bc = sorted(load_table_to_dict(samples2bc_path,'Samples {} belongs to more than one bc!!').keys())
-    samples_from_barcode2sample = sorted(load_table_to_dict(barcode2samples_path,'Barcode {} belongs to more than one sample!!').values())
+    samples_from_sample2bc = sorted(samples2bc_dict.keys())
+    samples_from_barcode2sample = sorted(barcode2samples_dict.values())
     if not samples_from_sample2bc == samples_from_barcode2sample:
-        logger.info(f'The files: {samples2bc_path} and {barcode2samples_path} not contain the same samples!!')
+        logger.info(f'The files: {samplename2biologicalcondition_path} and {barcode2samplename_path} not contain the same samples!!')
         return False
     return True
 
@@ -68,5 +68,5 @@ def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename
     if not samples2bc_valid or not barcode2samples_valid:
         return False
     if barcode2samplename_path and samplename2biologicalcondition_path:
-        return is_same_samples(samplename2biologicalcondition_path, barcode2samplename_path, logger)
+        return is_same_samples(sample2bc_data, barcode2sample_data, samplename2biologicalcondition_path, barcode2samplename_path, logger)
     return True     
