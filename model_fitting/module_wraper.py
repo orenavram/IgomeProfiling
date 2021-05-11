@@ -25,7 +25,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      fitting_done_path, check_files_valid, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
                      shuffles, queue_name, verbose, error_path, argv):
     
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=''):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
 
     is_pval = rank_method == 'pval'

@@ -33,17 +33,6 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "TAT": "Y"}
 
 
-sample2bc_schema = {
-    "type": "object",
-    "propertyNames": {
-        "pattern": "^[A-Za-z0-9_]*$"
-    },
-    "patternProperties": {
-        "^[A-Za-z0-9_]*$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]*$"} } 
-    }
-}
-
-
 def verify_file_is_not_empty(file_path):
     import logging
     from time import sleep

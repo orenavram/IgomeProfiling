@@ -325,7 +325,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
                  motif_inference_done_path, check_files_valid, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
 
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=''):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
         
     os.makedirs(motif_inference_output_path, exist_ok=True)

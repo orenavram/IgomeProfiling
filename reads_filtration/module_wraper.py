@@ -19,7 +19,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                     check_files_valid, gz, verbose, error_path, queue, argv='no_argv'):
 
         # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
         return
 
     os.makedirs(first_phase_output_path, exist_ok=True)
