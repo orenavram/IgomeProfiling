@@ -10,6 +10,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
 from sklearn.metrics import plot_roc_curve
 
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+sys.path.insert(0, src_dir)
+
+from auxiliaries.pipeline_auxiliaries import log_scale
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
@@ -87,18 +96,9 @@ def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample,
     return configurations
 
 
-def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_tfidf, output_path):
-    # plt.figure(dpi=1000)
-    # transform the data for better contrast in the visualization
+def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
     
-    train_data = np.log2(df+1) if hits_data else df 
-
-    #if hits_data:  # hits data
-    #    train_data = np.log2(df+1)  # pseudo counts
-    #elif use_tfidf: # tfidf data
-    #    train_data = -np.log2(df+0.0001)  # avoid 0
-    #else:  # p-values data
-    #    train_data = -np.log2(df)
+    train_data = log_scale(df, rank_method)
 
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
@@ -139,7 +139,7 @@ def generate_roc_curve(X, y, classifier, number_of_features, output_path):
     plt.close()
 
 
-def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_path, cv_num_of_splits):
+def train(rf, X, y, feature_names, sample_names, rank_method, output_path, cv_num_of_splits):
     original_feature_names = feature_names[:]
     original_X = X[:]
     logger.debug('\n'+'#'*100 + f'\nTrue labels:\n{y.tolist()}\n' + '#'*100 + '\n')
@@ -177,10 +177,6 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
         # save previous cv_avg_error_rate to make sure the performances do not deteriorate
         previous_cv_avg_error_rate = cv_avg_error_rate
 
-        # predictions = model.predict(X)
-        # logger.info(f'Full model error rate is {1 - (predictions == y).mean()}')
-        # logger.info(f'Current model\'s predictions\n{predictions.tolist()}')
-
         # compute current model accuracy for each fold of the cross validation
         cv_score = cross_val_score(model, X, y, cv=StratifiedKFold(cv_num_of_splits))
 
@@ -197,7 +193,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
         # save current model (unsorted) features to a csv file
         df = save_model_features(original_X, features_indexes_to_keep, feature_names, sample_names, f'{output_path}/Top_{number_of_features}_features')
 
-        generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_tfidf, f'{output_path}/{number_of_features}')
+        generate_heat_map(df, number_of_features, rank_method, number_of_samples, f'{output_path}/{number_of_features}')
 
         generate_roc_curve(X, y, rf, number_of_features, output_path)
 
@@ -229,7 +225,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, use_tfidf, output_pa
     return cv_avg_error_rates, number_of_features_per_model
 
 
-def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_tfidf, cv_num_of_splits, seed, argv):
+def train_models(csv_file_path, done_path, num_of_configurations_to_sample, rank_method, cv_num_of_splits, seed, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -242,7 +238,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
 
     logging.info('Parsing data...')
-    is_hits_data = 'hits' in os.path.split(csv_file_path)[-1]  # Does the file name contain "hits"?
+    #is_hits_data = 'hits' in os.path.split(csv_file_path)[-1]  # Does the file name contain "hits"?
 
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
 
@@ -251,21 +247,12 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
     perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits)
     if perfect_feature_names:
         df = save_model_features(X_train, perfect_feature_indexes, perfect_feature_names, sample_names_train, f'{output_path}/perfect_feature_names')
-        generate_heat_map(df, df.shape[1], is_hits_data, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
+        generate_heat_map(df, df.shape[1], rank_method, df.shape[0], f'{output_path}/perfect_feature_names')
     else:
         # touch a file so we can see that there were no perfect features
         with open(f'{output_path}/perfect_feature_names', 'w') as f:
             pass
 
-    # sanity check
-    # perfect_feature_names =['PMMILDLDHSQV', 'YASTIVVDLDHT', 'CDAALHVIAALD', 'CVSASMDLDHLE', 'CSVELCNISGYG', 'SSQIMFHVYN', 'CPVSPQSLDAPC', 'MSWIFYALDPYE', 'SSHISLLMSV', 'ATLKHYLIQDGI', 'CTWGGPGFDLFC', 'CPFDSAGFDPYC', 'CTAAFISGHYPD', 'SSFFYMQAYV', 'TPIETISDSVYK', 'LDSLHIHYLVSF', 'CHISHVQDLPYL', 'WLWYLASDGI', 'SINHGLLAYI', 'CIALLKEGEPFS', 'CSADNLNLYC', 'ACDPYDCRHLYS', 'WLAVLYADMVFY', 'WHWSLLQDTMYH', 'GTSSFPYSHLWA', 'CALGWLLDLDHC', 'CQAFIDPYEC', 'SLSQNYSLLMII', 'NGYDYFGLRF', 'GDPYEILVLSRC', 'IESGDPYEARFS', 'GYDLLRDRYI', 'PINDLDADGI', 'SAHIWLVTSI', 'CLRLHLASLTQC', 'SRMDFRYLLE', 'CPHSLIMLLGDL', 'WPVHLEHTNI', 'GPYELHYEDK', 'CRFGAPGFDVQC', 'LLSLVLMDSMYF', 'APTCFRGTDC', 'TWRSGNASGSP', 'DGYFAHFWSVLQ', 'CAVLLDPYEC', 'CIARKDMQATQN', 'CMVWLDNVLSLC', 'PFEALELMRT']
-    # for feature in perfect_feature_names:
-    #     rf = RandomForestClassifier(**{'n_estimators': 2000, 'max_features': 'auto', 'max_depth': 70, 'min_samples_split': 5, 'min_samples_leaf': 1, 'bootstrap': True, 'n_jobs': -1}).fit(df[feature].as_matrix().reshape(-1, 1), y_train)
-    #     rf = RandomForestClassifier(**configuration).fit(df[feature].as_matrix().reshape(-1, 1), y_train)
-    #     print(','.join(rf.predict(df[feature].as_matrix().reshape(-1, 1)).tolist()))
-    #     print(','.join(y_train.as_matrix().tolist()))
-
-    # feature selection analysis
     logging.info('\nApplying feature selection analysis...')
     if cv_num_of_splits < 2:
         logging.info('Number of CV folds is less than 2. '
@@ -292,7 +279,7 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, use_
 
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
         rf = RandomForestClassifier(**configuration)
-        errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, use_tfidf, output_path_i, cv_num_of_splits)
+        errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, rank_method, output_path_i, cv_num_of_splits)
         # model.predict(X_test, y_test)
 
         plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
@@ -384,9 +371,9 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     # parser.add_argument('n_splits', type=int, default=2, help='How manyfolds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
-    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
-    parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed', default=42, type=int, help='Seed number for reconstructing experiments')    
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -396,4 +383,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.tfidf, args.cv_num_of_splits, args.seed, argv=sys.argv)
+    train_models(args.data_path, args.done_file_path, args.num_of_configurations_to_sample, args.rank_method, args.cv_num_of_splits, args.seed, argv=sys.argv)
