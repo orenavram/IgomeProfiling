@@ -48,8 +48,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         map_args_exp = map_multi_experiments[exp]
         done_path=os.path.join(map_args_exp['logs_dir'],f'filter_reads_done.txt')
         if not os.path.exists(done_path):
-            cmds = [map_args_exp['fastq_path'], map_args_exp['barcode2samplename'], logs_dir,
-                        done_path, list_args_exp[1], f'{exp}_summary_log.txt',
+            cmds = [map_args_exp['fastq_path'], map_args_exp['output_path'], map_args_exp['logs_dir'],
+                        done_path, map_args_exp['barcode2samplename'], 'summary_log.txt',
                         f'--error_path {error_path}',
                         f'--left_construct {left_construct}',
                         f'--right_construct {right_construct}',
@@ -60,13 +60,12 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         else:
             logger.debug(f'skipping filter reads as {done_path} found')
             num_of_expected_results += 1
-    
     if len(all_cmds_params)>0:
         executable='python'
         script_path=f'{src_dir}/reads_filtration/{script_name}'
-        for cmds_params,exp in zip(all_cmds_params, map_multi_exp):
+        for cmds_params,exp in zip(all_cmds_params, map_multi_experiments):
             cmd = submit_pipeline_step(script_path,[cmds_params],
-                    logs_dir, f'{exp}_read_filteration',
+                    map_multi_experiments[exp]['logs_dir'], '_read_filteration',
                     queue, verbose, executable=executable)
             num_of_expected_results+= 1
         wait_for_results(script_name, logs_dir, num_of_expected_results,
@@ -74,9 +73,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     else:
         logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py, all reads exists')
 
-    with open(demultiplexing_done_path, 'w') as f:
-        f.write(' '.join(argv) + '\n')
-    
 
     if use_mapitope:
         mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
