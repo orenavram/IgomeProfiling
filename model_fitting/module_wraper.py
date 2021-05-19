@@ -23,7 +23,7 @@ def repeat_items(list):
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, queue_name, verbose, error_path, argv):
+                     shuffles, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, error_path, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -188,6 +188,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     else:
         logger.info(f'Skipping fitting, all found')
 
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
@@ -221,6 +223,9 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -238,4 +243,5 @@ if __name__ == '__main__':
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
                      args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
-                     args.shuffles, args.queue, True if args.verbose else False, error_path, sys.argv)
+                     args.shuffles, args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
+                     args.queue, True if args.verbose else False, error_path, sys.argv)

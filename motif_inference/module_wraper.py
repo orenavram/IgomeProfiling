@@ -10,6 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
+from tools.stop_machine_aws import stop_machines
 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
@@ -323,7 +324,8 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, error_path, argv):
+                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, 
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -549,6 +551,9 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         compute_cutoffs_then_split(biological_conditions, meme_split_size,
             motif_inference_output_path, logs_dir, queue_name, verbose)
 
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
+
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
     with open(motif_inference_done_path, 'w') as f:
@@ -583,6 +588,9 @@ if __name__ == '__main__':
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
                         help='Split size, how many meme per files for calculations')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -601,4 +609,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, error_path, sys.argv)
+                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, 
+                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, error_path, sys.argv)
