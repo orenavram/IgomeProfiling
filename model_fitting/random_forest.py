@@ -295,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument('logs_dir', help='A path for the log dir')
     parser.add_argument('error_path', help='Path for error file')
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many rando forest configurations to run in parallel')
+    parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
     parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
     parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
