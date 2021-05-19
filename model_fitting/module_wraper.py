@@ -157,13 +157,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
         
-        value_cmd = [aggregated_values_path, pvalues_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}']
-        hits_cmd = [aggregated_hits_path, hits_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}']
-        value_cmd.append(f'--rank_method {rank_method}')
-        if rank_method == 'tfidf':
-            hits_cmd.append(f'--rank_method {rank_method}')
-        else:
-            hits_cmd.append(f'--rank_method hits')
+        value_cmd = [aggregated_values_path, pvalues_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}', f'--rank_method {rank_method}']
+        hits_cmd = [aggregated_hits_path, hits_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}', '--rank_method hits']
     
 
         if not os.path.exists(pvalues_done_path):
@@ -221,7 +216,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
-    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')

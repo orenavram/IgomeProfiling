@@ -238,7 +238,6 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, rank
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
 
     logging.info('Parsing data...')
-    #is_hits_data = 'hits' in os.path.split(csv_file_path)[-1]  # Does the file name contain "hits"?
 
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
 
@@ -318,22 +317,15 @@ def train_models(csv_file_path, done_path, num_of_configurations_to_sample, rank
 
 
 def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits):
-    feature_to_avg_accuracy = {}
-    # df = pd.read_csv(f'{output_path}/Top_149_features.csv', index_col='sample_name')
+    feature_to_avg_accuracy = {}    
     rf = RandomForestClassifier(random_state=np.random.seed(seed))
 
     for i, feature in enumerate(feature_names):
-        # if i % 10 == 0:
         logger.info(f'Checking feature {feature} number {i}')
         # assert df.columns[i] == feature
         cv_score = cross_val_score(rf, X_train[:, i].reshape(-1, 1), y_train, cv=StratifiedKFold(cv_num_of_splits, shuffle=True)).mean()
         if cv_score == 1:
             logger.info('-' * 10 + f'{feature} has 100% accuracy!' + '-' * 10)
-        #     print(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])
-        #     print(f'min of other class: {min(X_train[:, i].reshape(-1, 1).tolist()[:8] + X_train[:, i].reshape(-1, 1).tolist()[12:])}')
-        #     print(X_train[:, i].reshape(-1, 1).tolist()[8:12])
-        #     # print(y_train.tolist())
-        #     print('Accuracy is 1')
         feature_to_avg_accuracy[feature] = cv_score
 
     with open(f'{output_path}/single_feature_accuracy.txt', 'w') as f:
