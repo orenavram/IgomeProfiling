@@ -2,10 +2,11 @@ import os
 import sys
 from subprocess import call, run, Popen, PIPE
 from time import time, sleep
+
+from celery.app.registry import _unpickle_task_v2
 import global_params
 import logging
 import json 
-
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
 
@@ -31,6 +32,17 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "TTT": "F",
                          "TGG": "W",
                          "TAT": "Y"}
+
+
+schema_sample2bc ={
+    "type": "object",
+    "propertyNames": {
+        "pattern": "^[A-Za-z0-9_]+$"
+    },
+    "patternProperties": {
+        "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
+    }
+}
 
 
 def verify_file_is_not_empty(file_path):
@@ -279,7 +291,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 
 
-def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
+def load_table_to_dict(table_path, error_msg, delimiter ='\t', data_json = None):
     table = {}
     filename, file_extension = os.path.splitext(table_path)
     if file_extension == '.txt':
@@ -294,10 +306,8 @@ def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
                     assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
                 table[key] = value
     else:
-        f = open(table_path, 'r')
-        dict_table = json.load(f)
-        for key in dict_table:
-            for val in dict_table[key]:
+        for key in data_json:
+            for val in data_json[key]:
                 if val in table:
                     assert False, error_msg.replace('{}', val)  # TODO: write to a global error log file
                 table[val] = key

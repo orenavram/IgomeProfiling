@@ -1,5 +1,5 @@
 import sys
-from auxiliaries.pipeline_auxiliaries import load_table_to_dict
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, schema_sample2bc
 import os
 import re
 import json
@@ -13,7 +13,7 @@ def is_valid_Json_file(json_path, schema, logger):
     except jsonschema.exceptions.ValidationError as err:
         logger.error(f'The structure of file name {json_path} is not valid')
         return False
-    return True
+    return json_data
 
 
 def is_same_samples(samples2bc_dict, barcode2samples_dict, samplename2biologicalcondition_path, barcode2samplename_path, logger):
@@ -28,6 +28,9 @@ def is_same_samples(samples2bc_dict, barcode2samples_dict, samplename2biological
 
 def is_valid_data(path_file ,dict_data, logger):
     # verify the structure of the file -  should look like: word\tword\n
+    if  not dict_data:
+        logger.info(f'There is not data in file: {path_file}')
+        return False
     regex = "^[A-Za-z0-9_]+$"
     for key, value in  dict_data.items():
         match_key = re.match(regex, key)
@@ -57,8 +60,11 @@ def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename
     # Test if the file samplename2biologicalcondition_path is valid. 
     if samplename2biologicalcondition_path:
         filename, file_extension = os.path.splitext(samplename2biologicalcondition_path)
+        json_data = False
+        if file_extension == '.json':
+            json_data = is_valid_Json_file(samplename2biologicalcondition_path, schema_sample2bc, logger)
         try:
-            sample2bc_data = load_table_to_dict(samplename2biologicalcondition_path,'Samples {} belongs to more than one bc!!')
+            sample2bc_data = load_table_to_dict(samplename2biologicalcondition_path,'Samples {} belongs to more than one bc!!', '\t', json_data if json_data else '')
         except:
             logger.error(f'{datetime.datetime.now()}: can not load the file - {samplename2biologicalcondition_path}')
             samples2bc_valid = False
