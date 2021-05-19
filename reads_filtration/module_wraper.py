@@ -10,13 +10,13 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, submit_pipeline_step
 from global_params import src_dir
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    many_exp_together, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
+                    multi_experiments_config, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -25,72 +25,58 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
         return
 
-    demultiplexing_done_path = f'{logs_dir}/done_demultiplexing.txt'
-    logger.info('_' * 100)
-    logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {first_phase_output_path}')
+    # create data structure for running filter_reads
+    map_multi_experiments = {}
+    if multi_experiments_config:
+        f = open(multi_experiments_config)
+        multi_experiments_dict = json.load(f)
+        map_multi_experiments = multi_experiments_dict['runs']
+    else:
+        map_multi_experiments['one'] = {
+            "fastq_path": fastq_path,
+            "barcode2samplename": barcode2samplename,
+            "output_path": first_phase_output_path,
+            "logs_dir": logs_dir,
+        }
+    
     script_name = 'filter_reads.py'
-    num_of_expected_result = 0
-
-    if many_exp_together:
-        #open the json file and make a dictionary
-        f = open(many_exp_together)
-        fastq_and_barcode2samplename_dict = json.load(f)
-        path_folder_fastq = fastq_and_barcode2samplename_dict['configuration']['input_fatsq']
-        path_folder_barcode2samplename = fastq_and_barcode2samplename_dict['configuration']['input_bc2barcode']
-        for exp,list_args in fastq_and_barcode2samplename_dict['runs'].items():
-        #get current paths
-            barcode2samplename_path = os.path.join(path_folder_barcode2samplename, list_args[0])
-            fastq_path = os.path.join(path_folder_fastq, list_args[1])
-            done_path=os.path.join(logs_dir,f'{exp}_filter_reads_done.txt')
-            if not os.path.exists(done_path):
-                cmds = [fastq_path, first_phase_output_path, logs_dir,
-                        done_path, barcode2samplename_path, f'{exp}_summary_log.txt',
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: demultiplexig sequences by {script_name}')
+    num_of_expected_results = 0
+    all_cmds_params = []
+    for exp in map_multi_experiments:
+        map_args_exp = map_multi_experiments[exp]
+        done_path=os.path.join(map_args_exp['logs_dir'],f'filter_reads_done.txt')
+        if not os.path.exists(done_path):
+            cmds = [map_args_exp['fastq_path'], map_args_exp['barcode2samplename'], logs_dir,
+                        done_path, list_args_exp[1], f'{exp}_summary_log.txt',
                         f'--error_path {error_path}',
                         f'--left_construct {left_construct}',
                         f'--right_construct {right_construct}',
                         f'--max_mismatches_allowed {max_mismatches_allowed}',
                         f'--min_sequencing_quality {min_sequencing_quality}',
                         f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
-                all_cmds_params.append(cmds)
-            else:
-                logger.debug(f'skipping filter reads as {done_path} found')
-                num_of_expected_results += 1
-    
-        if len(all_cmds_params)>0:
-            executable='python'
-            script_path=f'{src_dir}/reads_filtration/{script_name}'
-            for cmds_params,exp in zip(all_cmds_params,fastq_and_barcode2samplename_dict['runs'].keys()):
-                cmd = submit_pipeline_step(script_path,[cmds_params],
-                                    logs_dir, f'{exp}_read_filteration',
-                                    queue, verbose, executable=executable)
-                num_of_expected_results+= 1
-            wait_for_results(script_name, logs_dir, num_of_expected_results,
-                            error_file_path=error_path, suffix='_filter_reads_done.txt')
+            all_cmds_params.append(cmds)
         else:
-            logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py, all reads exists')
-
-        with open(demultiplexing_done_path, 'w') as f:
-            f.write(' '.join(argv) + '\n')
+            logger.debug(f'skipping filter reads as {done_path} found')
+            num_of_expected_results += 1
     
-    #filter read only one  exp.
-    if not os.path.exists(demultiplexing_done_path):
-        # run filter_reads.py
-        parameters = [fastq_path, first_phase_output_path, logs_dir,
-                      done_path, barcode2samplename,'summary_log.txt'
-                      f'--error_path {error_path}',
-                      f'--left_construct {left_construct}',
-                      f'--right_construct {right_construct}',
-                      f'--max_mismatches_allowed {max_mismatches_allowed}',
-                      f'--min_sequencing_quality {min_sequencing_quality}',
-                      f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
-
-        fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
-                  parameters, verbose, error_path)
-        num_of_expected_results+=1
+    if len(all_cmds_params)>0:
+        executable='python'
+        script_path=f'{src_dir}/reads_filtration/{script_name}'
+        for cmds_params,exp in zip(all_cmds_params, map_multi_exp):
+            cmd = submit_pipeline_step(script_path,[cmds_params],
+                    logs_dir, f'{exp}_read_filteration',
+                    queue, verbose, executable=executable)
+            num_of_expected_results+= 1
         wait_for_results(script_name, logs_dir, num_of_expected_results,
-                         error_file_path=error_path, suffix='demultiplexing.txt')
+                            error_file_path=error_path, suffix='_filter_reads_done.txt')
     else:
-        logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
+        logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py, all reads exists')
+
+    with open(demultiplexing_done_path, 'w') as f:
+        f.write(' '.join(argv) + '\n')
+    
 
     if use_mapitope:
         mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
@@ -145,13 +131,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
                 fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
                           
-                # file_path = output_file_path
-                # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-                # parameters = [file_path, output_file_path]
-                # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py',
-                #             parameters, verbose, error_path, done_path)
-                # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
-                # E.g.: CAAAAC and AAAA are the same after removing Cys
 
                 num_of_expected_results += 1
 
@@ -189,8 +168,8 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
-    
-    parser.add_argument('--many_exp_together', type=str, help='a path to file that defines all the experement to run')
+
+    parser.add_argument('--multi_experiments_config', type=str, help='a path to json file that contains a match between name of run and fastq, barcode2sample')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -210,5 +189,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, args.many_exp_together, True if args.gz else False,
+                    args.min_sequencing_quality, args.minimal_length_required, args.multi_experiments_config, True if args.gz else False,
                     True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
