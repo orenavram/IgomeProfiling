@@ -12,19 +12,18 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from global_params import src_dir
 from tools.validation_files import is_input_files_valid 
-
+from tools.stop_machine_aws import stop_machines
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    check_files_valid, gz, verbose, error_path, queue, argv='no_argv'):
-
-        # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+                    check_files_valid, gz, verbose, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, queue, argv='no_argv'):
+  
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
         return
-
+      
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
-
     if os.path.exists(first_phase_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
         return
@@ -95,6 +94,10 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
 
+
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
+        
     with open(first_phase_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
@@ -115,9 +118,11 @@ if __name__ == '__main__':
     parser.add_argument('min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-    
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')    
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -137,4 +142,5 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, args.check_files_valid, True if args.gz else False,
-                    True if args.verbose else False, error_path, args.queue, sys.argv)
+                    True if args.verbose else False, args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
+                    error_path, args.queue, sys.argv)

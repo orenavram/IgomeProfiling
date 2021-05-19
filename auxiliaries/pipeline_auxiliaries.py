@@ -5,6 +5,7 @@ from time import time, sleep
 
 from celery.app.registry import _unpickle_task_v2
 import global_params
+import numpy as np
 import logging
 import json 
 logger = logging.getLogger('main')
@@ -387,3 +388,14 @@ def count_memes(path):
     count = int(output) if p_status == 0 else 0
     print(f'Found {count} memes in {path}')
     return count
+
+
+def log_scale(df, rank_method):
+    # The options of ranking method are - hits, controlled_shuffles, pval, tfidf
+    if rank_method == 'hits':
+        df = np.log2(df + 1)
+    if rank_method == 'pval':    
+        df = 1-df
+    if rank_method == 'tfidf':
+        df = -np.log2(df + 0.0001)  # avoid 0  
+    return df
