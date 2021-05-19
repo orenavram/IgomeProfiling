@@ -15,7 +15,7 @@ from global_params import src_dir
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    gz, verbose, use_mapitope, rpm, error_path, queue, argv='no_argv'):
+                    rpm, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
 
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -168,5 +168,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
-                    True if args.verbose else False, args.mapitope, True if args.rpm else False, error_path, args.queue, sys.argv)
+                    args.min_sequencing_quality, args.minimal_length_required, args.rpm, args.gz,
+                    args.verbose, args.mapitope, error_path, args.queue, sys.argv)

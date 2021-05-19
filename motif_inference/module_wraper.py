@@ -160,10 +160,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            # submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
-            #                      current_batch,
-            #                      logs_dir, f'weblogo_{i}th_batch',
-            #                      queue_name='pupkolab', verbose=verbose)
+
 
     # wait for the memes!! (previous logical block!)
     # (no need to wait for weblogos..)
@@ -319,12 +316,11 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
     else:
         logger.info('Skipping calculate cutoffs, all exists')
 
-
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
                  motif_inference_done_path, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
-                 threshold, word_length, discard, queue_name, verbose, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme, error_path, use_mapitope, argv):
+                 threshold, word_length, discard, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme, error_path, queue_name, verbose, use_mapitope, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -621,6 +617,8 @@ if __name__ == '__main__':
 
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,args.aln_cutoff, args.pcc_cutoff, args.threshold, args.word_length, args.discard, args.queue,
-                 True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, args.skip_sample_merge_meme, error_path, True if args.mapitope else False, sys.argv)
+                 args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
+                 args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,args.aln_cutoff, args.pcc_cutoff, args.threshold,
+                 args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, args.skip_sample_merge_meme,  error_path,
+                 args.queue, args.verbose, args.mapitope, sys.argv)
+
