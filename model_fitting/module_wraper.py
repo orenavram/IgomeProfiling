@@ -157,13 +157,13 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
             aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
-
+            
             value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_random_configurations_to_sample, f'--cv_num_of_splits {cv_num_of_splits}'
-                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', num_of_random_configurations_to_sample, '--random_forest_seed', random_forest_seed,
-                    f'--random_forest_seed {random_forest_seed_configurations}']
+                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', num_of_random_configurations_to_sample, '--seed', random_forest_seed,
+                    f'--random_forest_seed {random_forest_seed_configurations}', '--rank_method {rank_method}']
             hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path, '--num_of_configurations_to_sample', num_of_configurations_to_sample, f'--cv_num_of_splits {cv_num_of_splits}'
-                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest, '--random_forest_seed', random_forest_seed,
-                     f'--random_forest_seed {random_forest_seed_configurations}']
+                    '--number_parallel_random_forest', number_parallel_random_forest, '--min_value_error_random_forest', min_value_error_random_forest, '--_seed', random_forest_seed,
+                     f'--random_forest_seed {random_forest_seed_configurations}', '--rank_method hits']
             if rank_method == 'tfidf' or rank_method == 'shuffles':
                 value_cmd.append('--tfidf')
                 hits_cmd.append('--tfidf')
@@ -190,8 +190,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
             wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                             error_file_path=error_path, suffix='_done_fitting.txt')
-        else:
-            logger.info(f'Skipping fitting, all found')
     else:
         print('stop before') 
         logger.info(f'Stop before random forest')        
@@ -234,8 +232,8 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
-    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
-    parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')    
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed_random_forest', default=42, type=int, help='Seed number for reconstructing experiments')    
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

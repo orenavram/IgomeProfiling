@@ -10,9 +10,11 @@ import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
 from sklearn.metrics import plot_roc_curve
+
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
+
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -22,6 +24,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import submit_pipeline_step, wait_for_results
+from auxiliaries.pipeline_auxiliaries import log_scale
 
 
 def parse_data(file_path):
@@ -95,8 +98,10 @@ def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample,
     return configurations
 
 
-def generate_heat_map(df, number_of_features, hits_data, number_of_samples, use_tfidf, output_path):
-    train_data = np.log2(df+1) if hits_data else df 
+
+def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
+    
+    train_data = log_scale(df, rank_method)
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -114,6 +119,7 @@ def save_model_features(X, feature_indexes, feature_names, sample_names, output_
     return df
 
 
+
 def write_results_feature_selection_summary(feature_selection_summary_path, path_dir):
     #feature_selection_summary_f = open(feature_selection_summary_path, 'a')
     models = sorted([x[0] for x in os.walk(path_dir)])
@@ -128,8 +134,7 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
                 os.remove(path_file)
     
 
-
-def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,use_tfidf, cv_num_of_splits, seed, random_forest_seed, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error, rank_method, cv_num_of_splits, seed, random_forest_seed, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -141,7 +146,6 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
 
     logging.info('Parsing data...')
-    is_hits_data = 'hits' in os.path.split(csv_file_path)[-1]  # Does the file name contain "hits"?
 
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
 
@@ -150,7 +154,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     perfect_feature_names, perfect_feature_indexes = measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits)
     if perfect_feature_names:
         df = save_model_features(X_train, perfect_feature_indexes, perfect_feature_names, sample_names_train, f'{output_path}/perfect_feature_names')
-        generate_heat_map(df, df.shape[1], is_hits_data, df.shape[0], use_tfidf, f'{output_path}/perfect_feature_names')
+        generate_heat_map(df, df.shape[1], rank_method, df.shape[0], f'{output_path}/perfect_feature_names')
     else:
         # touch a file so we can see that there were no perfect features
         with open(f'{output_path}/perfect_feature_names', 'w') as f:
@@ -219,7 +223,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
             if stop:
                 break
     else:
-         logger.info(f'Skipping random forest train, all found')
+         logger.info(f'Skipping random forest train, all found')       
 
     feature_selection_summary_f.close()
 
@@ -248,7 +252,8 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
 
 
 def measure_each_feature_accuracy(X_train, y_train, feature_names, output_path, seed, cv_num_of_splits):
-    feature_to_avg_accuracy = {}
+
+    feature_to_avg_accuracy = {}    
     rf = RandomForestClassifier(random_state=np.random.seed(seed))
 
     for i, feature in enumerate(feature_names):
@@ -294,13 +299,14 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('logs_dir', help='A path for the log dir')
     parser.add_argument('error_path', help='Path for error file')
+    
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
     parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
-    parser.add_argument('--tfidf', action='store_true', help="Are inputs from TF-IDF (avoid log(0))")
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed', default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
     import logging
@@ -311,4 +317,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest,
-     args.min_value_error_random_forest, args.tfidf, args.cv_num_of_splits, args.seed, args.random_forest_seed, argv=sys.argv)
+     args.min_value_error_random_forest, args.rank_method, args.cv_num_of_splits, args.seed, args.random_forest_seed, argv=sys.argv)
