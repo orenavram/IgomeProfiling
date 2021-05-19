@@ -19,7 +19,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import load_table_to_dict
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, log_scale
 
 
 def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
@@ -79,9 +79,9 @@ def united_csv(input_path, output_path, samplename2biologicalcondition_path, min
     color_motifs_values = sum(color_motifs_values, [])
     return hits_all, values_all, color_motifs_hits, color_motifs_values, dict_color
 
-def generate_heat_map(df, hits_data, number_of_samples, output_path, color_list, dict_color):
+def generate_heat_map(df, rank_method, number_of_samples, output_path, color_list, dict_color):
     df = df.set_index(df.columns[0])
-    train_data = np.log2(df+1) if hits_data else df 
+    train_data = log_scale(df, rank_method)
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True, col_colors=color_list)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     handles = [Patch(facecolor=dict_color[bc]) for bc in dict_color]
@@ -91,13 +91,13 @@ def generate_heat_map(df, hits_data, number_of_samples, output_path, color_list,
     cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
     plt.close()
 
-def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
+def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif, rank_method):
     hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs,
                                                                                   max_difference_from_last_motif, max_difference_from_fitst_motif)
     output_path_hits = os.path.join(output_path,'hits_all_bc')
     output_path_values = os.path.join(output_path,'values_all_bc')
-    generate_heat_map(hits, True, len(hits), output_path_hits, color_motifs_hits, dict_color)
-    generate_heat_map(values, False, len(values), output_path_values, color_motifs_values, dict_color)
+    generate_heat_map(hits, 'hits', len(hits), output_path_hits, color_motifs_hits, dict_color)
+    generate_heat_map(values, rank_method, len(values), output_path_values, color_motifs_values, dict_color)
 
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}')
@@ -110,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_num_motifs', type=int, default=10, help='Maximum number of motifs to united from every BC')
     parser.add_argument('--max_difference_from_last_motif', type=float, default=0.01, help='Take the motif if the difference of his importent values is less than the last motif')
     parser.add_argument('--max_difference_from_fitst_motif', type=float, default=0.05, help='Take the motif if the difference of his importent values is less than the first motif')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Rank method')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -119,5 +120,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
     
-    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, args.max_difference_from_last_motif, args.max_difference_from_fitst_motif)
-    
+    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, args.max_difference_from_last_motif, args.max_difference_from_fitst_motif, args.rank_method)
