@@ -1,6 +1,8 @@
 import boto3 
+import botocore.exceptions
 import datetime
 import re
+
 
 def is_match_name_instance(names, instance):
     for name in names:
@@ -8,21 +10,22 @@ def is_match_name_instance(names, instance):
             return True
     return False
 
+
 def is_stop_instance(instance, types, names):
     if instance.state['Name'] == 'stopped':
         return False
-    if types and names:
-        return  instance.instance_type in types or is_match_name_instance(names, instance)
-    if types and instance.instance_type not in types:
-        return False
-    if names and not is_match_name_instance(names, instance):
-        return False
-    return True;    
+    if not types and not names:
+        return True
+    is_type = types and instance.instance_type not in types
+    is_name = names and not is_match_name_instance(names, instance)
+    return is_type or is_name
 
-def stop_machines(type_machine, name_machines, logger):
+
+def stop_machines(type_machine, name_machines, logger, region_name = 'us-west-2'):
     logger.info('Stop machines...')
+    
     try:
-        ec2 = boto3.resource('ec2', region_name='us-west-2')
+        ec2 = boto3.resource('ec2', region_name=region_name)
     except botocore.exceptions.ClientError as error:
         logger.error(f'{datetime.datetime.now()}: Error {error}  - Can\'t connect to ec2 with boto3 for stop the machines')
 
@@ -35,7 +38,7 @@ def stop_machines(type_machine, name_machines, logger):
         if is_stop_instance(instance, types, names):
             try:
                 instance.stop()
-                logger.info("Stop the instance - Id: {0}, Type: {1}, Public IPv4: {2}, State: {3}".format(instance.id, instance.instance_type, instance.public_ip_address, instance.state))
+                logger.info(f'Stop the instance - Id: {instance.id}, Type: {instance.instance_type}, Public IPv4: {instance.public_ip_address}, State: {instance.state}')
             except botocore.exceptions.ClientError as error:
                 logger.error(f'{datetime.datetime.now()}: Error {error} - can\'t stop the instance {instance.id}')
         else:
