@@ -157,11 +157,9 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
         
-        value_cmd = [aggregated_values_path, pvalues_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}']
-        hits_cmd = [aggregated_hits_path, hits_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}']
-        if rank_method == 'tfidf' or rank_method == 'shuffles':
-            value_cmd.append('--tfidf')
-            hits_cmd.append('--tfidf')
+        value_cmd = [aggregated_values_path, pvalues_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}', f'--rank_method {rank_method}']
+        hits_cmd = [aggregated_hits_path, hits_done_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}', f'--seed {seed_random_forest}', '--rank_method hits']
+    
 
         if not os.path.exists(pvalues_done_path):
             all_cmds_params.append(value_cmd)
@@ -218,15 +216,15 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
-    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
-    parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')    
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed_random_forest', default=42, type=int, help='Seed number for reconstructing experiments')    
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
