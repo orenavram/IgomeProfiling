@@ -6,6 +6,7 @@ from celery.app.registry import _unpickle_task_v2
 import global_params
 import json
 import jsonschema
+import numpy as np
 import logging
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
@@ -402,3 +403,14 @@ def is_valid_Json_file(json_path, schema, logger):
         logger.error(f'The structure of file name {json_path} is not valid')
         return False
     return json_data
+
+    
+def log_scale(df, rank_method):
+    # The options of ranking method are - hits, controlled_shuffles, pval, tfidf
+    if rank_method == 'hits':
+        df = np.log2(df + 1)
+    if rank_method == 'pval':    
+        df = 1-df
+    if rank_method == 'tfidf':
+        df = -np.log2(df + 0.0001)  # avoid 0  
+    return df
