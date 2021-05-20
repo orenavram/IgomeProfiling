@@ -2,11 +2,11 @@ import os
 import sys
 from subprocess import call, run, Popen, PIPE
 from time import time, sleep
-
 from celery.app.registry import _unpickle_task_v2
 import global_params
+import json
+import jsonschema
 import logging
-import json 
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
 
@@ -291,7 +291,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 
 
-def load_table_to_dict(table_path, error_msg, delimiter ='\t', data_json = None):
+def load_table_to_dict(table_path, error_msg, delimiter ='\t', need_to_valid_json = False):
     table = {}
     filename, file_extension = os.path.splitext(table_path)
     if file_extension == '.txt':
@@ -306,10 +306,15 @@ def load_table_to_dict(table_path, error_msg, delimiter ='\t', data_json = None)
                     assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
                 table[key] = value
     else:
-        for key in data_json:
-            for val in data_json[key]:
+        json_data = {}
+        if need_to_valid_json:
+            json_data = is_valid_Json_file(table_path, schema_sample2bc, logger)
+            if not json_data:
+                assert False, 'The structure of json file not valid'  # TODO: write to a global error log file
+        for key in json_data:
+            for val in json_data[key]:
                 if val in table:
-                    assert False, error_msg.replace('{}', val)  # TODO: write to a global error log file
+                        assert False, error_msg.replace('{}', val)  # TODO: write to a global error log file
                 table[val] = key
     return table
 
@@ -387,3 +392,13 @@ def count_memes(path):
     count = int(output) if p_status == 0 else 0
     print(f'Found {count} memes in {path}')
     return count
+
+
+def is_valid_Json_file(json_path, schema, logger):
+    json_data = json.load(open(json_path))
+    try:
+        jsonschema.validate(instance=json_data, schema=schema)
+    except jsonschema.exceptions.ValidationError as err:
+        logger.error(f'The structure of file name {json_path} is not valid')
+        return False
+    return json_data

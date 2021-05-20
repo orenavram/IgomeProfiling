@@ -1,19 +1,6 @@
-import sys
-from auxiliaries.pipeline_auxiliaries import load_table_to_dict, schema_sample2bc
-import os
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict
 import re
-import json
-import jsonschema
 import datetime
-
-def is_valid_Json_file(json_path, schema, logger):
-    json_data = json.load(open(json_path))
-    try:
-        jsonschema.validate(instance=json_data, schema=schema)
-    except jsonschema.exceptions.ValidationError as err:
-        logger.error(f'The structure of file name {json_path} is not valid')
-        return False
-    return json_data
 
 
 def is_same_samples(samples2bc_dict, barcode2samples_dict, samplename2biologicalcondition_path, barcode2samplename_path, logger):
@@ -52,21 +39,17 @@ def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename
         try:
             barcode2sample_data =  load_table_to_dict(barcode2samplename_path,'Barcode {} belongs to more than one sample!!')
         except:
-            logger.error(f'{datetime.datetime.now()}: can not load the file - {barcode2samplename_path}')
+            logger.error(f'{datetime.datetime.now()}: Can not load the file - {barcode2samplename_path}')
             barcode2samples_valid = False
         if barcode2samples_valid:        
             barcode2samples_valid = is_valid_data(barcode2samplename_path, barcode2sample_data, logger) 
     
     # Test if the file samplename2biologicalcondition_path is valid. 
     if samplename2biologicalcondition_path:
-        filename, file_extension = os.path.splitext(samplename2biologicalcondition_path)
-        json_data = False
-        if file_extension == '.json':
-            json_data = is_valid_Json_file(samplename2biologicalcondition_path, schema_sample2bc, logger)
         try:
-            sample2bc_data = load_table_to_dict(samplename2biologicalcondition_path,'Samples {} belongs to more than one bc!!', '\t', json_data if json_data else '')
+            sample2bc_data = load_table_to_dict(samplename2biologicalcondition_path,'Samples {} belongs to more than one bc!!', '\t', True)
         except:
-            logger.error(f'{datetime.datetime.now()}: can not load the file - {samplename2biologicalcondition_path}')
+            logger.error(f'{datetime.datetime.now()}: Can not load the file - {samplename2biologicalcondition_path}')
             samples2bc_valid = False
         if samples2bc_valid:    
             samples2bc_valid = is_valid_data(samplename2biologicalcondition_path, sample2bc_data, logger)
