@@ -10,7 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-from tools.stop_machine_aws import stop_machines
+from auxiliaries.stop_machine_aws import stop_machines
 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,

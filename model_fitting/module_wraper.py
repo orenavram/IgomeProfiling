@@ -10,6 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.stop_machine_aws import stop_machines
 
 
 def repeat_items(list):

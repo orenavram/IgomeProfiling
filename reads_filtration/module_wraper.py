@@ -11,7 +11,7 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from global_params import src_dir
-from tools.stop_machine_aws import stop_machines
+from auxiliaries.stop_machine_aws import stop_machines
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
