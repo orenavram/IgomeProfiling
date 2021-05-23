@@ -10,6 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.validation_files import is_input_files_valid 
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,
@@ -19,6 +20,11 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  rank_method, tfidf_method, tfidf_factor, shuffles,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                  run_summary_path, error_path, queue, verbose, argv):
+    
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+    if not files_are_valid:
+        return
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -43,7 +49,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path,
+                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, 
                              '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
@@ -64,8 +70,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, second_phase_logs_path,
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                             allowed_gap_frequency, second_phase_done_path,
-                             f'--meme_split_size {meme_split_size}',
+                             allowed_gap_frequency, second_phase_done_path, f'--meme_split_size {meme_split_size}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}']
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
