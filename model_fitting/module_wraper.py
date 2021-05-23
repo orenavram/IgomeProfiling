@@ -10,7 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-from tools.validation_files import is_input_files_valid 
+from auxiliaries.validation_files import is_input_files_valid 
 from tools.stop_machine_aws import stop_machines
 
 def repeat_items(list):

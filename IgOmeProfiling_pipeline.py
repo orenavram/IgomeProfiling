@@ -10,7 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-from tools.validation_files import is_input_files_valid 
+from auxiliaries.validation_files import is_input_files_valid 
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, gz,

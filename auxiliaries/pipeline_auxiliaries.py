@@ -2,7 +2,6 @@ import os
 import sys
 from subprocess import call, run, Popen, PIPE
 from time import time, sleep
-from celery.app.registry import _unpickle_task_v2
 import global_params
 import json
 import jsonschema
@@ -292,7 +291,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 
 
-def load_table_to_dict(table_path, error_msg, delimiter ='\t', need_to_valid_json = False):
+def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):
     table = {}
     filename, file_extension = os.path.splitext(table_path)
     if file_extension == '.txt':
@@ -304,18 +303,27 @@ def load_table_to_dict(table_path, error_msg, delimiter ='\t', need_to_valid_jso
                     continue
                 key, value = line.strip().split(delimiter)
                 if key in table:
-                    assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
+                    message = error_msg.replace('{}', key)
+                    logger.error(message)
+                    assert False, message
                 table[key] = value
     else:
-        json_data = {}
-        if need_to_valid_json:
-            json_data = is_valid_Json_file(table_path, schema_sample2bc, logger)
-            if not json_data:
-                assert False, 'The structure of json file not valid'  # TODO: write to a global error log file
+        try:
+            json_data = json.load(open(table_path))
+        except:
+            assert False, f'"{table_path}" is not a valid JSON file'
+        if is_validate_json:
+            is_valid_json = is_valid_json_structure(table_path, json_data, schema_sample2bc, logger)
+            if not is_valid_json:
+                message = 'Invalid JSON file structure, expected dictionary of key/value strings'
+                logger.error(message)
+                assert False, message
         for key in json_data:
             for val in json_data[key]:
                 if val in table:
-                        assert False, error_msg.replace('{}', val)  # TODO: write to a global error log file
+                    message = error_msg.replace('{}', val)
+                    logger.error(message)   
+                    assert False, message
                 table[val] = key
     return table
 
@@ -395,14 +403,13 @@ def count_memes(path):
     return count
 
 
-def is_valid_Json_file(json_path, schema, logger):
-    json_data = json.load(open(json_path))
+def is_valid_json_structure(json_path, json_data, schema, logger):
     try:
         jsonschema.validate(instance=json_data, schema=schema)
     except jsonschema.exceptions.ValidationError as err:
-        logger.error(f'The structure of file name {json_path} is not valid')
+        logger.error(f'The structure of "{json_path}" file is not valid, reason: {err}')
         return False
-    return json_data
+    return True
 
     
 def log_scale(df, rank_method):
