@@ -11,11 +11,16 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results
 from auxiliaries.stop_machine_aws import stop_machines
+from auxiliaries.validation_files import is_input_files_valid 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    gz, verbose, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, queue, argv='no_argv'):
-
+                    check_files_valid, gz, verbose, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, queue, argv='no_argv'):
+  
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
+        return
+      
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
     if os.path.exists(first_phase_done_path):
@@ -112,7 +117,8 @@ if __name__ == '__main__':
     parser.add_argument('min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')    
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
@@ -134,6 +140,6 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, True if args.gz else False,
+                    args.min_sequencing_quality, args.check_files_valid, True if args.gz else False,
                     True if args.verbose else False, args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
                     error_path, args.queue, sys.argv)
