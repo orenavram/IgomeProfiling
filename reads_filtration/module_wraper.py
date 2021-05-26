@@ -29,16 +29,25 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         multi_experiments_dict = json.load(f)
         map_multi_experiments = multi_experiments_dict['runs']
     else:
-        map_multi_experiments['one'] = {
+        map_multi_experiments['main'] = {
             "fastq_path": fastq_path,
             "barcode2samplename": barcode2samplename,
             "output_path": first_phase_output_path,
             "logs_dir": logs_dir,
+            "first_phase_done_path":first_phase_done_path
         }
     
     for exp in map_multi_experiments:
+        first_phase_done_path_exp = map_multi_experiments[exp]['first_phase_done_path']
+        if os.path.exists(first_phase_done_path_exp):
+            logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path_exp} already exists)')
+            del map_multi_experiments[exp]
+        
         os.makedirs(map_multi_experiments[exp]['output_path'], exist_ok=True)
         os.makedirs(map_multi_experiments[exp]['logs_dir'], exist_ok=True)
+    
+    if not map_multi_experiments:
+        return
 
     list_output_path = []
     log_dirs = []
@@ -149,8 +158,11 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
             else:
                 logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({collapsing_done_path} exists)')
 
-    with open(first_phase_done_path, 'w') as f:
-        f.write(' '.join(argv) + '\n')
+    for exp in map_multi_experiments:
+        if exp != 'main':
+            argv = ''
+        with open(map_multi_experiments[exp]['first_phase_done_path'], 'a') as f:
+            f.write(' '.join(argv) + '\n')
 
 
 if __name__ == '__main__':
@@ -173,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
 
-    parser.add_argument('--multi_experiments_config', type=str, help='a path to json file that contains a match between name of run and fastq, barcode2sample')
+    parser.add_argument('--multi_experiments_config', type=str, help='A path to json file that contains a match between name of run and fastq, barcode2sample')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -193,5 +205,5 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.minimal_length_required, args.multi_experiments_config, True if args.gz else False,
-                    True if args.verbose else False, args.mapitope, error_path, args.queue, sys.argv)
+                    args.min_sequencing_quality, args.minimal_length_required, args.multi_experiments_config, args.gz,
+                    args.verbose, args.mapitope, error_path, args.queue, sys.argv)
