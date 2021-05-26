@@ -291,6 +291,7 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 
 
+
 def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):
     table = {}
     filename, file_extension = os.path.splitext(table_path)
@@ -401,8 +402,6 @@ def count_memes(path):
     count = int(output) if p_status == 0 else 0
     print(f'Found {count} memes in {path}')
     return count
-
-
 def is_valid_json_structure(json_path, json_data, schema, logger):
     try:
         jsonschema.validate(instance=json_data, schema=schema)

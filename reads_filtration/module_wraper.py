@@ -14,13 +14,14 @@ from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
-                    left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality,
-                    check_files_valid, gz, verbose, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, queue, argv='no_argv'):
+                    left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
+                    check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
+                    rpm, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
   
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
         return
-      
+
     os.makedirs(first_phase_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
     if os.path.exists(first_phase_done_path):
@@ -38,7 +39,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                       f'--left_construct {left_construct}',
                       f'--right_construct {right_construct}',
                       f'--max_mismatches_allowed {max_mismatches_allowed}',
-                      f'--min_sequencing_quality {min_sequencing_quality}'] + (['--gz'] if gz else [])
+                      f'--min_sequencing_quality {min_sequencing_quality}',
+                      f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
 
         fetch_cmd(f'{src_dir}/reads_filtration/filter_reads.py',
                   parameters, verbose, error_path)
@@ -47,6 +49,34 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                          error_file_path=error_path, suffix='demultiplexing.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
+
+    if use_mapitope:
+        mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
+        if not os.path.exists(mapitope_done_path):
+            logger.info('_' * 100)
+            logger.info(f'{datetime.datetime.now()}: mapitope encoding data {first_phase_output_path}')
+            # run mapitope_conversion.py
+
+            num_of_expected_results = 0
+            for sample_name in sorted(os.listdir(first_phase_output_path)):
+                dir_path = os.path.join(first_phase_output_path, sample_name)
+                if not os.path.isdir(dir_path):
+                    continue
+                done_path = f'{logs_dir}/01_{sample_name}_done_converting_to_mapitope.txt'
+                parameters = [
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}.faa',
+                    f'{first_phase_output_path}/{sample_name}/{sample_name}_mapitope.faa',
+                    done_path
+                ]
+                fetch_cmd(f'{src_dir}/reads_filtration/mapitope_conversion.py', parameters, verbose, error_path, done_path)
+                num_of_expected_results += 1
+
+            wait_for_results('mapitope_conversion.py', logs_dir, num_of_expected_results, error_file_path=error_path, suffix='mapitope.txt')
+            with open(mapitope_done_path, 'w') as f:
+                f.write(' '.join(argv) + '\n')
+
+        else:
+            logger.info(f'{datetime.datetime.now()}: skipping mapitope_conversion.py ({done_path} exists)')
 
     collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
     if not os.path.exists(collapsing_done_path):
@@ -67,19 +97,15 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 file_path = f'{dir_path}/{file}'
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
+                factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
+                parameters = [file_path, output_file_path, done_path]
+                if rpm:
+                    rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
+                    parameters.append('--rpm')
+                    parameters.append(rpm_factors_path)
 
-                parameters = [file_path, output_file_path, done_path,
-                              '--rpm', f'{first_phase_output_path}/rpm_factors.txt']
-                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py',
-                          parameters, verbose, error_path, done_path)
+                fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
 
-                # file_path = output_file_path
-                # output_file_path = f'{os.path.splitext(file_path)[0]}_cysteine_trimmed.faa'
-                # parameters = [file_path, output_file_path]
-                # fetch_cmd(f'{src_dir}/reads_filtration/remove_cysteine_loop.py',
-                #             parameters, verbose, error_path, done_path)
-                # TODO: if remove_cysteine_loop.py is fetched, the counts should be recalculated!
-                # E.g.: CAAAAC and AAAA are the same after removing Cys
 
                 num_of_expected_results += 1
                 break
@@ -118,10 +144,14 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')    
+    parser.add_argument('minimal_length_required', default=3, type=int,
+                        help='Shorter peptides will be discarded')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -140,6 +170,6 @@ if __name__ == '__main__':
     run_first_phase(args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
-                    args.min_sequencing_quality, args.check_files_valid, True if args.gz else False,
-                    True if args.verbose else False, args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
-                    error_path, args.queue, sys.argv)
+                    args.min_sequencing_quality, args.minimal_length_required,
+                    args.check_files_valid, args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
+                    args.rpm, args.gz, args.verbose, args.mapitope, error_path, args.queue, sys.argv)
