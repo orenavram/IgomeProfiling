@@ -10,8 +10,8 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-from tools.stop_machine_aws import stop_machines
-
+from auxiliaries.stop_machine_aws import stop_machines
+from auxiliaries.validation_files import is_input_files_valid 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
                              motif_inference_output_path, logs_dir, error_path, queue_name, verbose, data_type):
@@ -324,9 +324,12 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, queue_name, verbose, concurrent_cutoffs, meme_split_size, 
+                 motif_inference_done_path, check_files_valid, queue_name, verbose, concurrent_cutoffs, meme_split_size, 
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, error_path, argv):
 
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
+        return
+        
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -583,7 +586,8 @@ if __name__ == '__main__':
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
-
+    
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -609,5 +613,5 @@ if __name__ == '__main__':
     infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,
-                 args.done_file_path, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, 
+                 args.done_file_path, args.check_files_valid, args.queue, True if args.verbose else False, concurrent_cutoffs, args.meme_split_size, 
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, error_path, sys.argv)
