@@ -131,8 +131,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
     logger.info('Bye!')
 
-
-
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
 
@@ -241,6 +239,6 @@ if __name__ == '__main__':
                  args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
-				 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
+                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
                 

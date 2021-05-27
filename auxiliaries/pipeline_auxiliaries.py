@@ -402,6 +402,8 @@ def count_memes(path):
     count = int(output) if p_status == 0 else 0
     print(f'Found {count} memes in {path}')
     return count
+
+    
 def is_valid_json_structure(json_path, json_data, schema, logger):
     try:
         jsonschema.validate(instance=json_data, schema=schema)
