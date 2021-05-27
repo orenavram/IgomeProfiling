@@ -13,41 +13,43 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, submit_pipeline_step
 from global_params import src_dir
 
+map_names ={
+    "fastq": "fastq_path",
+    "output_reads": "first_phase_output_path",
+    "logs_dir": "logs_dir",
+    "barcode2sample": "barcode2samplename",
+    "done_path": "first_phase_done_path",
+    "left_construct": "left_construct",
+    "right_construct": "right_construct",
+    "max_mismatches_allowed": "max_mismatches_allowed"
+
+}
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    multi_experiments_config, gz, verbose, use_mapitope, error_path, queue, argv='no_argv'):
-
-    if os.path.exists(first_phase_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
-        return
+                    multi_experiments_config, gz, verbose, use_mapitope, error_path, queue, args, argv='no_argv'):
 
     # create data structure for running filter_reads
-    map_multi_experiments = {}
+    base_map =  args.__dict__
+    runs = {}
     if multi_experiments_config:
+        #TODO validation of json file structure    
         f = open(multi_experiments_config)
         multi_experiments_dict = json.load(f)
-        map_multi_experiments = multi_experiments_dict['runs']
-    else:
-        map_multi_experiments['main'] = {
-            "fastq_path": fastq_path,
-            "barcode2samplename": barcode2samplename,
-            "output_path": first_phase_output_path,
-            "logs_dir": logs_dir,
-            "first_phase_done_path":first_phase_done_path
-        }
+        configuration = multi_experiments_dict['configuration']
+        base_map.update(configuration)
+        runs = multi_experiments_dict['runs']
     
-    for exp in map_multi_experiments:
+    for exp in runs:
+
         first_phase_done_path_exp = map_multi_experiments[exp]['first_phase_done_path']
         if os.path.exists(first_phase_done_path_exp):
             logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path_exp} already exists)')
-            del map_multi_experiments[exp]
-        
+            continue        
         os.makedirs(map_multi_experiments[exp]['output_path'], exist_ok=True)
         os.makedirs(map_multi_experiments[exp]['logs_dir'], exist_ok=True)
     
-    if not map_multi_experiments:
-        return
+ 
 
     list_output_path = []
     log_dirs = []
@@ -206,4 +208,4 @@ if __name__ == '__main__':
                     args.barcode2samplename, args.done_file_path, args.left_construct,
                     args.right_construct, args.max_mismatches_allowed,
                     args.min_sequencing_quality, args.minimal_length_required, args.multi_experiments_config, args.gz,
-                    args.verbose, args.mapitope, error_path, args.queue, sys.argv)
+                    args.verbose, args.mapitope, error_path, args.queue, args, sys.argv)
