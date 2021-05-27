@@ -1,6 +1,5 @@
 import datetime
 import os
-from re import T
 import sys
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
@@ -51,8 +50,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                             barcode2samplename_path, left_construct, right_construct,
-							max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
-                            False if files_are_valid else True,
+                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
         
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',[module_parameters],
@@ -72,9 +70,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, second_phase_logs_path,
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                             allowed_gap_frequency, second_phase_done_path,
-							 f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}', f'--prefix_length_in_clstr {prefix_length_in_clstr}',
-                             f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
+                             allowed_gap_frequency, second_phase_done_path, f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
+                             f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
@@ -104,7 +101,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
-							 '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
+                             '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
 							 f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:

@@ -90,7 +90,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 continue
             for file in os.listdir(dir_path):
                 # look for faa files to collapse
-                if not file.startswith(f'{dir_name}.faa'):  # maybe there's a .gz afterwards
+                if not file.startswith(f'{dir_name}.faa') and not file.startswith(f'{dir_name}_mapitope.faa'): # maybe there's a .gz afterwards
                     continue
 
                 sample_name = file.split('.faa')[0]
@@ -106,7 +106,6 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
                 fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
 
-
                 num_of_expected_results += 1
                 break
 
@@ -114,11 +113,8 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                      error_file_path=error_path, suffix='collapsing.txt')
         with open(collapsing_done_path, 'w') as f:
             f.write(' '.join(argv) + '\n')
-
-
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({done_path} exists)')
-
 
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
@@ -143,19 +139,20 @@ if __name__ == '__main__':
     parser.add_argument('min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')    
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
+    
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge.')
     parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
+    parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
     args = parser.parse_args()
 
     import logging
