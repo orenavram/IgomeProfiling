@@ -3,9 +3,10 @@ import sys
 from subprocess import call, run, Popen, PIPE
 from time import time, sleep
 import global_params
+import json
+import jsonschema
 import numpy as np
 import logging
-
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
 
@@ -31,6 +32,18 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "TTT": "F",
                          "TGG": "W",
                          "TAT": "Y"}
+
+
+schema_sample2bc ={
+    "type": "object",
+    "propertyNames": {
+        "pattern": "^[A-Za-z0-9_]+$"
+    },
+    "patternProperties": {
+        "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
+    }
+}
+
 
 def verify_file_is_not_empty(file_path):
     import logging
@@ -278,18 +291,41 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
 
 
 
-def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
+
+def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):
     table = {}
-    with open(table_path) as f:
-        for line in f:
-            if line.isspace():  # empty line
-                continue
-            if line.startswith('#'):  # ignore symbol
-                continue
-            key, value = line.strip().split(delimiter)
-            if key in table:
-                assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
-            table[key] = value
+    filename, file_extension = os.path.splitext(table_path)
+    if file_extension == '.txt':
+        with open(table_path) as f:
+            for line in f:
+                if line.isspace():  # empty line
+                    continue
+                if line.startswith('#'):  # ignore symbol
+                    continue
+                key, value = line.strip().split(delimiter)
+                if key in table:
+                    message = error_msg.replace('{}', key)
+                    logger.error(message)
+                    assert False, message
+                table[key] = value
+    else:
+        try:
+            json_data = json.load(open(table_path))
+        except:
+            assert False, f'"{table_path}" is not a valid JSON file'
+        if is_validate_json:
+            is_valid_json = is_valid_json_structure(table_path, json_data, schema_sample2bc, logger)
+            if not is_valid_json:
+                message = 'Invalid JSON file structure, expected dictionary of key/value strings'
+                logger.error(message)
+                assert False, message
+        for key in json_data:
+            for val in json_data[key]:
+                if val in table:
+                    message = error_msg.replace('{}', val)
+                    logger.error(message)   
+                    assert False, message
+                table[val] = key
     return table
 
 
@@ -367,7 +403,16 @@ def count_memes(path):
     print(f'Found {count} memes in {path}')
     return count
 
+    
+def is_valid_json_structure(json_path, json_data, schema, logger):
+    try:
+        jsonschema.validate(instance=json_data, schema=schema)
+    except jsonschema.exceptions.ValidationError as err:
+        logger.error(f'The structure of "{json_path}" file is not valid, reason: {err}')
+        return False
+    return True
 
+    
 def log_scale(df, rank_method):
     # The options of ranking method are - hits, controlled_shuffles, pval, tfidf
     if rank_method == 'hits':
@@ -376,4 +421,4 @@ def log_scale(df, rank_method):
         df = 1-df
     if rank_method == 'tfidf':
         df = -np.log2(df + 0.0001)  # avoid 0  
-    return df       
+    return df
