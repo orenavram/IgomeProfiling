@@ -316,6 +316,9 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
     else:
         logger.info('Skipping calculate cutoffs, all exists')
 
+def process_params():
+    return 
+
 def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
@@ -520,7 +523,7 @@ def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
         if not os.path.exists(done_path):
             all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples,
                                     max_number_of_cluster_members_per_bc,
-                                    output_path, done_path, '--aln_cutoff {aln_cutoff}', '--pcc_cutoff {pcc_cutoff}'])
+                                    output_path, done_path, f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}'])
         else:
             logger.debug(f'Skipping unite as {done_path} exists')
             num_of_expected_results += 1
@@ -577,8 +580,9 @@ if __name__ == '__main__':
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
 
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file to determine parameters for many experiments')
     parser.add_argument('--minimal_number_of_columns_required_create_meme', default=1, type=int,
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
@@ -597,7 +601,7 @@ if __name__ == '__main__':
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('--skip_sample_merge_meme', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped, e.g., for testing purposes. More than one sample '
-                             'name should be separated by commas but no spaces. '
+                             'name should be separated by commas but no spaces'
                              'For example: 17b_05,17b_05_test,another_one')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -615,10 +619,10 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
     concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
-    infer_motifs(args.parsed_fastq_results, args.max_msas_per_sample, args.max_msas_per_bc,
+    infer_motifs(args.parsed_fastq_results, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
+                 args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
-                 args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,args.aln_cutoff, args.pcc_cutoff, args.threshold,
-                 args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, args.skip_sample_merge_meme,  error_path,
-                 args.queue, args.verbose, args.mapitope, sys.argv)
+                 args.allowed_gap_frequency, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,args.aln_cutoff,
+                 args.pcc_cutoff, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, args.skip_sample_merge_meme,
+                 error_path, args.queue, args.verbose, args.mapitope, sys.argv)
 
