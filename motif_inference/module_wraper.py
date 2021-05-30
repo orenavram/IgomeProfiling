@@ -316,7 +316,8 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
     else:
         logger.info('Skipping calculate cutoffs, all exists')
 
-def process_params():
+def process_params(args, multi_exp_config_inference, argv):
+    
     return  
     
 def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
@@ -619,6 +620,7 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
     concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
+    process_params(args, args.multi_exp_config_inference, sys.argv)
     infer_motifs(args.parsed_fastq_results, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
                  args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,

@@ -94,7 +94,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
                              third_phase_done_path, '--stop_before_random_forest' if stop_before_random_forest else '',
                              f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}',
-                             f'--number_parallel_random_forest' {number_parallel_random_forest}, f'--min_value_error_random_forest' {min_value_error_random_forest},
+                             f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}',f'--error_path {error_path}', '-v' if verbose else '',
