@@ -317,12 +317,12 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
         logger.info('Skipping calculate cutoffs, all exists')
 
 def process_params():
-    return 
-
-def infer_motifs(first_phase_output_path, max_msas_per_sample, max_msas_per_bc,
+    return  
+    
+def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
+                 motif_inference_done_path, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 gap_frequency, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
+                 gap_frequency, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme, error_path, queue_name, verbose, use_mapitope, argv):
 
     os.makedirs(motif_inference_output_path, exist_ok=True)
