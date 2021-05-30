@@ -13,10 +13,11 @@ from auxiliaries.pipeline_auxiliaries import *
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
-                 max_msas_per_sample, max_msas_per_bc,
+                 multi_experiments_config_reads, max_msas_per_sample, max_msas_per_bc,
                  max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope, number_of_random_pssms,
-                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
+                 allowed_gap_frequency, concurrent_cutoffs, meme_split_size, use_mapitope,
+                 multi_experiments_config_inference, number_of_random_pssms,
+                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits, cross_experiments_config,
                  run_summary_path, error_path, queue, verbose, argv):
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
@@ -42,7 +43,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                              barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, minimal_length_required,first_phase_done_path,
+                             max_mismatches_allowed, min_sequencing_quality, minimal_length_required, first_phase_done_path,
+                             f'--multi_experiments_config_reads {multi_experiments_config_reads}' if multi_experiments_config_reads else '',
                              '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
                              [module_parameters],
@@ -64,6 +66,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                              allowed_gap_frequency, second_phase_done_path,
+                             f'--multi_experiments_config_inference {multi_experiments_config_inference}' if multi_experiments_config_inference else '',
                              f'--meme_split_size {meme_split_size}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if concurrent_cutoffs:
@@ -86,7 +89,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}' ,f'--rank_method {rank_method}', f'--error_path {error_path}', 
+                             third_phase_done_path, f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}' ,
+                             f'--rank_method {rank_method}', f'--error_path {error_path}',
+                             f'--cross_experiments_config {cross_experiments_config}' if cross_experiments_config else '',
                              '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -138,8 +143,9 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('--minimal_length_required', default=3, type=int,
-                        help='Shorter peptides will be discarded')                             
+                        help='Shorter peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
+    parser.add_argument('--multi_experiments_config_reads', type=str, help='Configuration file for multi experiments run together')
 
     # optional parameters for the motif inference
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
@@ -159,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
+    parser.add_argument('--multi_experiments_config_inference', type=str, help='Configuration file for multi experiments run together')
 
     # optional parameters for the modelling step
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
@@ -168,6 +175,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
+    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file for create cross experiments')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -192,9 +200,10 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, True if args.gz else False,
-                 args.max_msas_per_sample, args.max_msas_per_bc,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz,
+                 args.multi_experiments_config_reads, args.max_msas_per_sample, args.max_msas_per_bc,
                  args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope, args.number_of_random_pssms,
-                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
+                 args.allowed_gap_frequency, concurrent_cutoffs, args.meme_split_size, args.mapitope,
+                 args.multi_experiments_config_inference, args.number_of_random_pssms,
+                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits, args.cross_experiments_config,
                  run_summary_path, error_path, args.queue, True if args.verbose else False, sys.argv)
