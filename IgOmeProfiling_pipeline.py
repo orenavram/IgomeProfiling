@@ -50,7 +50,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                             barcode2samplename_path, left_construct, right_construct,
-                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
+                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required, '--check_files_valid' if not files_are_valid else '',
                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
         
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',[module_parameters],
@@ -70,7 +70,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, second_phase_logs_path,
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                             allowed_gap_frequency, second_phase_done_path, f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
+                             allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
+                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
@@ -96,7 +97,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms, third_phase_done_path,
 							 '--stop_before_random_forest' if stop_before_random_forest else '',
-                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}',
+                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}', '--check_files_valid' if not files_are_valid else '',
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',

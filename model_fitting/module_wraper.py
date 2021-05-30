@@ -225,15 +225,15 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('parsed_fastq_results', type=str, help='A path in which each subfolder corresponds to a samplename and contains a collapsed faa file')
-    parser.add_argument('motif_inference_results', type=str, help='A path in which there is a subfolder for each bc. '
-                                                                  'In each such subfolder there is a memes folder and a cutoffs folder.')
+    parser.add_argument('motif_inference_results', type=str, help='A path in which there is a subfolder for each bc '
+                                                                  'In each such subfolder there is a memes folder and a cutoffs folder')
     parser.add_argument('classification_output_path', type=str, help='output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     
-    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem).')
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
@@ -243,7 +243,7 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
-    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
+    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, type=int, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
