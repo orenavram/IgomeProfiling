@@ -96,14 +96,14 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
           
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms, third_phase_done_path,
-							 '--stop_before_random_forest' if stop_before_random_forest else '',
+                             '--stop_before_random_forest' if stop_before_random_forest else '',
                              f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}', '--check_files_valid' if not files_are_valid else '',
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
                              '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
-							 f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
