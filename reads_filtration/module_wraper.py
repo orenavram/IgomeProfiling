@@ -29,6 +29,7 @@ map_names_json_file = {
     "v": "verbose",
     "error_path": "error_path",
     "queue": "queue",
+    "rpm": "rpm",
     "m": "use_mapitope"
 }
 
@@ -48,6 +49,7 @@ map_names_command_line = {
     "verbose": "verbose",
     "error_path": "error_path",
     "queue": "queue",
+    "rpm": "rpm",
     "mapitope": "use_mapitope"
 }
 
@@ -88,17 +90,17 @@ def process_params(args, multi_experiments_config, argv):
                     argv_new.append(val)              
             run_first_phase(dict_params['fastq_path'], dict_params['first_phase_output_path'], dict_params['logs_dir'], dict_params['barcode2samplename'], dict_params['first_phase_done_path'],
                     dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], dict_params['minimal_length_required'],
-                    dict_params['gz'], dict_params['verbose'], dict_params['use_mapitope'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
+                    dict_params['rpm'], dict_params['gz'], dict_params['verbose'], dict_params['use_mapitope'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
     else:
         exp_name = ''
         run_first_phase(base_map['fastq_path'], base_map['first_phase_output_path'], base_map['logs_dir'], base_map['barcode2samplename'], base_map['first_phase_done_path'],
                     base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'], base_map['minimal_length_required'],
-                    base_map['gz'], base_map['verbose'], base_map['use_mapitope'], base_map['error_path'], base_map['queue'], exp_name, argv)
+                    base_map['rpm'], base_map['gz'], base_map['verbose'], base_map['use_mapitope'], base_map['error_path'], base_map['queue'], exp_name, argv)
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    gz, verbose, use_mapitope, error_path, queue, exp_name, argv):
+                    rpm, gz, verbose, use_mapitope, error_path, queue, exp_name, argv):
 
     if os.path.exists(first_phase_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
@@ -192,14 +194,19 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
                 factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
-                rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
+                
                 if not os.path.exists(done_path):
-                    parameters = [file_path, output_file_path, done_path, '--rpm', rpm_factors_path]
-                    fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)          
-                    num_of_expected_results += 1
+                    if rpm:
+                        rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
+                        parameters.append('--rpm')
+                        parameters.append(rpm_factors_path)        
+                        fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
+                        num_of_expected_results += 1
+
                 else:
                     logger.debug(f'skipping filter reads as {done_path} found')
                     num_of_expected_results += 1    
+                
 
         wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
                     error_file_path=error_path, suffix='collapsing.txt')
@@ -231,6 +238,7 @@ if __name__ == '__main__':
                         help='Shorter peptides will be discarded')
 
     parser.add_argument('--multi_experiments_config', type=str, help='A path to json file that contains a match between name of run and fastq, barcode2sample')
+    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

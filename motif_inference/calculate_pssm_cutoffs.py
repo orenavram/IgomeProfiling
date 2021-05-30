@@ -53,4 +53,3 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, args.total_memes, argv=sys.argv)
-
