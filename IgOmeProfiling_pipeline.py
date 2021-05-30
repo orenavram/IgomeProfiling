@@ -10,19 +10,23 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-  
+from auxiliaries.validation_files import is_input_files_valid 
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
-                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz,
-                 rpm, multi_experiments_config_reads, max_msas_per_sample, max_msas_per_bc,
-                 max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope,
-                 aln_cutoff, pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
-                 multi_experiments_config_inference, stop_before_random_forest, number_of_random_pssms,
-                 number_parallel_random_forest, min_value_error_random_forest,
-                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits, cross_experiments_config,
-                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,         
-                 run_summary_path, error_path, queue, verbose, argv):
+                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
+                 gz, rpm, multi_exp_config_reads,
+                 max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
+                 allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference,
+                 stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
+                 rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
+                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_exp_config, run_summary_path, error_path, queue, verbose, argv):
+    
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+    if not files_are_valid:
+        return
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -46,14 +50,13 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         os.makedirs(first_phase_logs_path, exist_ok=True)
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
-                             barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, minimal_length_required, first_phase_done_path,
-                             f'--multi_experiments_config_reads {multi_experiments_config_reads}' if multi_experiments_config_reads else '', '--rpm' if rpm else '',
-                             '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
-        cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
-                             [module_parameters],
-                             logs_dir, f'{exp_name}_reads_filtration',
-                             queue, verbose)
+                            barcode2samplename_path, left_construct, right_construct,
+                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
+                            '--check_files_valid' if not files_are_valid else '', f'--multi_exp_config_reads {multi_exp_config_reads}' if multi_exp_config_reads else '',
+                            '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
+        
+        cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',[module_parameters],
+                             logs_dir, f'{exp_name}_reads_filtration', queue, verbose)
 
         wait_for_results('reads_filtration', logs_dir, num_of_expected_results=1, example_cmd=cmd,
                          error_file_path=error_path, suffix='reads_filtration_done.txt')
@@ -69,14 +72,13 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, second_phase_logs_path,
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                             allowed_gap_frequency, second_phase_done_path,
-                             f'--multi_experiments_config_inference {multi_experiments_config_inference}' if multi_experiments_config_inference else '',
-                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}', 
-                             f'--prefix_length_in_clstr {prefix_length_in_clstr}',
-                             f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
+                             allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
+                             f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
+                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
+                             f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
@@ -88,7 +90,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                          error_file_path=error_path, suffix='motif_inference_done.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping motif inference. Done file exists at:\n{second_phase_done_path}')
-        
+
     third_phase_done_path = f'{logs_dir}/model_fitting_done.txt'
     if not os.path.exists(third_phase_done_path):
         os.makedirs(third_phase_output_path, exist_ok=True)
@@ -96,16 +98,16 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         os.makedirs(third_phase_logs_path, exist_ok=True)
           
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
-                             third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, f'--cross_experiments_config {cross_experiments_config}' if cross_experiments_config else '',
+                             third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms, third_phase_done_path,
                              '--stop_before_random_forest' if stop_before_random_forest else '',
-                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}',
+                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}', '--check_files_valid' if not files_are_valid else '',
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
-                             f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}', f'--rank_method {rank_method}',
-                             f'--random_forest_seed_configurations {random_forest_seed_configurations}',f'--error_path {error_path}', '-v' if verbose else '',
-                             f'-q {queue}','-m' if use_mapitope else '']
-
+                             f'--cross_exp_config {cross_exp_config}' if cross_exp_config else '',
+                             f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
+                             f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
+                             '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -124,6 +126,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
+
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
     f_run_summary_path.close()
@@ -132,8 +135,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     logger.info(f'Done running at {end_time}')
     logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
     logger.info('Bye!')
-
-
 
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
@@ -156,11 +157,11 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('--minimal_length_required', default=3, type=int,
-                        help='Shorter peptides will be discarded')
+                        help='Shorter peptides will be discarded')                             
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
-    parser.add_argument('--multi_experiments_config_reads', type=str, help='Configuration file for multi experiments run together')
-    
+    parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
+
     # optional parameters for the motif inference
     parser.add_argument('--max_msas_per_sample', default=100, type=int,
                         help='For each sample, align only the biggest $max_msas_per_sample')
@@ -195,7 +196,7 @@ if __name__ == '__main__':
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
-    parser.add_argument('--multi_experiments_config_inference', type=str, help='Configuration file for multi experiments run together')
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
     
     # optional parameters for the modelling step
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
@@ -207,13 +208,16 @@ if __name__ == '__main__':
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
-    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
+    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
-    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file for create cross experiments')
-    
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--cross_exp_config', type=str, help='Configuration file that determine the cross between expirements')
+
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
@@ -237,13 +241,15 @@ if __name__ == '__main__':
 
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
-                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz,
-                 args.rpm, args.multi_experiments_config_reads, args.max_msas_per_sample, args.max_msas_per_bc,
-                 args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
+                 args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required,
+                 args.gz, args.rpm, args.multi_exp_config_reads,
+                 args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
-                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
-                 args.multi_experiments_config_inference, args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, 
-                 args.min_value_error_random_forest, args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits, 
-                 args.cross_experiments_config, args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, 
-                 args.random_forest_seed_configurations, run_summary_path, error_path, args.queue, args.verbose, sys.argv)
-                 
+                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
+                 args.prefix_length_in_clstr, args.multi_exp_config_inference,
+                 args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
+                 args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
+                 args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
+                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_exp_config,
+                 run_summary_path, error_path, args.queue, args.verbose, sys.argv)
+                

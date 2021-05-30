@@ -12,6 +12,8 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict
+from auxiliaries.validation_files import is_input_files_valid
+from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
 
 map_names_json_file = {
@@ -25,6 +27,10 @@ map_names_json_file = {
     "max_mismatches_allowed": "max_mismatches_allowed",
     "min_sequencing_quality": "min_sequencing_quality",
     "minimal_length_required": "minimal_length_required",
+    "check_files_valid": "check_files_valid",
+    "stop_machines_flag": "stop_machines_flag",
+    "type_machines_to_stop": "type_machines_to_stop",
+    "name_machines_to_stop": "name_machines_to_stop",
     "gz": "gz",
     "v": "verbose",
     "error_path": "error_path",
@@ -45,6 +51,10 @@ map_names_command_line = {
     "min_sequencing_quality": "min_sequencing_quality",
     "minimal_length_required": "minimal_length_required",
     'multi_experiments_config': 'multi_experiments_config',
+    "check_files_valid": "check_files_valid",
+    "stop_machines_flag": "stop_machines_flag",
+    "type_machines_to_stop": "type_machines_to_stop",
+    "name_machines_to_stop": "name_machines_to_stop",
     "gz": "gz",
     "verbose": "verbose",
     "error_path": "error_path",
@@ -90,17 +100,24 @@ def process_params(args, multi_experiments_config, argv):
                     argv_new.append(val)              
             run_first_phase(dict_params['fastq_path'], dict_params['first_phase_output_path'], dict_params['logs_dir'], dict_params['barcode2samplename'], dict_params['first_phase_done_path'],
                     dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], dict_params['minimal_length_required'],
+                    dict_params['check_files_valid'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
                     dict_params['rpm'], dict_params['gz'], dict_params['verbose'], dict_params['use_mapitope'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
     else:
         exp_name = ''
         run_first_phase(base_map['fastq_path'], base_map['first_phase_output_path'], base_map['logs_dir'], base_map['barcode2samplename'], base_map['first_phase_done_path'],
                     base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'], base_map['minimal_length_required'],
+                    base_map['check_files_valid'], base_map['stop_machines_flag'], base_map['type_machines_to_stop'], base_map['name_machines_to_stop'],
                     base_map['rpm'], base_map['gz'], base_map['verbose'], base_map['use_mapitope'], base_map['error_path'], base_map['queue'], exp_name, argv)
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
+                    check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                     rpm, gz, verbose, use_mapitope, error_path, queue, exp_name, argv):
+
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
+        return
 
     if os.path.exists(first_phase_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
@@ -186,7 +203,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 continue
             for file in os.listdir(dir_path):
                 # look for faa files to collapse
-                if not file.startswith(f'{dir_name}.faa') and not file.startswith(f'{dir_name}_mapitope.faa'):  # maybe there's a .gz afterwards
+                if not file.startswith(f'{dir_name}.faa') and not file.startswith(f'{dir_name}_mapitope.faa'): # maybe there's a .gz afterwards
                     continue
 
                 sample_name = file.split('.faa')[0]
@@ -194,7 +211,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 output_file_path = f'{dir_path}/{sample_name}_unique_rpm.faa'
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
                 factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
-                
+                parameters = [file_path, output_file_path, done_path]
                 if not os.path.exists(done_path):
                     if rpm:
                         rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
@@ -212,6 +229,9 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                     error_file_path=error_path, suffix='collapsing.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({collapsing_done_path} exists)')
+
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
     with open(first_phase_done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -233,11 +253,15 @@ if __name__ == '__main__':
     parser.add_argument('min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     parser.add_argument('minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
 
-    parser.add_argument('--multi_experiments_config', type=str, help='A path to json file that contains a match between name of run and fastq, barcode2sample')
+    parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
@@ -253,4 +277,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    process_params(args,args.multi_experiments_config, sys.argv)
+    process_params(args,args.multi_exp_config_reads, sys.argv)
