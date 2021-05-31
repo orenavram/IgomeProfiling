@@ -11,14 +11,14 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, is_valid_json_structure, schema_reads
 from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
 
 map_names_json_file = {
     "fastq": "fastq_path",
-    "output_reads": "first_phase_output_path",
+    "reads_path": "first_phase_output_path",
     "logs_dir": "logs_dir",
     "barcode2sample": "barcode2samplename",
     "done_path": "first_phase_done_path",
@@ -78,10 +78,13 @@ def process_params(args, multi_experiments_config, argv):
     base_map =  args.__dict__
     keys = base_map.keys()
     base_map = change_key_name(base_map, map_names_command_line)
-    if multi_experiments_config:
-        #TODO validation of json file structure    
+    if multi_experiments_config:    
         f = open(multi_experiments_config)
         multi_experiments_dict = json.load(f)
+        # validation of the json file
+        is_valid = is_valid_json_structure(multi_experiments_config, multi_experiments_dict, schema_reads, logger)
+        if not is_valid:
+            return 
         configuration = multi_experiments_dict['configuration']
         configuration = change_key_name(configuration, map_names_json_file)
         base_map.update(configuration)

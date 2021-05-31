@@ -45,6 +45,43 @@ schema_sample2bc ={
 }
 
 
+schema_reads = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+                "patternProperties":{
+                    "^[A-Za-z0-9_]+$":{
+                        "required": [ "fastq", "barcode2sample", "done_path", "reads_path" ],
+                        "properties": {
+                            "fastq":{
+                                "type":"string"
+                            },
+                            "barcode2sample":{
+                                "type": "string",
+                            },
+                            "done_path":{
+                                "type": "string"
+                            },
+                            "reads_path":{
+                                "type":"string"
+                            }   
+                        
+                        }
+                    }
+                }
+            
+        }  
+  },
+  "required": ["configuration", "runs"]
+}
+
+
 def verify_file_is_not_empty(file_path):
     import logging
     from time import sleep
