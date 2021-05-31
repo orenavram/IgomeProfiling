@@ -206,7 +206,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
 
 
 def compute_cutoffs_then_split(biological_conditions, meme_split_size,
-    motif_inference_output_path, logs_dir, queue_name, verbose):
+    motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Compute pssm cutoffs for each bc
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: computing pssms cutoffs for the following biological conditions:\n'
@@ -271,7 +271,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
 
 
 def split_then_compute_cutoffs(biological_conditions, meme_split_size,
-    motif_inference_output_path, logs_dir, queue_name, verbose):
+    motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Count memes per BC (synchrnous)
     memes_per_bc = {}
     for bc in biological_conditions:
@@ -358,9 +358,9 @@ def process_params(args, multi_exp_config_inference, argv):
         f = open(multi_exp_config_inference)
         multi_experiments_dict = json.load(f)
         # validation of the json file
-        ##is_valid = is_valid_json_structure(multi_experiments_config, multi_experiments_dict, schema_reads, logger)
-        ##if not is_valid:
-        ##    return 
+        is_valid = is_valid_json_structure(multi_exp_config_inference, multi_experiments_dict, schema_inference, logger)
+        if not is_valid:
+            return 
         configuration = multi_experiments_dict['configuration']
         base_map.update(configuration)
         runs = multi_experiments_dict['runs']
@@ -627,10 +627,10 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
 
     if concurrent_cutoffs:
         split_then_compute_cutoffs(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, verbose)
+            motif_inference_output_path, logs_dir, queue_name, error_path,verbose)
     else:
         compute_cutoffs_then_split(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, verbose)
+            motif_inference_output_path, logs_dir, queue_name, error_path, verbose)
 
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
