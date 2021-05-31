@@ -1,7 +1,6 @@
 import datetime
 import os
 import sys
-import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -11,6 +10,8 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.stop_machine_aws import stop_machines
+from auxiliaries.validation_files import is_input_files_valid 
 
 map_names_command_line = {
     "parsed_fastq_results": "reads_path",
@@ -23,6 +24,7 @@ map_names_command_line = {
     "max_number_of_cluster_members_per_sample": "max_num_of_cluster_per_sample",
     "max_number_of_cluster_members_per_bc": "max_num_of_cluster_per_bc",
     "allowed_gap_frequency": "gap",
+    "check_files_valid": "check_files_valid",
     "minimal_number_of_columns_required_create_meme": "min_num_of_columns_meme",
     "prefix_length_in_clstr": "prefix_length_in_clstr",
     "aln_cutoff": "aln_cutoff",
@@ -33,6 +35,9 @@ map_names_command_line = {
     "concurrent_cutoffs": "concurrent_cutoffs",
     "meme_split_size": "meme_split_size",
     "skip_sample_merge_meme": "skip_sample_merge_meme",
+    "stop_machines_flag": "stop_machines_flag",
+    "type_machines_to_stop": "type_machines_to_stop",
+    "name_machines_to_stop": "name_machines_to_stop",
     "error_path": "error_path",
     "queue": "queue",
     "verbose": "v",
@@ -344,6 +349,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
     else:
         logger.info('Skipping calculate cutoffs, all exists')
 
+
 def process_params(args, multi_exp_config_inference, argv):
     base_map =  args.__dict__
     keys = base_map.keys()
@@ -369,25 +375,36 @@ def process_params(args, multi_exp_config_inference, argv):
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
                     argv_new.append(val)    
-            infer_motifs(dict_params['reads_path'], dict_params['motif_path'], dict_params['logs_dir'], dict_params['sample2bc'], dict_params['done_path'],
+            infer_motifs(dict_params['reads_path'], dict_params['motif_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
                         dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
-                        dict_params['gap'], dict_params['min_num_of_columns_meme'], dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
+                        dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
+                        dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
                         dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['concurrent_cutoffs'], dict_params['meme_split_size'], 
-                        dict_params['skip_sample_merge_meme'], dict_params['error_path'], dict_params['queue'], dict_params['v'], dict_params['m'], run, argv_new)           
+                        dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
+                        dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
+                        dict_params['error_path'], run, argv_new)           
     else:
         exp_name = ''
-        infer_motifs(base_map['reads_path'], base_map['motif_path'], base_map['logs_dir'], base_map['sample2bc'], base_map['done_path'],
+        infer_motifs(base_map['reads_path'], base_map['motif_path'], base_map['logs_dir'], base_map['sample2bc'], 
                     base_map['max_msas_per_sample'], base_map['max_msas_per_bc'], base_map['max_num_of_cluster_per_sample'], base_map['max_num_of_cluster_per_bc'],
-                    base_map['gap'], base_map['min_num_of_columns_meme'], base_map['prefix_length_in_clstr'], base_map['aln_cutoff'], base_map['pcc_cutoff'],
+                    base_map['gap'], base_map['done_path'], base_map['check_files_valid'], base_map['min_num_of_columns_meme'],
+                    base_map['prefix_length_in_clstr'], base_map['aln_cutoff'], base_map['pcc_cutoff'],
                     base_map['threshold'], base_map['word_length'], base_map['discard'], base_map['concurrent_cutoffs'], base_map['meme_split_size'], 
-                    base_map['skip_sample_merge_meme'], base_map['error_path'], base_map['queue'], base_map['v'], base_map['m'], exp_name, argv)    
-      
-def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 motif_inference_done_path, max_msas_per_sample, max_msas_per_bc,
-                 max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 gap_frequency, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
-                 threshold, word_length, discard, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme, error_path, queue_name, verbose, use_mapitope, exp_name, argv):
+                    base_map['skip_sample_merge_meme'],  base_map['stop_machines_flag'], base_map['type_machines_to_stop'], 
+                    base_map['name_machines_to_stop'], base_map['queue'], base_map['v'], base_map['m'],
+                    base_map['error_path'], exp_name, argv)
 
+
+def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
+                 max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
+                 gap_frequency, motif_inference_done_path, check_files_valid, 
+                 minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
+                 threshold, word_length, discard, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
+
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
+        return
+        
     os.makedirs(motif_inference_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -395,6 +412,7 @@ def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, 
         logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
         return
 
+    error_path = error_path if error_path else os.path.join(motif_inference_output_path, 'error.txt')
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
@@ -413,7 +431,6 @@ def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, 
             continue
 
         for file_name in os.listdir(dir_path):
-
             if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == use_mapitope:
                 faa_filename = file_name
                 break
@@ -615,6 +632,9 @@ def infer_motifs(first_phase_output_path,motif_inference_output_path, logs_dir, 
         compute_cutoffs_then_split(biological_conditions, meme_split_size,
             motif_inference_output_path, logs_dir, queue_name, verbose)
 
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
+
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
     with open(motif_inference_done_path, 'w') as f:
@@ -643,9 +663,10 @@ if __name__ == '__main__':
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
 
-    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
+    parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     
-    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file to determine parameters for many experiments')
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file to run multi expirements inference phase')
+    parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--minimal_number_of_columns_required_create_meme', default=1, type=int,
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
@@ -664,8 +685,12 @@ if __name__ == '__main__':
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('--skip_sample_merge_meme', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped, e.g., for testing purposes. More than one sample '
-                             'name should be separated by commas but no spaces'
+                             'name should be separated by commas but no spaces. '
                              'For example: 17b_05,17b_05_test,another_one')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -679,9 +704,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
     concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
-    process_params(args, args.multi_exp_config_inference, sys.argv)
-    
-
+    process_params(args, args.multi_exp_config_inference, sys.argv)          

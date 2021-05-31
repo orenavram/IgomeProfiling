@@ -10,7 +10,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-  
+from auxiliaries.validation_files import is_input_files_valid 
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
@@ -19,8 +19,13 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
                  stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
-                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,          
-                 run_summary_path, error_path, queue, verbose, argv):
+                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
+    
+    # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
+    files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+    if not files_are_valid:
+        return
 
     os.makedirs(os.path.split(run_summary_path)[0], exist_ok=True)
 
@@ -44,13 +49,12 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         os.makedirs(first_phase_logs_path, exist_ok=True)
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
-                             barcode2samplename_path, left_construct, right_construct,
-                             max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required,
-                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']
-        cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',
-                             [module_parameters],
-                             logs_dir, f'{exp_name}_reads_filtration',
-                             queue, verbose)
+                            barcode2samplename_path, left_construct, right_construct,
+                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required, '--check_files_valid' if not files_are_valid else '',
+                            '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
+        
+        cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',[module_parameters],
+                             logs_dir, f'{exp_name}_reads_filtration', queue, verbose)
 
         wait_for_results('reads_filtration', logs_dir, num_of_expected_results=1, example_cmd=cmd,
                          error_file_path=error_path, suffix='reads_filtration_done.txt')
@@ -66,12 +70,12 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         module_parameters = [first_phase_output_path, second_phase_output_path, second_phase_logs_path,
                              samplename2biologicalcondition_path, max_msas_per_sample, max_msas_per_bc,
                              max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                             allowed_gap_frequency, second_phase_done_path,
-                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}', f'--prefix_length_in_clstr {prefix_length_in_clstr}',
-                             f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
+                             allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
+                             f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
+                             f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
@@ -83,7 +87,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                          error_file_path=error_path, suffix='motif_inference_done.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping motif inference. Done file exists at:\n{second_phase_done_path}')
-        
+
     third_phase_done_path = f'{logs_dir}/model_fitting_done.txt'
     if not os.path.exists(third_phase_done_path):
         os.makedirs(third_phase_output_path, exist_ok=True)
@@ -91,15 +95,15 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
         os.makedirs(third_phase_logs_path, exist_ok=True)
           
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
-                             third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms,
-                             third_phase_done_path, '--stop_before_random_forest' if stop_before_random_forest else '',
-                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}',
+                             third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms, third_phase_done_path,
+                             '--stop_before_random_forest' if stop_before_random_forest else '',
+                             f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}', '--check_files_valid' if not files_are_valid else '',
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
-                             f'--random_forest_seed_configurations {random_forest_seed_configurations}',f'--error_path {error_path}', '-v' if verbose else '',
-                             f'-q {queue}','-m' if use_mapitope else '']
-
+                             f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
+                             '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -118,6 +122,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
+
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
     f_run_summary_path.close()
@@ -126,8 +131,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     logger.info(f'Done running at {end_time}')
     logger.info(f'Total running time: {str(end_time-start_time)[:-3]}')
     logger.info('Bye!')
-
-
 
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
@@ -204,6 +207,9 @@ if __name__ == '__main__':
     parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
@@ -234,5 +240,6 @@ if __name__ == '__main__':
                  args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
+                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
                 
