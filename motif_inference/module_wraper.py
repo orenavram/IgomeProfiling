@@ -24,6 +24,7 @@ map_names_command_line = {
     "max_number_of_cluster_members_per_sample": "max_num_of_cluster_per_sample",
     "max_number_of_cluster_members_per_bc": "max_num_of_cluster_per_bc",
     "allowed_gap_frequency": "gap",
+    "multi_exp_config_inference": "multi_exp_config_inference",
     "check_files_valid": "check_files_valid",
     "minimal_number_of_columns_required_create_meme": "min_num_of_columns_meme",
     "prefix_length_in_clstr": "prefix_length_in_clstr",
@@ -35,7 +36,7 @@ map_names_command_line = {
     "concurrent_cutoffs": "concurrent_cutoffs",
     "meme_split_size": "meme_split_size",
     "skip_sample_merge_meme": "skip_sample_merge_meme",
-    "stop_machines_flag": "stop_machines_flag",
+    "stop_machines": "stop_machines_flag",
     "type_machines_to_stop": "type_machines_to_stop",
     "name_machines_to_stop": "name_machines_to_stop",
     "error_path": "error_path",
@@ -688,8 +689,8 @@ if __name__ == '__main__':
                              'name should be separated by commas but no spaces. '
                              'For example: 17b_05,17b_05_test,another_one')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
-    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
