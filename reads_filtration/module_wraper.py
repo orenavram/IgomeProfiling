@@ -16,52 +16,30 @@ from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
 
-map_names_json_file = {
-    "fastq": "fastq_path",
-    "reads_path": "first_phase_output_path",
+map_names_command_line = {
+    "fastq_path": "fastq",
+    "parsed_fastq_results": "reads_path",
     "logs_dir": "logs_dir",
-    "barcode2sample": "barcode2samplename",
-    "done_path": "first_phase_done_path",
+    "barcode2samplename": "barcode2sample",
+    "done_file_path": "done_path",
     "left_construct": "left_construct",
     "right_construct": "right_construct",
     "max_mismatches_allowed": "max_mismatches_allowed",
     "min_sequencing_quality": "min_sequencing_quality",
     "minimal_length_required": "minimal_length_required",
+    "multi_exp_config_reads": "multi_experiments_config",
     "check_files_valid": "check_files_valid",
-    "stop_machines_flag": "stop_machines_flag",
+    "stop_machines": "stop_machines",
     "type_machines_to_stop": "type_machines_to_stop",
     "name_machines_to_stop": "name_machines_to_stop",
     "gz": "gz",
-    "v": "verbose",
+    "verbose": "v",
     "error_path": "error_path",
     "queue": "queue",
     "rpm": "rpm",
-    "m": "use_mapitope"
+    "mapitope": "m"
 }
 
-map_names_command_line = {
-    "fastq_path": "fastq_path",
-    "parsed_fastq_results": "first_phase_output_path",
-    "logs_dir": "logs_dir",
-    "barcode2samplename": "barcode2samplename",
-    "done_file_path": "first_phase_done_path",
-    "left_construct": "left_construct",
-    "right_construct": "right_construct",
-    "max_mismatches_allowed": "max_mismatches_allowed",
-    "min_sequencing_quality": "min_sequencing_quality",
-    "minimal_length_required": "minimal_length_required",
-    'multi_experiments_config': 'multi_experiments_config',
-    "check_files_valid": "check_files_valid",
-    "stop_machines_flag": "stop_machines_flag",
-    "type_machines_to_stop": "type_machines_to_stop",
-    "name_machines_to_stop": "name_machines_to_stop",
-    "gz": "gz",
-    "verbose": "verbose",
-    "error_path": "error_path",
-    "queue": "queue",
-    "rpm": "rpm",
-    "mapitope": "use_mapitope"
-}
 
 def change_key_name(old_names_dict, map_name):
     new_dict = {}
@@ -86,13 +64,11 @@ def process_params(args, multi_experiments_config, argv):
         if not is_valid:
             return 
         configuration = multi_experiments_dict['configuration']
-        configuration = change_key_name(configuration, map_names_json_file)
         base_map.update(configuration)
         runs = multi_experiments_dict['runs']
         for run in runs:
             dict_params = base_map.copy()
-            exp_params = change_key_name(runs[run], map_names_json_file)
-            dict_params.update(exp_params)
+            dict_params.update(runs[run])
             # create new list of argv of the specific run.
             argv_new = []
             argv_new.append(argv[0])
@@ -101,16 +77,16 @@ def process_params(args, multi_experiments_config, argv):
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
                     argv_new.append(val)              
-            run_first_phase(dict_params['fastq_path'], dict_params['first_phase_output_path'], dict_params['logs_dir'], dict_params['barcode2samplename'], dict_params['first_phase_done_path'],
+            run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
                     dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], dict_params['minimal_length_required'],
-                    dict_params['check_files_valid'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
-                    dict_params['rpm'], dict_params['gz'], dict_params['verbose'], dict_params['use_mapitope'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
+                    dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
+                    dict_params['rpm'], dict_params['gz'], dict_params['v'], dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
     else:
         exp_name = ''
-        run_first_phase(base_map['fastq_path'], base_map['first_phase_output_path'], base_map['logs_dir'], base_map['barcode2samplename'], base_map['first_phase_done_path'],
+        run_first_phase(base_map['fastq'], base_map['reads_path'], base_map['logs_dir'], base_map['barcode2sample'], base_map['done_path'],
                     base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'], base_map['minimal_length_required'],
-                    base_map['check_files_valid'], base_map['stop_machines_flag'], base_map['type_machines_to_stop'], base_map['name_machines_to_stop'],
-                    base_map['rpm'], base_map['gz'], base_map['verbose'], base_map['use_mapitope'], base_map['error_path'], base_map['queue'], exp_name, argv)
+                    base_map['check_files_valid'], base_map['stop_machines'], base_map['type_machines_to_stop'], base_map['name_machines_to_stop'],
+                    base_map['rpm'], base_map['gz'], base_map['v'], base_map['m'], base_map['error_path'], base_map['queue'], exp_name, argv)
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
@@ -263,8 +239,8 @@ if __name__ == '__main__':
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
-    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
+    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
