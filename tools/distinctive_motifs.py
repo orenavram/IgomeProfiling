@@ -2,7 +2,6 @@
 '''
 Extract ranked distinctive motifs ignoring artifacts
 '''
-from os import path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +9,16 @@ import seaborn as sns
 import sys 
 import logging
 from matplotlib.patches import Patch
+import os
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+sys.path.insert(0, src_dir)
+from auxiliaries.pipeline_auxiliaries import log_scale
+
 
 colors_map = {
     'perfect': 'green',
@@ -51,10 +60,10 @@ def is_artifact(motif: str, df: pd.DataFrame, bio_cond: str, invalid_mix: str, s
     return artifact, is_perfect, is_valid_mix, mixed_samples
 
 
-def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str ,is_hit: bool, is_pval: bool, logger: logging.Logger):
+def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str , rank_method:str, logger: logging.Logger):
     logger.info('Generating heatmap...')
     df.set_index('sample_name', inplace=True)
-    df = np.log2(df+1) if is_hit else (1 - df if is_pval else df)
+    df = log_scale(df, rank_method)
 
     map_path = f'{base_path}.svg'
     number_of_samples = df.shape[0]
@@ -76,11 +85,10 @@ def save_output(base_path: str, data, logger: logging.Logger):
 
 
 def extract_distinctive_motifs(data_path: str, count: int, feature_importance_path: str, biological_condition: str, output_base_path: str, title_heatmap: str, 
-                           invalid_mix: str, epsilon: float, min_importance_score: float, is_pval: bool, logger: logging.Logger):
+                           invalid_mix: str, epsilon: float, min_importance_score: float, rank_method: str, logger: logging.Logger):
     logger.info("Loading features...")
     features = get_sorted_features(feature_importance_path)
     data_df = pd.read_csv(data_path)
-    is_hits = data_path.find('hits') > 0
     
     total = 0
     last_score = 0
@@ -147,7 +155,7 @@ def extract_distinctive_motifs(data_path: str, count: int, feature_importance_pa
         txt_file_out.close()
 
         columns = ['sample_name'] + [x[0] for x in features[:count]]
-        generate_heatmap(output_base_path, data_df[columns], colors, title_heatmap, is_hits, is_pval, logger)
+        generate_heatmap(output_base_path, data_df[columns], colors, title_heatmap, rank_method, logger)
         save_output(output_base_path, output, logger)
     else:
         logger.info(summary)
@@ -166,8 +174,8 @@ if __name__ == '__main__':
     parser.add_argument('--output_base_path', type=str, help='An optional base path for generated files, extensions will be added to the base path')
     parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
     parser.add_argument('--epsilon', type=int, default=0, help='range of mistake')
-    parser.add_argument('--min_importance_score',type=int, default=0, help='The minimun score of motifs to take.')
-    parser.add_argument('--pval', action='store_true', help='Is input p-val')
+    parser.add_argument('--min_importance_score',type=int, default=0, help='The minimun score of motifs to take')
+    parser.add_argument('--rank_method', type=str, choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -178,6 +186,5 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     extract_distinctive_motifs(args.data_path, args.count, args.feature_importance_path, args.biological_condition, args.output_base_path, args.title_heatmap,
-                                args.invalid_mix, args.epsilon, args.min_importance_score, args.pval, logger)
-    
+                                args.invalid_mix, args.epsilon, args.min_importance_score, args.rank_method, logger)
     

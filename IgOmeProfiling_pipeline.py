@@ -15,7 +15,7 @@ from auxiliaries.validation_files import is_input_files_valid
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 allowed_gap_frequency, threshold, word_length, discard, algorithm_mode,concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
                  stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
@@ -73,7 +73,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
                              f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
-                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
+                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--algorithm_mode {algorithm_mode}' 
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
@@ -176,6 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
+    parser.add_argument('--algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
-    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
+    parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
@@ -204,12 +205,12 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
-    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
@@ -235,7 +236,7 @@ if __name__ == '__main__':
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz, args.rpm,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
+                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
                  args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
