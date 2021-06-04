@@ -3,7 +3,6 @@
 Extract ranked distinctive motifs ignoring artifacts
 '''
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys 
@@ -60,7 +59,7 @@ def is_artifact(motif: str, df: pd.DataFrame, bio_cond: str, invalid_mix: str, s
     return artifact, is_perfect, is_valid_mix, mixed_samples
 
 
-def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str , rank_method:str, logger: logging.Logger):
+def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str , rank_method: str, logger: logging.Logger):
     logger.info('Generating heatmap...')
     df.set_index('sample_name', inplace=True)
     df = log_scale(df, rank_method)

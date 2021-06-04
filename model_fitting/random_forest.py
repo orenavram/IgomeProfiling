@@ -8,8 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
-from sklearn.metrics import plot_roc_curve
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -141,7 +140,7 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
     output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model')
     os.makedirs(output_path, exist_ok=True)
-    is_hits_data = True if rank_method == 'hits' else False
+
     best_model_path = os.path.join(output_path, f'best_model')
 
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'
@@ -199,13 +198,14 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
             logger.debug(f'Skipping random forest train as {done_file_path} found')
             num_of_expected_results +=1
 
-      
+    executable = 'python'  
     if len(all_cmds_params) > 0:
         stop = False
         for count, cmds_params in enumerate(all_cmds_params):
+            model_number = cmds_params[4]
             cmd = submit_pipeline_step(script_name, [cmds_params],
-                                logs_dir, f'{csv_file_prefix}_{cmds_params[4]}_train_random_forest',
-                                queue_name, verbose, executable='python')
+                                logs_dir, f'{csv_file_prefix}_{model_number}_train_random_forest',
+                                queue_name, verbose, executable=executable)
             num_of_expected_results += 1  # a single job for each train random forest
             if (count + 1) % number_parallel_random_forest == 0 or (count + 1) == num_of_configurations_to_sample:
                 wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,

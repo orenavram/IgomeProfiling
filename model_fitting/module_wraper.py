@@ -22,12 +22,12 @@ def repeat_items(list):
                       
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
-                     fitting_done_path, check_files_valid, stop_before_random_forest, run_local_randon_forst_for_bc, num_of_random_configurations_to_sample,
+                     fitting_done_path, check_files_valid, stop_before_random_forest, is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample,
                      number_parallel_random_forest, min_value_error_random_forest,
                      rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
-                     queue_name, verbose, error_path, use_mapitope, argv):                  
+                     queue_name, verbose, error_path, use_mapitope, argv):     
 
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
@@ -74,10 +74,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms)]
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms), output_path, done_path]
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
-                    cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits, output_path, done_path]
+                        cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
@@ -187,7 +187,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             doubled_bc = repeat_items(biological_conditions)
             for cmds_params, bc in zip(all_cmds_params, doubled_bc):
                 cmd = ''
-                if run_local_randon_forst_for_bc:
+                if is_run_random_forest_per_bc_sequentially:
                     cmd = run_step_locally(f'{src_dir}/model_fitting/{script_name}',
                                     [cmds_params],
                                     logs_dir, f'{bc}_model',
@@ -231,7 +231,7 @@ if __name__ == '__main__':
     parser.add_argument('parsed_fastq_results', type=str, help='A path in which each subfolder corresponds to a samplename and contains a collapsed faa file')
     parser.add_argument('motif_inference_results', type=str, help='A path in which there is a subfolder for each bc '
                                                                   'In each such subfolder there is a memes folder and a cutoffs folder')
-    parser.add_argument('classification_output_path', type=str, help='output folder')
+    parser.add_argument('classification_output_path', type=str, help='Output folder')
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
-    parser.add_argument('--run_local_randon_forst_for_bc', action='store_true', help='Run the BC random forest local and not parallel')
+    parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
     parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
-    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
+    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
     args = parser.parse_args()
@@ -271,8 +271,8 @@ if __name__ == '__main__':
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
-                     args.logs_dir, args.samplename2biologicalcondition_path,  args.number_of_random_pssms, args.done_file_path,
-                     args.check_files_valid, args.stop_before_random_forest, args.run_local_randon_forst_for_bc, args.num_of_random_configurations_to_sample, 
+                     args.logs_dir, args.samplename2biologicalcondition_path, args.number_of_random_pssms, args.done_file_path,
+                     args.check_files_valid, args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.num_of_random_configurations_to_sample,
                      args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
                      args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                      args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations, 

@@ -1,12 +1,10 @@
 import sys
 import pandas as pd
 import os
-import numpy as np
 import logging
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
@@ -24,7 +22,7 @@ from auxiliaries.pipeline_auxiliaries import load_table_to_dict, log_scale
 
 def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
     important_motifs = []
-    motif_importance_path = os.path.join(bc_dir_path, f'{biological_condition}_{rank_type}_model','best_model','feature_importance.txt')
+    motif_importance_path = os.path.join(bc_dir_path, f'{biological_condition}_{rank_type}_model', 'best_model', 'feature_importance.txt')
     dict_importance = load_table_to_dict(motif_importance_path, 'Motif {} is not unique!!')
     first_val = None
     last_val = 0
@@ -34,14 +32,14 @@ def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_
             last_val = first_val
             important_motifs.append(key)
             continue 
-        current_val = float(value)    
+        current_val = float(value)
         if len(important_motifs) >= max_num_motifs or first_val - current_val >=  max_difference_from_fitst_motif or last_val - current_val >= max_difference_from_last_motif:
             break
         important_motifs.append(key)
         last_val = current_val
     if len(important_motifs) <= min_num_motifs and len(dict_importance.keys())>= min_num_motifs:
         important_motifs = list(dict_importance.keys())[:min_num_motifs]
-    return important_motifs    
+    return important_motifs
 
 def united_csv(input_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
@@ -56,8 +54,8 @@ def united_csv(input_path, samplename2biologicalcondition_path, min_num_motifs, 
         bc_dir_path = os.path.join(input_path, bc)
         list_motifs_hits = get_motifs_importance(bc, bc_dir_path, 'hits', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
         list_motifs_values = get_motifs_importance(bc, bc_dir_path, 'values', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
-        bc_hits = os.path.join(bc_dir_path,f'{bc}_hits.csv')
-        bc_values = os.path.join(bc_dir_path,f'{bc}_values.csv')
+        bc_hits = os.path.join(bc_dir_path, f'{bc}_hits.csv')
+        bc_values = os.path.join(bc_dir_path, f'{bc}_values.csv')
         df_hits = pd.read_csv(bc_hits, index_col=0)
         df_value = pd.read_csv(bc_values, index_col=0)
         df_hits = df_hits[list_motifs_hits]

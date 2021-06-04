@@ -5,7 +5,7 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.metrics import plot_roc_curve
 import pandas as pd
 import numpy as np
@@ -186,7 +186,7 @@ def configuration_from_txt_to_dictionary(configuration_path):
 
 def pre_train(configuration_path, csv_file_path, rank_method, output_path_i, model_number, done_file_path, random_forest_seed, cv_num_of_splits, argv):
     configuration = configuration_from_txt_to_dictionary(configuration_path)
-    print(f'Start run random forest for model number {model_number}:')
+    logger.info(f'Start run random forest for model number {model_number}:')
     feature_selection_f = open(f'{output_path_i}/feature_selection.txt', 'w')
     rf = RandomForestClassifier(**configuration, random_state=random_forest_seed)
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
