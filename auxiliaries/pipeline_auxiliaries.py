@@ -34,7 +34,7 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "TAT": "Y"}
 
 
-schema_sample2bc ={
+schema_sample2bc = {
     "type": "object",
     "propertyNames": {
         "pattern": "^[A-Za-z0-9_]+$"
@@ -43,6 +43,56 @@ schema_sample2bc ={
         "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
     }
 }
+
+
+schema_model_fitting = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
+                    "configuration": {        
+                        "properties": {
+                            "reads_path": { "type": "string" },
+                            "motifs_path": { "type": "string" },
+                            "done_path": { "type": "string" },
+                            "sample2bc": { "type": "string" }  
+                        },
+                        "required": [ "reads_path", "motifs_path", "done_path"]
+                    },
+                    "cross": {
+                        "type": "object",
+                        "patternProperties": {
+                            "^[A-Za-z0-9_+]+$": {
+                                "properties": {
+                                    "motifs": {
+                                        "type":"array",
+                                        "items": {
+                                                "type": "string"
+                                        }
+                                    },
+                                    "samples": {"type":"object"}
+                                },
+                                 "required": [ "motifs", "samples"]
+                            }
+                        }    
+                    },
+                    "required": [ "configuration"]
+
+                }
+            },
+            "additionalProperties": False        
+        }  
+  },
+  "required": ["configuration", "runs"]
+}
+
 
 
 def verify_file_is_not_empty(file_path):
@@ -422,3 +472,14 @@ def log_scale(df, rank_method):
     if rank_method == 'tfidf':
         df = -np.log2(df + 0.0001)  # avoid 0  
     return df
+
+
+def change_key_name(old_names_dict, map_name):
+    new_dict = {}
+    if old_names_dict:
+        keys = old_names_dict.keys()
+        for key in keys:
+            new_dict[map_name[key]] = old_names_dict[key]
+        return new_dict
+    return old_names_dict
+    
