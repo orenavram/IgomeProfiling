@@ -5,10 +5,19 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.metrics import plot_roc_curve
 import pandas as pd
 import numpy as np
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+sys.path.insert(0, src_dir)
+from auxiliaries.pipeline_auxiliaries import log_scale
+
 
 def parse_data(file_path):
     try:
@@ -46,8 +55,8 @@ def generate_roc_curve(X, y, classifier, number_of_features, output_path):
     plt.close()
 
 
-def generate_heat_map(df, number_of_features, hits_data, number_of_samples, output_path):
-    train_data = np.log2(df+1) if hits_data else df 
+def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
+    train_data = log_scale(df, rank_method)
     cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
     plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
     cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
@@ -69,7 +78,7 @@ def plot_error_rate(errors, features, cv_num_of_splits, output_path_dir):
     plt.savefig(plot_path)
     plt.close()
 
-def train(rf, X, y, feature_names, sample_names, hits_data, output_path, cv_num_of_splits):
+def train(rf, X, y, feature_names, sample_names, rank_method, output_path, cv_num_of_splits):
 
     original_feature_names = feature_names[:]
     original_X = X[:]
@@ -124,7 +133,7 @@ def train(rf, X, y, feature_names, sample_names, hits_data, output_path, cv_num_
         # save current model (unsorted) features to a csv file
         df = save_model_features(original_X, features_indexes_to_keep, feature_names, sample_names, f'{output_path}/Top_{number_of_features}_features')
 
-        generate_heat_map(df, number_of_features, hits_data, number_of_samples, f'{output_path}/{number_of_features}')
+        generate_heat_map(df, number_of_features, rank_method, number_of_samples, f'{output_path}/{number_of_features}')
 
         generate_roc_curve(X, y, rf, number_of_features, output_path)
 
@@ -175,13 +184,13 @@ def configuration_from_txt_to_dictionary(configuration_path):
                     configuration[key] = int(val)
     return configuration                
 
-def pre_train(configuration_path, csv_file_path, is_hits_data, output_path_i, model_number, done_file_path, random_forest_seed, cv_num_of_splits, argv):
+def pre_train(configuration_path, csv_file_path, rank_method, output_path_i, model_number, done_file_path, random_forest_seed, cv_num_of_splits, argv):
     configuration = configuration_from_txt_to_dictionary(configuration_path)
-    print(f'Start run random forest for model number {model_number}:')
+    logger.info(f'Start run random forest for model number {model_number}:')
     feature_selection_f = open(f'{output_path_i}/feature_selection.txt', 'w')
     rf = RandomForestClassifier(**configuration, random_state=random_forest_seed)
     X_train, y_train, X_test, y_test, feature_names, sample_names_train, sample_names_test = parse_data(csv_file_path)
-    errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, is_hits_data, output_path_i, cv_num_of_splits)
+    errors, features = train(rf, X_train, y_train, feature_names, sample_names_train, rank_method, output_path_i, cv_num_of_splits)
     plot_error_rate(errors, features, cv_num_of_splits, output_path_i)
     feature_selection_f.write(f'{model_number}\t{features[-1]}\t{errors[-1]}\n')
     feature_selection_f.close()
@@ -197,7 +206,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('configuration_path', type=str, help='A dictionary of the configuration to this model ')
     parser.add_argument('csv_file_path', type=str, help='A csv file with data matrix to model')
-    parser.add_argument('is_hits_data', type=bool, help='if is hits data or pvalue data')
+    parser.add_argument('rank_method', type=str, help='if is hits data or pvalue data')
     parser.add_argument('output_path_i', type=str, help='A path for the results of this model')
     parser.add_argument('model_number', type=str, help='number of model')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully')
@@ -213,5 +222,5 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
    
-    pre_train(args.configuration_path, args.csv_file_path, args.is_hits_data, args.output_path_i, args.model_number, args.done_file_path,
+    pre_train(args.configuration_path, args.csv_file_path, args.rank_method, args.output_path_i, args.model_number, args.done_file_path,
              args.random_forest_seed, args.cv_num_of_splits, argv=sys.argv)
