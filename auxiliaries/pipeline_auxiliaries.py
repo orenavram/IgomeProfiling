@@ -290,6 +290,7 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
         run(process, shell=True)
     return example_cmd
 
+
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1, executable='python', done_path = None):
@@ -316,8 +317,6 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
     # logger.info(f'Finished:\n{cmd}')
     # except Exception as e:
     #     fail(error_path, e)
-
-
 
 
 def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):

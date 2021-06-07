@@ -1,12 +1,10 @@
 import sys
 import pandas as pd
 import os
-import numpy as np
 import logging
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
@@ -24,7 +22,7 @@ from auxiliaries.pipeline_auxiliaries import load_table_to_dict, log_scale
 
 def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
     important_motifs = []
-    motif_importance_path = os.path.join(bc_dir_path, f'{biological_condition}_{rank_type}_model','best_model','feature_importance.txt')
+    motif_importance_path = os.path.join(bc_dir_path, f'{biological_condition}_{rank_type}_model', 'best_model', 'feature_importance.txt')
     dict_importance = load_table_to_dict(motif_importance_path, 'Motif {} is not unique!!')
     first_val = None
     last_val = 0
@@ -34,16 +32,16 @@ def get_motifs_importance(biological_condition, bc_dir_path, rank_type, min_num_
             last_val = first_val
             important_motifs.append(key)
             continue 
-        current_val = float(value)    
+        current_val = float(value)
         if len(important_motifs) >= max_num_motifs or first_val - current_val >=  max_difference_from_fitst_motif or last_val - current_val >= max_difference_from_last_motif:
             break
         important_motifs.append(key)
         last_val = current_val
-    if len(important_motifs) <= min_num_motifs:
-        important_motifs = dict_importance.keys()[:min_num_motifs]
-    return important_motifs    
+    if len(important_motifs) <= min_num_motifs and len(dict_importance.keys())>= min_num_motifs:
+        important_motifs = list(dict_importance.keys())[:min_num_motifs]
+    return important_motifs
 
-def united_csv(input_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
+def united_csv(input_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif):
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
     color_name = sns.color_palette(None, len(biological_conditions))
@@ -56,8 +54,8 @@ def united_csv(input_path, output_path, samplename2biologicalcondition_path, min
         bc_dir_path = os.path.join(input_path, bc)
         list_motifs_hits = get_motifs_importance(bc, bc_dir_path, 'hits', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
         list_motifs_values = get_motifs_importance(bc, bc_dir_path, 'values', min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif)
-        bc_hits = os.path.join(bc_dir_path,f'{bc}_hits.csv')
-        bc_values = os.path.join(bc_dir_path,f'{bc}_values.csv')
+        bc_hits = os.path.join(bc_dir_path, f'{bc}_hits.csv')
+        bc_values = os.path.join(bc_dir_path, f'{bc}_values.csv')
         df_hits = pd.read_csv(bc_hits, index_col=0)
         df_value = pd.read_csv(bc_values, index_col=0)
         df_hits = df_hits[list_motifs_hits]
@@ -92,7 +90,8 @@ def generate_heat_map(df, rank_method, number_of_samples, output_path, color_lis
     plt.close()
 
 def united_heatmap(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs, max_difference_from_last_motif, max_difference_from_fitst_motif, rank_method):
-    hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, output_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs,
+    
+    hits, values, color_motifs_hits, color_motifs_values, dict_color = united_csv(data_path, samplename2biologicalcondition_path, min_num_motifs, max_num_motifs,
                                                                                   max_difference_from_last_motif, max_difference_from_fitst_motif)
     output_path_hits = os.path.join(output_path,'hits_all_bc')
     output_path_values = os.path.join(output_path,'values_all_bc')
@@ -120,4 +119,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
     
-    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, args.max_difference_from_last_motif, args.max_difference_from_fitst_motif, args.rank_method)
+    united_heatmap(args.data_path, args.output_path, args.samplename2biologicalcondition_path, args.min_num_motifs, args.max_num_motifs, 
+                    args.max_difference_from_last_motif, args.max_difference_from_fitst_motif, args.rank_method)
