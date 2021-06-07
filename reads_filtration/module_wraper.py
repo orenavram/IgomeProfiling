@@ -80,7 +80,7 @@ def process_params(args, multi_experiments_config, argv):
             run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
                     dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], dict_params['minimal_length_required'],
                     dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
-                    dict_params['rpm'], dict_params['gz'], dict_params['v'], dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)    
+                    dict_params['rpm'], dict_params['gz'], dict_params['v'], dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)
     else:
         exp_name = ''
         run_first_phase(base_map['fastq'], base_map['reads_path'], base_map['logs_dir'], base_map['barcode2sample'], base_map['done_path'],

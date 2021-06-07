@@ -77,7 +77,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--clustere_algorithm_mode {clustere_algorithm_mode}',
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}', '-m' if use_mapitope else '']       
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
         cmd = submit_pipeline_step(f'{src_dir}/motif_inference/module_wraper.py',
@@ -109,7 +109,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--type_machines_to_stop {type_machines_to_stop}' if type_machines_to_stop else '',
                              f'--name_machines_to_stop {name_machines_to_stop}' if name_machines_to_stop else '',
                              f'--cross_exp_config {cross_exp_config}' if cross_exp_config else '',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
+                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}', '-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
