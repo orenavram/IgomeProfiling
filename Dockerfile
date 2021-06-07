@@ -41,5 +41,6 @@ RUN cd UnitePSSMs && \
     g++ *.cpp -std=c++11 -O3 -o tfidf
 
 ENV APP_FILE IgOmeProfiling_pipeline.py
+RUN chmod +x entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["-h"]
