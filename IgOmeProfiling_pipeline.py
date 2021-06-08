@@ -15,9 +15,9 @@ from auxiliaries.validation_files import is_input_files_valid
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
-                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
-                 stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
+                 allowed_gap_frequency, threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference,
+                 stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
@@ -73,7 +73,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
                              f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
-                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
+                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--clustere_algorithm_mode {clustere_algorithm_mode}',
+                             f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
@@ -96,13 +97,16 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
           
         module_parameters = [first_phase_output_path, second_phase_output_path, third_phase_output_path,
                              third_phase_logs_path, samplename2biologicalcondition_path, number_of_random_pssms, third_phase_done_path,
-                             '--stop_before_random_forest' if stop_before_random_forest else '',
+                             '--stop_before_random_forest' if stop_before_random_forest else '', 
+                             '--is_run_random_forest_per_bc_sequentially' if is_run_random_forest_per_bc_sequentially else '',
                              f'--num_of_random_configurations_to_sample {num_of_random_configurations_to_sample}', '--check_files_valid' if not files_are_valid else '',
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
-                             '--stop_machines' if stop_machines_flag else '', f'--type_machines_to_stop {type_machines_to_stop}', f'--name_machines_to_stop {name_machines_to_stop}',
+                             '--stop_machines' if stop_machines_flag else '',
+                             f'--type_machines_to_stop {type_machines_to_stop}' if type_machines_to_stop else '',
+                             f'--name_machines_to_stop {name_machines_to_stop}' if name_machines_to_stop else '',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -152,8 +156,7 @@ if __name__ == '__main__':
     parser.add_argument('--min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('--minimal_length_required', default=3, type=int,
-                        help='Shorter peptides will be discarded')                             
+    parser.add_argument('--minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')                             
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
 
@@ -176,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
+    parser.add_argument('--clustere_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
@@ -191,25 +195,28 @@ if __name__ == '__main__':
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
 
     # optional parameters for the modelling step
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
+    parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
-    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
+    parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
-    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
+    parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
-    parser.add_argument('--cv_num_of_splits', default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', defualt='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
-    parser.add_argument('--name_machines_to_stop', defualt='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
+    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
@@ -235,9 +242,9 @@ if __name__ == '__main__':
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz, args.rpm,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
-                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
-                 args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
+                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.clustere_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
+                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr, args.multi_exp_config_inference,
+                 args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,

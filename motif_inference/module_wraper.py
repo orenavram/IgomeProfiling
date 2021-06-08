@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -9,7 +10,8 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import get_cluster_rank_from, wait_for_results, submit_pipeline_step, is_valid_json_structure, \
+                                            change_key_name, schema_inference, count_memes, load_table_to_dict, fetch_cmd
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
@@ -33,6 +35,7 @@ map_names_command_line = {
     "threshold": "threshold",
     "word_length": "word_length",
     "discard": "discard",
+    "clustere_algorithm_mode":"clustere_alg_mode",
     "concurrent_cutoffs": "concurrent_cutoffs",
     "meme_split_size": "meme_split_size",
     "skip_sample_merge_meme": "skip_sample_merge_meme",
@@ -57,7 +60,6 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
     msas_paths = []  # keep all msas' paths for the next step
     num_of_cmds_per_job = 33
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    max_number_of_leading_zeros = len(str(max_clusters_to_align))
     logger.info(f'folder_names_to_handle:\n{folder_names_to_handle}')
     for folder in folder_names_to_handle:
         path = os.path.join(motif_inference_output_path, folder, 'unaligned_sequences')
@@ -374,12 +376,13 @@ def process_params(args, multi_exp_config_inference, argv):
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
                     argv_new.append(val)   
+            print(dict_params)
             # create new list of argv of the specific run.
             infer_motifs(dict_params['reads_path'], dict_params['motifs_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
                         dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
                         dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
                         dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
-                        dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['concurrent_cutoffs'], dict_params['meme_split_size'], 
+                        dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['clustere_alg_mode'], dict_params['concurrent_cutoffs'], dict_params['meme_split_size'], 
                         dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
                         dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
                         dict_params['error_path'], run, argv_new)           
@@ -389,7 +392,7 @@ def process_params(args, multi_exp_config_inference, argv):
                     base_map['max_msas_per_sample'], base_map['max_msas_per_bc'], base_map['max_num_of_cluster_per_sample'], base_map['max_num_of_cluster_per_bc'],
                     base_map['gap'], base_map['done_path'], base_map['check_files_valid'], base_map['min_num_of_columns_meme'],
                     base_map['prefix_length_in_clstr'], base_map['aln_cutoff'], base_map['pcc_cutoff'],
-                    base_map['threshold'], base_map['word_length'], base_map['discard'], base_map['concurrent_cutoffs'], base_map['meme_split_size'], 
+                    base_map['threshold'], base_map['word_length'], base_map['discard'], base_map['clustere_alg_mode'], base_map['concurrent_cutoffs'], base_map['meme_split_size'], 
                     base_map['skip_sample_merge_meme'],  base_map['stop_machines_flag'], base_map['type_machines_to_stop'], 
                     base_map['name_machines_to_stop'], base_map['queue'], base_map['v'], base_map['m'],
                     base_map['error_path'], exp_name, argv)
@@ -399,7 +402,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  gap_frequency, motif_inference_done_path, check_files_valid, 
                  minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
-                 threshold, word_length, discard, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
+                 threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
     
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
@@ -487,7 +490,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         clstr_paths.append(f'{output_prefix}.clstr')
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
         if not os.path.exists(done_path):
-            cmds = [no_cys_faa_path, output_prefix, done_path , '--threshold', threshold, '--word_length', word_length, '--discard', discard]
+            cmds = [no_cys_faa_path, output_prefix, done_path, sample_name, '--threshold', threshold, '--word_length', word_length,
+                    '--discard', discard, '--clustere_algorithm_mode', clustere_algorithm_mode]
             all_cmds_params.append(cmds)
         else:
             logger.debug(f'Skipping clustering as {done_path} exists')
@@ -679,6 +683,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
+    parser.add_argument('--clustere_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,

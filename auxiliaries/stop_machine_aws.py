@@ -16,8 +16,8 @@ def is_stop_instance(instance, types, names):
         return False
     if not types and not names:
         return True
-    is_type = types and instance.instance_type not in types
-    is_name = names and not is_match_name_instance(names, instance)
+    is_type = types and instance.instance_type in types
+    is_name = names and is_match_name_instance(names, instance)
     return is_type or is_name
 
 
@@ -33,7 +33,6 @@ def stop_machines(type_machine, name_machines, logger, region_name = 'us-west-2'
 
     types = type_machine.split(',') if type_machine else '' 
     names = name_machines.split(',') if name_machines else ''
-
     for instance in list_instances:
         if is_stop_instance(instance, types, names):
             try:
