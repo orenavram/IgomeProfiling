@@ -11,7 +11,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name
+from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
 def calculate_pssm_cutoffs(meme_path, output_path, done_path, total_memes, argv='no_argv',

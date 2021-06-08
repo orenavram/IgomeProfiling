@@ -11,7 +11,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, is_valid_json_structure, schema_reads
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, is_valid_json_structure, schema_reads, change_key_name
 from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
@@ -41,16 +41,6 @@ map_names_command_line = {
 }
 
 
-def change_key_name(old_names_dict, map_name):
-    new_dict = {}
-    if old_names_dict:
-        keys = old_names_dict.keys()
-        for key in keys:
-            new_dict[map_name[key]] = old_names_dict[key]
-        return new_dict
-    return old_names_dict    
-
-
 def process_params(args, multi_experiments_config, argv):
     # create data structure for running filter_reads
     base_map =  args.__dict__
@@ -78,15 +68,17 @@ def process_params(args, multi_experiments_config, argv):
                     argv_new.append(k)
                     argv_new.append(val)              
             run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
-                    dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], dict_params['minimal_length_required'],
-                    dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
-                    dict_params['rpm'], dict_params['gz'], dict_params['v'], dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)
+                    dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], 
+                    dict_params['minimal_length_required'],dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'],
+                    dict_params['name_machines_to_stop'],dict_params['rpm'], dict_params['gz'], dict_params['v'],
+                    dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)
     else:
         exp_name = ''
         run_first_phase(base_map['fastq'], base_map['reads_path'], base_map['logs_dir'], base_map['barcode2sample'], base_map['done_path'],
-                    base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'], base_map['minimal_length_required'],
-                    base_map['check_files_valid'], base_map['stop_machines'], base_map['type_machines_to_stop'], base_map['name_machines_to_stop'],
-                    base_map['rpm'], base_map['gz'], base_map['v'], base_map['m'], base_map['error_path'], base_map['queue'], exp_name, argv)
+                    base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'],
+                    base_map['minimal_length_required'], base_map['check_files_valid'], base_map['stop_machines'], base_map['type_machines_to_stop'],
+                    base_map['name_machines_to_stop'], base_map['rpm'], base_map['gz'], base_map['v'],
+                    base_map['m'], base_map['error_path'], base_map['queue'], exp_name, argv)
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
@@ -256,4 +248,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    process_params(args,args.multi_exp_config_reads, sys.argv)
+    process_params(args, args.multi_exp_config_reads, sys.argv)

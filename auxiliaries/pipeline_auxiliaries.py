@@ -449,3 +449,14 @@ def log_scale(df, rank_method):
     if rank_method == 'tfidf':
         df = -np.log2(df + 0.0001)  # avoid 0  
     return df
+
+
+def change_key_name(old_names_dict, map_name):
+    new_dict = {}
+    if old_names_dict:
+        keys = old_names_dict.keys()
+        for key in keys:
+            new_dict[map_name[key]] = old_names_dict[key]
+        return new_dict
+    return old_names_dict    
+    

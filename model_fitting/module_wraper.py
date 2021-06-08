@@ -9,7 +9,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, submit_pipeline_step, run_step_locally, wait_for_results
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
