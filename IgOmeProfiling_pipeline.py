@@ -211,11 +211,11 @@ if __name__ == '__main__':
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
-    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
-    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
-    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     
     # general optional parameters
+    parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
+    parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
+    parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--run_summary_path', type=str,
                         help='a file in which the running configuration and timing will be written to')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
