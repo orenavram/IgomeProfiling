@@ -11,6 +11,7 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
 from auxiliaries.validation_files import is_input_files_valid 
+from auxiliaries.stop_machine_aws import stop_machines
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
@@ -103,9 +104,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
-                             '--stop_machines' if stop_machines_flag else '',
-                             f'--type_machines_to_stop {type_machines_to_stop}' if type_machines_to_stop else '',
-                             f'--name_machines_to_stop {name_machines_to_stop}' if name_machines_to_stop else '',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -125,6 +123,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
