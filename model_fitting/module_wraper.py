@@ -13,38 +13,6 @@ from auxiliaries.pipeline_auxiliaries import *
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
-map_names_command_line = {
-    "parsed_fastq_results": "reads_path",
-    "motif_inference_results": "motifs_path",
-    "classification_output_path": "model_path",
-    "logs_dir": "logs_dir",
-    "samplename2biologicalcondition_path": "sample2bc",
-    "number_of_random_pssms": "num_random_pssms",
-    "done_file_path": "done_path", 
-    "cross_experiments_config": "cross_experiments_config",
-    "check_files_valid": "check_files_valid",
-    "stop_before_random_forest": "stop_before_random_forest", 
-    "num_of_random_configurations_to_sample": "num_of_random_configurations_to_sample",
-    "number_parallel_random_forest": "number_parallel_random_forest", 
-    "min_value_error_random_forest": "min_value_error_random_forest",
-    "rank_method": "rank_method",
-    "tfidf_method": "tfidf_method",
-    "tfidf_factor": "tfidf_factor",
-    "shuffles": "shuffles",
-    "shuffles_percent": "shuffles_percent",
-    "shuffles_digits": "shuffles_digits",
-    "cv_num_of_splits": "cv_num_of_splits", 
-    "seed_random_forest": "seed_random_forest",
-    "random_forest_seed_configurations": "random_forest_seed_configurations",
-    "stop_machines": "stop_machines",
-    "type_machines_to_stop": "type_machines_to_stop", 
-    "name_machines_to_stop": "name_machines_to_stop", 
-    "error_path": "error_path", 
-    "queue": "q",
-    "verbose": "v",
-    "mapitope": "m"
-}
-
 
 def repeat_items(list):
     output = []
@@ -54,63 +22,14 @@ def repeat_items(list):
     return output
 
 
-def process_params(args, cross_experiments_config, argv):
-    base_map =  args.__dict__
-    keys = base_map.keys()
-    base_map = change_key_name(base_map, map_names_command_line)
-    cross_data = ''
-    if cross_experiments_config:    
-        f = open(cross_experiments_config)
-        cross_experiments_dict = json.load(f)
-        # validation of the json file
-        is_valid = is_valid_json_structure(cross_experiments_config, cross_experiments_dict, schema_model_fitting, logger)
-        if not is_valid:
-            return 
-        configuration = cross_experiments_dict['configuration']
-        base_map.update(configuration)
-        runs = cross_experiments_dict['runs']
-        for run in runs:
-            dict_params = base_map.copy()
-            dict_params.update(runs[run]['configuration'])
-            cross_data = ''
-            if 'cross' in runs[run].keys():
-                cross_data = runs[run]['cross']
-            argv_new = []
-            for k in keys:
-                # create new list of argv of the specific run.
-                val = str(dict_params[map_names_command_line[k]])
-                if (val != 'None') and (val != 'False'):
-                    argv_new.append(k)
-                    argv_new.append(val)   
-            build_classifier(dict_params['reads_path'], dict_params['motifs_path'], dict_params['model_path'], dict_params['logs_dir'], dict_params['sample2bc'],
-                            dict_params['num_random_pssms'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['stop_before_random_forest'], 
-                            dict_params['num_of_random_configurations_to_sample'], dict_params['number_parallel_random_forest'], dict_params['min_value_error_random_forest'],
-                            dict_params['rank_method'], dict_params['tfidf_method'], dict_params['tfidf_factor'], dict_params['shuffles'], dict_params['shuffles_percent'],
-                            dict_params['shuffles_digits'], dict_params['cv_num_of_splits'], dict_params['seed_random_forest'], dict_params['random_forest_seed_configurations'],
-                            dict_params['stop_machines'], dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'],
-                            dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'], cross_data, run, argv_new)
-    else:
-        exp_name = ''
-        build_classifier(base_map['reads_path'], base_map['motifs_path'], base_map['model_path'], base_map['logs_dir'], base_map['sample2bc'],
-                        base_map['num_random_pssms'], base_map['done_path'], base_map['check_files_valid'], base_map['stop_before_random_forest'], 
-                        base_map['num_of_random_configurations_to_sample'], base_map['number_parallel_random_forest'], base_map['min_value_error_random_forest'],
-                        base_map['rank_method'], base_map['tfidf_method'], base_map['tfidf_factor'], base_map['shuffles'], base_map['shuffles_percent'],
-                        base_map['shuffles_digits'], base_map['cv_num_of_splits'], base_map['seed_random_forest'], base_map['random_forest_seed_configurations'],
-                        base_map['stop_machines'], base_map['type_machines_to_stop'], base_map['name_machines_to_stop'],
-                        base_map['q'], base_map['v'], base_map['error_path'], base_map['m'], cross_data, exp_name, argv)
-
-
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
-                     fitting_done_path, check_files_valid, stop_before_random_forest, num_of_random_configurations_to_sample,
-                     number_parallel_random_forest, min_value_error_random_forest,
+                     fitting_done_path, cross_experiments_config, check_files_valid, stop_before_random_forest, 
+                     num_of_random_configurations_to_sample, number_parallel_random_forest, min_value_error_random_forest,
                      rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
-                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
-                     queue_name, verbose, error_path, use_mapitope, cross_data, exp_name, argv):                  
-
-    if exp_name:
-        logger.info(f'Start model fitting for expirements {exp_name}')
+                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, smart_scanning,
+                     queue_name, verbose, error_path, use_mapitope, argv):
 
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
@@ -125,7 +44,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         return
 
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
-    sample_names = sorted(samplename2biologicalcondition)
+    #sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
     for bc in biological_conditions:
@@ -334,6 +253,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--smart_scanning', action='store_true', help='verify which scanning have been made and not repeat them')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -349,14 +269,13 @@ if __name__ == '__main__':
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
-    process_params(args, args.cross_experiments_config, sys.argv)
 
-    #build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
-    #                 args.logs_dir, args.samplename2biologicalcondition_path,  args.number_of_random_pssms, args.done_file_path,
-    #                 args.check_files_valid, args.stop_before_random_forest, args.num_of_random_configurations_to_sample, 
-    #                 args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
-    #                 args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
-    #                 args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations, 
-    #                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
-    #                 args.queue, args.verbose, error_path, args.mapitope, sys.argv)
+    build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
+                     args.logs_dir, args.samplename2biologicalcondition_path,  args.number_of_random_pssms, args.done_file_path, 
+                     args.cross_experiments_config, args.check_files_valid, args.stop_before_random_forest, args.num_of_random_configurations_to_sample, 
+                     args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
+                     args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
+                     args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations, 
+                     args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.smart_scanning,
+                     args.queue, args.verbose, error_path, args.mapitope, sys.argv)
                       
