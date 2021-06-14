@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import pandas as pd
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -219,6 +220,28 @@ def get_faa_file_name_from_path(path, use_mapitope):
             file_name = file_name
             break
     return os.path.join(path, file_name)
+
+
+def score_hits_and_values(csv_file_hits, csv_file_values , dict_score):
+    df_hits = pd.read_csv(csv_file_hits)
+    df_values = pd.read_csv(csv_file_values)
+    labels = list(set(list(df_hits['label'])))
+    bc = labels[0] if labels[0] != 'other' else labels[1]
+    samples = set(df_hits['sample_name'])
+    df_hits = df_hits.set_index(['sample_name'])
+    df_values = df_values.set_index(['sample_name'])
+    dict_values = df_values.to_dict()
+    dict_hits = df_hits.to_dict()
+    del dict_hits['label']
+    del dict_values['label']
+    for sample in samples:
+        if f'{bc},{sample}' not in dict_score:
+            dict_sample = {}
+            for key in dict_hits:
+                dict_sample[key] = {'hits': dict_hits[key][sample], 'values': dict_values[key][sample]}
+            dict_score[f'{bc},{sample}'] = dict_sample
+    return dict_score
+
 
 
 if __name__ == '__main__':
