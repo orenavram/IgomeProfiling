@@ -34,16 +34,15 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
-                     
-    
+
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
-    os.makedirs(logs_dir, exist_ok=True)
-
+    os.makedirs(logs_dir, exist_ok=True)                 
+    
     if os.path.exists(fitting_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({fitting_done_path} already exists)')
         return
-
+    
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     #sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
