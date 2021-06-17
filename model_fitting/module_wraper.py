@@ -1,7 +1,9 @@
 import datetime
+from logging import log
 import os
 import sys
 import pandas as pd
+import sqlite3
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -14,6 +16,15 @@ from auxiliaries.pipeline_auxiliaries import *
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
+sql_create_table = """CREATE TABLE IF NOT EXISTS score (
+                                    BC text NOT NULL,
+                                    motif text NOT NULL,
+                                    sample text NOT NULL,
+                                    hit integer NOT NULL,
+                                    value REAL NOT NULL,
+                                );"""
+
+map_names_command_line = {}
 
 def repeat_items(list):
     output = []
@@ -21,6 +32,35 @@ def repeat_items(list):
         output.append(x)
         output.append(x)
     return output
+
+
+
+def process_params(args, multi_experiments_config, argv):
+    # create data structure for running filter_reads
+    base_map =  args.__dict__
+    keys = base_map.keys()
+    base_map = change_key_name(base_map, map_names_command_line)
+    if multi_experiments_config:    
+        f = open(multi_experiments_config)
+        multi_experiments_dict = json.load(f)
+        # validation of the json file
+        is_valid = is_valid_json_structure(multi_experiments_config, multi_experiments_dict, schema_cross_exp, logger)
+        if not is_valid:
+            return 
+        configuration = multi_experiments_dict['configuration']
+        base_map.update(configuration)
+        runs = multi_experiments_dict['runs']
+        for run in runs:
+            dict_params = base_map.copy()
+            dict_params.update(runs[run]['configuration'])
+            # create new list of argv of the specific run.
+            argv_new = []
+            argv_new.append(argv[0])
+            for k in keys:
+                val = str(dict_params[map_names_command_line[k]])
+                if (val != 'None') and (val != 'False'):
+                    argv_new.append(k)
+                    argv_new.append(val)              
 
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
@@ -221,7 +261,28 @@ def get_faa_file_name_from_path(path, use_mapitope):
     return os.path.join(path, file_name)
 
 
-def score_hits_and_values(csv_file_hits, csv_file_values , dict_score):
+def score_in_database(path_db, csv_file_hits, csv_file_values):
+    conn = None
+    table = None
+    sql_add_score = ''' INSERT INTO score(BC,sample,motif,hit,value)
+              VALUES(?,?,?,?,?) '''
+    try:
+        conn = sqlite3.connect(path_db)
+    except  sqlite3.Error as e:
+        logger.error(f'Error - {e} when try to connect to DB {path_db}')
+        return
+
+    try:
+        table = conn.cursor()
+        table.execute(sql_create_table)
+    except  sqlite3.Error as e:
+        logger.error(f'Error - {e} when try to create table in DB {path_db}')
+        return
+
+    # Get all the BC and sample that in the database
+    table.execute("Select bc,sample FROM score")
+    rows_bc_sample = table.fetchall()
+
     df_hits = pd.read_csv(csv_file_hits)
     df_values = pd.read_csv(csv_file_values)
     labels = list(set(list(df_hits['label'])))
@@ -234,13 +295,13 @@ def score_hits_and_values(csv_file_hits, csv_file_values , dict_score):
     del dict_hits['label']
     del dict_values['label']
     for sample in samples:
-        if f'{bc},{sample}' not in dict_score:
-            dict_sample = {}
-            for key in dict_hits:
-                dict_sample[key] = {'hits': dict_hits[key][sample], 'values': dict_values[key][sample]}
-            dict_score[f'{bc},{sample}'] = dict_sample
-    return dict_score
-
+        #test that the bc and sample not in the DB 
+        if (bc,sample) not in rows_bc_sample:
+            for motif in dict_hits:
+                # Add to the database
+                score = (bc, sample, motif, dict_hits[motif][sample], dict_values[motif][sample])
+                table.execute(sql_add_score, score)  
+    conn.commit()
 
 
 if __name__ == '__main__':

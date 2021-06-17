@@ -45,7 +45,7 @@ schema_sample2bc = {
 }
 
 
-schema_model_fitting = {
+schema_cross_exp = {
     "type": "object",
     "properties": {
         "configuration": {
