@@ -22,41 +22,44 @@ sql_create_table = """CREATE TABLE IF NOT EXISTS score (
                                     sample text NOT NULL,
                                     hit integer NOT NULL,
                                     value REAL NOT NULL,
+                                    rank_method text NOT NULL,
+                                    rank_factor integer NOT NULL
                                 );"""
 
 
 map_names_command_line = {
-    "parsed_fastq_results":"reads_path",
-    "motif_inference_results":"motifs_path",
-    "classification_output_path":"model_path",
-    "logs_dir":"logs_dir",
-    "samplename2biologicalcondition_path":"s2b_path",
-    "number_of_random_pssms":"num_of_random_pssms",
-    "done_file_path":"done_path", 
-    "cross_experiments_config":"cross_experiments_config",
-    "check_files_valid":"check_files_valid",
-    "stop_before_random_forest":"stop_before_random_forest",
-    "num_of_random_configurations_to_sample":"num_of_random_configurations_to_sample", 
-    "number_parallel_random_forest":"number_parallel_rf",
-    "min_value_error_random_forest":"min_value_error_rf",
-    "rank_method":"rank_method",
-    "tfidf_method":"tfidf_method",
-    "tfidf_factor":"tfidf_factor",
-    "shuffles":"shuffles",
-    "shuffles_percent":"shuffles_percent",
-    "shuffles_digits":"shuffles_digits",
-    "cv_num_of_splits":"cv_num_of_splits",
-    "seed_random_forest":"rf_seed",
-    "random_forest_seed_configurations":"rf_seed_configurations",
-    "stop_machines":"stop_machines",
-    "type_machines_to_stop":"type_machines_to_stop",
-    "name_machines_to_stop":"name_machines_to_stop",
-    "smart_scanning":"smart_scanning",
-    "db_path":"db_path",
-    "queue":"q",
-    "verbose":"v",
-    "error_path":"error_path",
-    "mapitope":"m"
+    "parsed_fastq_results" : "reads_path",
+    "motif_inference_results" : "motifs_path",
+    "classification_output_path" : "model_path",
+    "logs_dir" : "logs_dir",
+    "samplename2biologicalcondition_path" : "s2b_path",
+    "number_of_random_pssms" : "num_of_random_pssms",
+    "done_file_path" : "done_path", 
+    "cross_experiments_config" : "cross_experiments_config",
+    "scan_output" : "scan_output",
+    "check_files_valid" : "check_files_valid",
+    "stop_before_random_forest" : "stop_before_random_forest",
+    "num_of_random_configurations_to_sample" : "num_of_random_configurations_to_sample", 
+    "number_parallel_random_forest" : "number_parallel_rf",
+    "min_value_error_random_forest" : "min_value_error_rf",
+    "rank_method" : "rank_method",
+    "tfidf_method" : "tfidf_method",
+    "tfidf_factor" : "tfidf_factor",
+    "shuffles" : "shuffles",
+    "shuffles_percent" : "shuffles_percent",
+    "shuffles_digits" : "shuffles_digits",
+    "cv_num_of_splits" : "cv_num_of_splits",
+    "seed_random_forest" : "rf_seed",
+    "random_forest_seed_configurations" : "rf_seed_configurations",
+    "stop_machines" : "stop_machines",
+    "type_machines_to_stop" : "type_machines_to_stop",
+    "name_machines_to_stop" : "name_machines_to_stop",
+    "smart_scanning" : "smart_scanning",
+    "db_path" : "db_path",
+    "queue" : "q",
+    "verbose" : "v",
+    "error_path" : "error_path",
+    "mapitope" : "m"
 }
 
 
@@ -66,6 +69,22 @@ def repeat_items(list):
         output.append(x)
         output.append(x)
     return output
+
+
+def remove_motifs_and_sample_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor):
+    samples = sorted(os.listdir(first_phase_output_path))
+    size_samples = len(samples)
+    bc_remove = []
+    for bc in biological_conditions:
+        sample_to_remove = []
+        for sample in samples:
+            if (bc,sample,rank_method,rank_factor) in bc_and_sample_score:
+                sample_to_remove.append(sample)
+        if len(sample_to_remove) == len(size_samples):
+            bc_remove.append(bc)
+    for bc in  bc_remove:       
+        biological_conditions.remove(bc)
+    return biological_conditions, samples
 
 
 def process_params(args, cross_experiments_config, argv):
@@ -97,18 +116,20 @@ def process_params(args, cross_experiments_config, argv):
 
             build_classifier(dict_params['reads_path'], dict_params['motifs_path'], dict_params['model_path'], dict_params['logs_dir'],
                             dict_params['s2b_path'], dict_params['num_of_random_pssms'], dict_params['done_path'],  dict_params['cross_experiments_config'],
-                            dict_params['check_files_valid'], dict_params['stop_before_random_forest'], dict_params['num_of_random_configurations_to_sample'],
-                            dict_params['number_parallel_rf'], dict_params['min_value_error_rf'], dict_params['rank_method'], dict_params['tfidf_method'],
-                            dict_params['tfidf_factor'], dict_params['shuffles'], dict_params['shuffles_percent'], dict_params['shuffles_digits'],
+                            dict_params['scan_output'], dict_params['check_files_valid'], dict_params['stop_before_random_forest'],
+                            dict_params['num_of_random_configurations_to_sample'], dict_params['number_parallel_rf'], dict_params['min_value_error_rf'],
+                            dict_params['rank_method'], dict_params['tfidf_method'], dict_params['tfidf_factor'],
+                            dict_params['shuffles'], dict_params['shuffles_percent'], dict_params['shuffles_digits'],
                             dict_params['cv_num_of_splits'], dict_params['rf_seed'], dict_params['rf_seed_configurations'], dict_params['stop_machines'],
                             dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'], dict_params['smart_scanning'], dict_params['db_path'],
                             dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'])
     else:
          build_classifier(base_map['reads_path'], base_map['motifs_path'], base_map['model_path'], base_map['logs_dir'],
                             base_map['s2b_path'], base_map['num_of_random_pssms'], base_map['done_path'],  base_map['cross_experiments_config'],
-                            base_map['check_files_valid'], base_map['stop_before_random_forest'], base_map['num_of_random_configurations_to_sample'],
-                            base_map['number_parallel_rf'], base_map['min_value_error_rf'], base_map['rank_method'], base_map['tfidf_method'],
-                            base_map['tfidf_factor'], base_map['shuffles'], base_map['shuffles_percent'], base_map['shuffles_digits'],
+                            base_map['scan_output'], base_map['check_files_valid'], base_map['stop_before_random_forest'],
+                            base_map['num_of_random_configurations_to_sample'], base_map['number_parallel_rf'], base_map['min_value_error_rf'],
+                            base_map['rank_method'], base_map['tfidf_method'], base_map['tfidf_factor'],
+                            base_map['shuffles'], base_map['shuffles_percent'], base_map['shuffles_digits'],
                             base_map['cv_num_of_splits'], base_map['rf_seed'], base_map['rf_seed_configurations'], base_map['stop_machines'],
                             base_map['type_machines_to_stop'], base_map['name_machines_to_stop'], base_map['smart_scanning'], base_map['db_path'],
                             base_map['q'], base_map['v'], base_map['error_path'], base_map['m'])
@@ -116,7 +137,7 @@ def process_params(args, cross_experiments_config, argv):
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
-                     fitting_done_path, cross_experiments_config, check_files_valid, stop_before_random_forest, 
+                     fitting_done_path, cross_experiments_config, scan_output, check_files_valid, stop_before_random_forest, 
                      num_of_random_configurations_to_sample, number_parallel_random_forest, min_value_error_random_forest,
                      rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
@@ -136,22 +157,28 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({fitting_done_path} already exists)')
         return
 
-    # DB with all the results
-    for bc in  sorted(os.listdir(classification_output_path)):
-        hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-        values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
-        score_in_database(db_path, hits_path, values_path)
-    bc_and_sample_score = get_bc_and_sample_from_db(db_path)    
-    
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
     #sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+
+    # Add to the DB scanning results. 
+    if scan_output:
+        for scan in scan_output:
+            for bc in  sorted(os.listdir(scan)):
+                hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+                values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
+                score_in_database(db_path, hits_path, values_path)
+    bc_and_sample_score = get_bc_and_sample_from_db(db_path)    
 
     for bc in biological_conditions:
         bc_dir_path = os.path.join(classification_output_path, bc)
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
+
+    rank_factor = shuffles if rank_method == 'shuffles' else number_of_random_pssms
+
+    samples, biological_conditions = remove_motifs_and_sample_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor)
 
     # compute scanning scores (hits and values)
     logger.info('_'*100)
@@ -169,7 +196,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             # extract each split of the motifs to scan peptides against it
             meme_file_path = os.path.join(memes_path, file_name)
             cutoffs_file_path = os.path.join(cutoffs_path, file_name)
-            for sample_name in sorted(os.listdir(first_phase_output_path)):
+            for sample_name in samples:
                 sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
                 faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
                 output_path = os.path.join(classification_output_path, bc, 'scanning',
@@ -345,9 +372,9 @@ def get_bc_and_sample_from_db(path_db):
     table.execute("Select bc,sample FROM score")
     return table.fetchall()
 
-def score_in_database(path_db, csv_file_hits, csv_file_values):
+def score_in_database(path_db, csv_file_hits, csv_file_values, rank_method, rank_factor):
     conn, table = connect_and_create_table_db(path_db) 
-    sql_add_score =  ''' INSERT INTO score(BC,sample,motif,hit,value)
+    sql_add_score =  ''' INSERT INTO score(bc,sample,motif,hit,value,rank_method,rank_factor)
                         VALUES(?,?,?,?,?) '''
     # Get all the BC and sample that in the database
     table.execute("Select bc,sample FROM score")
@@ -366,10 +393,10 @@ def score_in_database(path_db, csv_file_hits, csv_file_values):
     del dict_values['label']
     for sample in samples:
         #test that the bc and sample not in the DB 
-        if (bc,sample) not in rows_bc_sample:
+        if (bc,sample,rank_method,rank_factor) not in rows_bc_sample:
             for motif in dict_hits:
                 # Add to the database
-                score = (bc, sample, motif, dict_hits[motif][sample], dict_values[motif][sample])
+                score = (bc, sample, motif, dict_hits[motif][sample], dict_values[motif][sample],rank_method, rank_factor)
                 table.execute(sql_add_score, score)  
     conn.commit()
 
@@ -389,6 +416,7 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     
     parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets')
+    parser.add_argument('--scan_output', type=str, help='Path for folders of scanning output, not repeat on scanning that have been done')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
