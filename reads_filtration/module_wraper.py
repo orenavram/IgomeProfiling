@@ -16,29 +16,38 @@ from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
 
+
 map_names_command_line = {
-    "fastq_path": "fastq",
-    "parsed_fastq_results": "reads_path",
-    "logs_dir": "logs_dir",
-    "barcode2samplename": "barcode2sample",
-    "done_file_path": "done_path",
-    "left_construct": "left_construct",
-    "right_construct": "right_construct",
-    "max_mismatches_allowed": "max_mismatches_allowed",
-    "min_sequencing_quality": "min_sequencing_quality",
-    "minimal_length_required": "minimal_length_required",
-    "multi_exp_config_reads": "multi_experiments_config",
-    "check_files_valid": "check_files_valid",
-    "stop_machines": "stop_machines",
-    "type_machines_to_stop": "type_machines_to_stop",
-    "name_machines_to_stop": "name_machines_to_stop",
-    "gz": "gz",
-    "verbose": "v",
-    "error_path": "error_path",
-    "queue": "queue",
-    "rpm": "rpm",
-    "mapitope": "m"
+    "fastq_path" : "fastq",
+    "parsed_fastq_results" : "reads_path",
+    "logs_dir" : "logs_dir",
+    "barcode2samplename" : "barcode2sample",
+    "done_file_path" : "done_path",
+    "left_construct" : "left_construct",
+    "right_construct" : "right_construct",
+    "max_mismatches_allowed" : "max_mismatches_allowed",
+    "min_sequencing_quality" : "min_sequencing_quality",
+    "minimal_length_required" : "minimal_length_required",
+    "multi_exp_config_reads" : "multi_experiments_config",
+    "check_files_valid" : "check_files_valid",
+    "stop_machines" : "stop_machines",
+    "type_machines_to_stop" : "type_machines_to_stop",
+    "name_machines_to_stop" : "name_machines_to_stop",
+    "gz" : "gz",
+    "verbose" : "v",
+    "error_path" : "error_path",
+    "queue" : "queue",
+    "rpm" : "rpm",
+    "mapitope" : "m"
 }
+
+
+def call_run_first_phase(dict_params, exp_name, argv):
+    run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
+                    dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], 
+                    dict_params['minimal_length_required'],dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'],
+                    dict_params['name_machines_to_stop'],dict_params['rpm'], dict_params['gz'], dict_params['v'],
+                    dict_params['m'], dict_params['error_path'], dict_params['queue'], exp_name, argv)
 
 
 def process_params(args, multi_experiments_config, argv):
@@ -67,18 +76,10 @@ def process_params(args, multi_experiments_config, argv):
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
                     argv_new.append(val)              
-            run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
-                    dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], 
-                    dict_params['minimal_length_required'],dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'],
-                    dict_params['name_machines_to_stop'],dict_params['rpm'], dict_params['gz'], dict_params['v'],
-                    dict_params['m'], dict_params['error_path'], dict_params['queue'], run, argv_new)
+            call_run_first_phase(dict_params, run, argv_new)
     else:
         exp_name = ''
-        run_first_phase(base_map['fastq'], base_map['reads_path'], base_map['logs_dir'], base_map['barcode2sample'], base_map['done_path'],
-                    base_map['left_construct'], base_map['right_construct'], base_map['max_mismatches_allowed'], base_map['min_sequencing_quality'],
-                    base_map['minimal_length_required'], base_map['check_files_valid'], base_map['stop_machines'], base_map['type_machines_to_stop'],
-                    base_map['name_machines_to_stop'], base_map['rpm'], base_map['gz'], base_map['v'],
-                    base_map['m'], base_map['error_path'], base_map['queue'], exp_name, argv)
+        call_run_first_phase(base_map, exp_name, argv)
 
 
 def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
