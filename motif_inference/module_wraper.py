@@ -16,37 +16,48 @@ from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
 map_names_command_line = {
-    "parsed_fastq_results": "reads_path",
-    "motif_inference_results": "motifs_path",
-    "logs_dir": "logs_dir",
-    "samplename2biologicalcondition_path": "sample2bc",    
-    "done_file_path": "done_path",
-    "max_msas_per_sample": "max_msas_per_sample",
-    "max_msas_per_bc": "max_msas_per_bc",
-    "max_number_of_cluster_members_per_sample": "max_num_of_cluster_per_sample",
-    "max_number_of_cluster_members_per_bc": "max_num_of_cluster_per_bc",
-    "allowed_gap_frequency": "gap",
-    "multi_exp_config_inference": "multi_exp_config_inference",
-    "check_files_valid": "check_files_valid",
-    "minimal_number_of_columns_required_create_meme": "min_num_of_columns_meme",
-    "prefix_length_in_clstr": "prefix_length_in_clstr",
-    "aln_cutoff": "aln_cutoff",
-    "pcc_cutoff": "pcc_cutoff", 
-    "threshold": "threshold",
-    "word_length": "word_length",
-    "discard": "discard",
-    "clustere_algorithm_mode":"clustere_alg_mode",
-    "concurrent_cutoffs": "concurrent_cutoffs",
-    "meme_split_size": "meme_split_size",
-    "skip_sample_merge_meme": "skip_sample_merge_meme",
-    "stop_machines": "stop_machines_flag",
-    "type_machines_to_stop": "type_machines_to_stop",
-    "name_machines_to_stop": "name_machines_to_stop",
-    "error_path": "error_path",
-    "queue": "queue",
-    "verbose": "v",
-    "mapitope": "m"
+    "parsed_fastq_results" : "reads_path",
+    "motif_inference_results" : "motifs_path",
+    "logs_dir" : "logs_dir",
+    "samplename2biologicalcondition_path" : "sample2bc",
+    "done_file_path" : "done_path",
+    "max_msas_per_sample" : "max_msas_per_sample",
+    "max_msas_per_bc" : "max_msas_per_bc",
+    "max_number_of_cluster_members_per_sample" : "max_num_of_cluster_per_sample",
+    "max_number_of_cluster_members_per_bc" : "max_num_of_cluster_per_bc",
+    "allowed_gap_frequency" : "gap",
+    "multi_exp_config_inference" : "multi_exp_config_inference",
+    "check_files_valid" : "check_files_valid",
+    "minimal_number_of_columns_required_create_meme" : "min_num_of_columns_meme",
+    "prefix_length_in_clstr" : "prefix_length_in_clstr",
+    "aln_cutoff" : "aln_cutoff",
+    "pcc_cutoff" : "pcc_cutoff", 
+    "threshold" : "threshold",
+    "word_length" : "word_length",
+    "discard" : "discard",
+    "clustere_algorithm_mode" :"clustere_alg_mode",
+    "concurrent_cutoffs" : "concurrent_cutoffs",
+    "meme_split_size" : "meme_split_size",
+    "skip_sample_merge_meme" : "skip_sample_merge_meme",
+    "stop_machines" : "stop_machines_flag",
+    "type_machines_to_stop" : "type_machines_to_stop",
+    "name_machines_to_stop" : "name_machines_to_stop",
+    "error_path" : "error_path",
+    "queue" : "queue",
+    "verbose" : "v",
+    "mapitope" : "m"
 } 
+
+
+def call_infer_motifs(dict_params ,exp_name, argv):
+    infer_motifs(dict_params['reads_path'], dict_params['motifs_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
+                dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
+                dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
+                dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
+                dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['clustere_alg_mode'], dict_params['concurrent_cutoffs'],
+                dict_params['meme_split_size'], dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
+                dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
+                dict_params['error_path'], exp_name, argv) 
 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
@@ -371,31 +382,17 @@ def process_params(args, multi_exp_config_inference, argv):
             dict_params = base_map.copy()
             dict_params.update(runs[run])
             argv_new = []
+            argv_new.append(argv[0])
             for k in keys:
                 val = str(dict_params[map_names_command_line[k]])
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
-                    argv_new.append(val)   
-            print(dict_params)
+                    argv_new.append(val)
             # create new list of argv of the specific run.
-            infer_motifs(dict_params['reads_path'], dict_params['motifs_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
-                        dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
-                        dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
-                        dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
-                        dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['clustere_alg_mode'], dict_params['concurrent_cutoffs'], dict_params['meme_split_size'], 
-                        dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
-                        dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
-                        dict_params['error_path'], run, argv_new)           
+            infer_motifs(dict_params, run, argv_new)
     else:
         exp_name = ''
-        infer_motifs(base_map['reads_path'], base_map['motifs_path'], base_map['logs_dir'], base_map['sample2bc'], 
-                    base_map['max_msas_per_sample'], base_map['max_msas_per_bc'], base_map['max_num_of_cluster_per_sample'], base_map['max_num_of_cluster_per_bc'],
-                    base_map['gap'], base_map['done_path'], base_map['check_files_valid'], base_map['min_num_of_columns_meme'],
-                    base_map['prefix_length_in_clstr'], base_map['aln_cutoff'], base_map['pcc_cutoff'],
-                    base_map['threshold'], base_map['word_length'], base_map['discard'], base_map['clustere_alg_mode'], base_map['concurrent_cutoffs'], base_map['meme_split_size'], 
-                    base_map['skip_sample_merge_meme'],  base_map['stop_machines_flag'], base_map['type_machines_to_stop'], 
-                    base_map['name_machines_to_stop'], base_map['queue'], base_map['v'], base_map['m'],
-                    base_map['error_path'], exp_name, argv)
+        infer_motifs(base_map, exp_name, argv)
 
 
 def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
