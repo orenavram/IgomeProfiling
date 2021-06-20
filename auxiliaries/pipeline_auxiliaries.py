@@ -64,7 +64,7 @@ schema_cross_exp = {
                             "done_path": { "type": "string" },
                             "sample2bc": { "type": "string" }  
                         },
-                        "required": [ "reads_path", "motifs_path", "done_path"]
+                        "required": [ "reads_path", "motifs_path", "done_path", "sample2bc"]
                     },
                     "cross": {
                         "type": "object",
