@@ -71,7 +71,7 @@ def repeat_items(list):
     return output
 
 
-def remove_motifs_and_sample_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor):
+def remove_motifs_and_samples_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor):
     samples = sorted(os.listdir(first_phase_output_path))
     size_samples = len(samples)
     bc_remove = []
@@ -85,6 +85,18 @@ def remove_motifs_and_sample_done(bc_and_sample_score, biological_conditions, fi
     for bc in  bc_remove:       
         biological_conditions.remove(bc)
     return biological_conditions, samples
+
+
+def call_build_classifier(dict_params, argv):
+    build_classifier(dict_params['reads_path'], dict_params['motifs_path'], dict_params['model_path'], dict_params['logs_dir'],
+                            dict_params['s2b_path'], dict_params['num_of_random_pssms'], dict_params['done_path'],  dict_params['cross_experiments_config'],
+                            dict_params['scan_output'], dict_params['check_files_valid'], dict_params['stop_before_random_forest'],
+                            dict_params['num_of_random_configurations_to_sample'], dict_params['number_parallel_rf'], dict_params['min_value_error_rf'],
+                            dict_params['rank_method'], dict_params['tfidf_method'], dict_params['tfidf_factor'],
+                            dict_params['shuffles'], dict_params['shuffles_percent'], dict_params['shuffles_digits'],
+                            dict_params['cv_num_of_splits'], dict_params['rf_seed'], dict_params['rf_seed_configurations'], dict_params['stop_machines'],
+                            dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'], dict_params['smart_scanning'], dict_params['db_path'],
+                            dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'], argv)
 
 
 def process_params(args, cross_experiments_config, argv):
@@ -113,26 +125,9 @@ def process_params(args, cross_experiments_config, argv):
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
                     argv_new.append(val)              
-
-            build_classifier(dict_params['reads_path'], dict_params['motifs_path'], dict_params['model_path'], dict_params['logs_dir'],
-                            dict_params['s2b_path'], dict_params['num_of_random_pssms'], dict_params['done_path'],  dict_params['cross_experiments_config'],
-                            dict_params['scan_output'], dict_params['check_files_valid'], dict_params['stop_before_random_forest'],
-                            dict_params['num_of_random_configurations_to_sample'], dict_params['number_parallel_rf'], dict_params['min_value_error_rf'],
-                            dict_params['rank_method'], dict_params['tfidf_method'], dict_params['tfidf_factor'],
-                            dict_params['shuffles'], dict_params['shuffles_percent'], dict_params['shuffles_digits'],
-                            dict_params['cv_num_of_splits'], dict_params['rf_seed'], dict_params['rf_seed_configurations'], dict_params['stop_machines'],
-                            dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'], dict_params['smart_scanning'], dict_params['db_path'],
-                            dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'])
+            build_classifier(dict_params, argv_new)
     else:
-         build_classifier(base_map['reads_path'], base_map['motifs_path'], base_map['model_path'], base_map['logs_dir'],
-                            base_map['s2b_path'], base_map['num_of_random_pssms'], base_map['done_path'],  base_map['cross_experiments_config'],
-                            base_map['scan_output'], base_map['check_files_valid'], base_map['stop_before_random_forest'],
-                            base_map['num_of_random_configurations_to_sample'], base_map['number_parallel_rf'], base_map['min_value_error_rf'],
-                            base_map['rank_method'], base_map['tfidf_method'], base_map['tfidf_factor'],
-                            base_map['shuffles'], base_map['shuffles_percent'], base_map['shuffles_digits'],
-                            base_map['cv_num_of_splits'], base_map['rf_seed'], base_map['rf_seed_configurations'], base_map['stop_machines'],
-                            base_map['type_machines_to_stop'], base_map['name_machines_to_stop'], base_map['smart_scanning'], base_map['db_path'],
-                            base_map['q'], base_map['v'], base_map['error_path'], base_map['m'])
+         build_classifier(base_map, argv)
 
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
@@ -178,7 +173,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     rank_factor = shuffles if rank_method == 'shuffles' else number_of_random_pssms
 
-    samples, biological_conditions = remove_motifs_and_sample_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor)
+    samples, biological_conditions = remove_motifs_and_samples_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor)
 
     # compute scanning scores (hits and values)
     logger.info('_'*100)
