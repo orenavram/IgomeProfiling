@@ -19,7 +19,7 @@ Structure of the json file:
 ```
 The four parameters under name_exp are mast.
 
-### Phase 2 - motif_inference
+### Phase 2 - motif inference
 Run multi experiments of phase 2 by adding json file with the flag "--multi_exp_config_inference".
 
 Structure of the json file:
@@ -38,7 +38,7 @@ Structure of the json file:
 ```
 The four parameters under name_exp are mast.
 
-### Phase 3 - model_fitting
+### Phase 3 - model fitting
 Run multi experiments and create cross between multi experiments by adding json file with the flag "--cross_experiments_config".
 
 Structure of the json file:
