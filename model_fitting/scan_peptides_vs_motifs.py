@@ -72,8 +72,8 @@ if __name__ == '__main__':
 
     start = time()
     calculate_pssm_thresholds(args.meme_file_path, args.cutoffs_file_path, args.faa_file_path,
-                              args.number_of_random_pssms, args.shuffles, args.shuffles_percent, args.shuffles_digits,args.output_path, 
-                              args.done_file_path, args.rank_method, argv=sys.argv)
+                              args.number_of_random_pssms, args.shuffles, args.shuffles_percent, args.shuffles_digits, 
+                              args.output_path, args.done_file_path, args.rank_method, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')
 

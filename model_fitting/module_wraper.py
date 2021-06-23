@@ -1,5 +1,6 @@
 import datetime
 from logging import log
+from operator import mod
 import os
 import sys
 import pandas as pd
@@ -54,7 +55,6 @@ map_names_command_line = {
     "stop_machines" : "stop_machines",
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
-    "smart_scanning" : "smart_scanning",
     "db_path" : "db_path",
     "queue" : "q",
     "verbose" : "v",
@@ -87,16 +87,16 @@ def remove_motifs_and_samples_done(bc_and_sample_score, biological_conditions, f
     return biological_conditions, samples
 
 
-def call_build_classifier(dict_params, argv):
+def call_build_classifier(dict_params, exp_name, argv, multi_experiments_dict):
     build_classifier(dict_params['reads_path'], dict_params['motifs_path'], dict_params['model_path'], dict_params['logs_dir'],
-                            dict_params['s2b_path'], dict_params['num_of_random_pssms'], dict_params['done_path'],  dict_params['cross_experiments_config'],
-                            dict_params['scan_output'], dict_params['check_files_valid'], dict_params['stop_before_random_forest'],
+                            dict_params['s2b_path'], dict_params['num_of_random_pssms'], dict_params['done_path'], multi_experiments_dict,
+                            dict_params['check_files_valid'], dict_params['stop_before_random_forest'],
                             dict_params['num_of_random_configurations_to_sample'], dict_params['number_parallel_rf'], dict_params['min_value_error_rf'],
                             dict_params['rank_method'], dict_params['tfidf_method'], dict_params['tfidf_factor'],
                             dict_params['shuffles'], dict_params['shuffles_percent'], dict_params['shuffles_digits'],
                             dict_params['cv_num_of_splits'], dict_params['rf_seed'], dict_params['rf_seed_configurations'], dict_params['stop_machines'],
-                            dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'], dict_params['smart_scanning'], dict_params['db_path'],
-                            dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'], argv)
+                            dict_params['type_machines_to_stop'], dict_params['name_machines_to_stop'], dict_params['db_path'],
+                            dict_params['q'], dict_params['v'], dict_params['error_path'], dict_params['m'], exp_name, argv)
 
 
 def process_params(args, cross_experiments_config, argv):
@@ -108,7 +108,8 @@ def process_params(args, cross_experiments_config, argv):
         f = open(cross_experiments_config)
         multi_experiments_dict = json.load(f)
         # validation of the json file
-        is_valid = is_valid_json_structure(cross_experiments_config, multi_experiments_dict, schema_cross_exp, logger)
+        #is_valid = is_valid_json_structure(cross_experiments_config, multi_experiments_dict, schema_cross_exp, logger)
+        is_valid = True
         if not is_valid:
             return 
         configuration = multi_experiments_dict['configuration']
@@ -117,63 +118,125 @@ def process_params(args, cross_experiments_config, argv):
         for run in runs:
             dict_params = base_map.copy()
             dict_params.update(runs[run]['configuration'])
-            # create new list of argv of the specific run.
             argv_new = []
             argv_new.append(argv[0])
             for k in keys:
                 val = str(dict_params[map_names_command_line[k]])
                 if (val != 'None') and (val != 'False'):
                     argv_new.append(k)
-                    argv_new.append(val)              
-            build_classifier(dict_params, argv_new)
+                    argv_new.append(val)
+                # create new list of argv of the specific run.
+                call_build_classifier(dict_params, run, argv_new, multi_experiments_dict)
     else:
-         build_classifier(base_map, argv)
+        exp_name = ''
+        multi_experiments_dict = ''
+        call_build_classifier(base_map, exp_name, argv, multi_experiments_dict)
+    
+
+def get_config(path_configureation_run):
+    config_run = open(path_configureation_run,'r')
+    line = config_run.readline()
+    return line.split('\t')
+
+
+def get_scanning_input(bc_and_sample_score, json_cross_experiments,samplename2biologicalcondition_path, motif_inference_output_path,
+                       first_phase_output_path, rank_method, shuffles, number_of_random_pssms, exp_name):
+    
+    val_method = shuffles if rank_method=='shuffles' else number_of_random_pssms
+    df = pd.DataFrame(columns=['name_folder', 'bc', 'sample', 'path_motif', 'path_reads'])
+    samplename2biologicalcondition = ''
+    sample_names = []
+    biological_conditions = []
+    if not json_cross_experiments:
+            samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
+            sample_names = sorted(samplename2biologicalcondition)
+            biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+    else:
+        if 'motifs&samples' in json_cross_experiments['runs'][exp_name]['sample2bc']:
+            samplename2biologicalcondition_path = json_cross_experiments['runs'][exp_name]['sample2bc']['motifs&samples']
+            samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')          
+            sample_names = sorted(samplename2biologicalcondition)
+            biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+        else:
+            samplename2biologicalcondition_path_bc = json_cross_experiments['runs'][exp_name]['sample2bc']['motifs']
+            samplename2biologicalcondition_bc = load_table_to_dict(samplename2biologicalcondition_path_bc, 'Barcode {} belongs to more than one sample_name!!')          
+            biological_conditions = sorted(set(samplename2biologicalcondition_bc.values()))
+
+            samplename2biologicalcondition_path_samples = json_cross_experiments['runs'][exp_name]['sample2bc']['samples']
+            samplename2biologicalcondition_samples = load_table_to_dict(samplename2biologicalcondition_path_samples, 'Barcode {} belongs to more than one sample_name!!')          
+            sample_names = sorted(set(samplename2biologicalcondition_samples.values()))
+    
+    if "biological_motifs_combain" in json_cross_experiments['runs'][exp_name]:
+        dict_motifs_combain = json_cross_experiments['runs'][exp_name]['biological_motifs_combain']
+        for folder_name in dict_motifs_combain:
+            bc_names = dict_motifs_combain[folder_name]['motifs']
+            
+    else:    
+        for bc in biological_conditions:
+            for sample in sample_names:
+                if (bc,sample,rank_method,val_method) not in bc_and_sample_score:
+                    df.append({'name_folder':bc, 'bc':bc, 'sample':sample, 'path_motif':json_cross_experiments['runs'][exp_name]['motifs_path'][0], \
+                               'path_reads':json_cross_experiments['runs'][exp_name]['reads_path'][0]}, ignore_index=True)
+    
+    return 
 
 
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
-                     fitting_done_path, cross_experiments_config, scan_output, check_files_valid, stop_before_random_forest, 
+                     fitting_done_path, json_cross_experiments, check_files_valid, stop_before_random_forest, 
                      num_of_random_configurations_to_sample, number_parallel_random_forest, min_value_error_random_forest,
                      rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
-                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, smart_scanning, db_path,
-                     queue_name, verbose, error_path, use_mapitope, argv):
+                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, db_path,
+                     queue_name, verbose, error_path, use_mapitope, exp_name, argv):
 
     error_path = error_path if error_path else os.path.join(classification_output_path, 'error.txt')
 
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
-        return
+        
+    all_samplename2biologicalcondition_path = []
+    if json_cross_experiments:
+        for type_sample2bc in json_cross_experiments['runs'][exp_name]['sample2bc']:
+            for samplename2biologicalcondition_path in json_cross_experiments['runs'][exp_name]['sample2bc'][type_sample2bc]:
+                all_samplename2biologicalcondition_path.append(samplename2biologicalcondition_path)
+    else: 
+        all_samplename2biologicalcondition_path.append(samplename2biologicalcondition_path)
 
-    is_pval = rank_method == 'pval'
+    for samplename2biologicalcondition_path in all_samplename2biologicalcondition_path:
+        if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
+            return
+
     os.makedirs(classification_output_path, exist_ok=True)
-    os.makedirs(logs_dir, exist_ok=True)                 
-    
+    os.makedirs(logs_dir, exist_ok=True)
+        
     if os.path.exists(fitting_done_path):
         logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({fitting_done_path} already exists)')
         return
+    
 
-    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
-    #sample_names = sorted(samplename2biologicalcondition)
-    biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+    #add to the DB output of runs that already runs
+    if  "model_results_for_scanning" in json_cross_experiments['runs'][exp_name]:
+        for model_path in json_cross_experiments['runs'][run]['model_results_for_scanning']:
+            for bc in sorted(os.listdir(model_path)):
+                    path_configureation_run = os.path.join(model_path, bc, 'configutation_run.txt')
+                    if not os.path.exists(path_configureation_run):
+                        logger.info('There is not a configuration file of the run model')
+                        continue
+                    rank_method, rank_factor = get_config(path_configureation_run)
+                    hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
+                    values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
+                    score_in_database(db_path, hits_path, values_path)
+    bc_and_sample_score = get_bc_and_sample_from_db(db_path)
 
-    # Add to the DB scanning results. 
-    if scan_output:
-        for scan in scan_output:
-            for bc in  sorted(os.listdir(scan)):
-                hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-                values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
-                score_in_database(db_path, hits_path, values_path)
-    bc_and_sample_score = get_bc_and_sample_from_db(db_path)    
+    df_scanning_input = get_scanning_input(bc_and_sample_score, json_cross_experiments, samplename2biologicalcondition_path, motif_inference_output_path, \
+                                            first_phase_output_path, rank_method, shuffles, number_of_random_pssms, exp_name)
 
-    for bc in biological_conditions:
+    name_folders_bc = df_scanning_input['name_folder']
+
+    for bc in name_folders_bc:
         bc_dir_path = os.path.join(classification_output_path, bc)
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
-
-    rank_factor = shuffles if rank_method == 'shuffles' else number_of_random_pssms
-
-    samples, biological_conditions = remove_motifs_and_samples_done(bc_and_sample_score, biological_conditions, first_phase_output_path, rank_method, rank_factor)
 
     # compute scanning scores (hits and values)
     logger.info('_'*100)
@@ -182,30 +245,39 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     num_of_expected_results = 0
     num_of_cmds_per_job = 4
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    for bc in biological_conditions:
-        # get current biological condition (splitted) motifs folder
-        memes_path = os.path.join(motif_inference_output_path, bc, 'memes')
-        cutoffs_path = os.path.join(motif_inference_output_path, bc, 'cutoffs')
-
-        for file_name in sorted(os.listdir(memes_path)):
-            # extract each split of the motifs to scan peptides against it
-            meme_file_path = os.path.join(memes_path, file_name)
-            cutoffs_file_path = os.path.join(cutoffs_path, file_name)
-            for sample_name in samples:
-                sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
-                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
-                output_path = os.path.join(classification_output_path, bc, 'scanning',
-                                           f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
-                done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
-                if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms)]
-                    if rank_method == 'shuffles':
-                        cmd += ['--shuffles', shuffles]
-                    cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits, output_path, done_path]
-                    all_cmds_params.append(cmd)
-                else:
-                    logger.debug(f'skipping scan as {done_path} found')
-                    num_of_expected_results += 1
+    
+    for name_folder in name_folders_bc:
+        sub_scanning_input = df_scanning_input[df_scanning_input["name_folder"] == name_folders_bc]
+        biological_conditions = list(set(sub_scanning_input['bc']))      
+        for bc in biological_conditions:
+            sub_scanning_bc = sub_scanning_input[sub_scanning_input['bc'] == bc]
+            # get current biological condition (splitted) motifs folder
+            motif_inference_output_path = sub_scanning_bc['path_motif'][0] # all the path are the same for the same bc 
+            memes_path = os.path.join(motif_inference_output_path, bc, 'memes')
+            cutoffs_path = os.path.join(motif_inference_output_path, bc, 'cutoffs')
+            samples = list(set(sub_scanning_bc['sample']))
+            for file_name in sorted(os.listdir(memes_path)):
+                # extract each split of the motifs to scan peptides against it
+                meme_file_path = os.path.join(memes_path, file_name)
+                cutoffs_file_path = os.path.join(cutoffs_path, file_name)
+                for sample_name in samples:
+                    first_phase_output_path = sub_scanning_bc[sub_scanning_bc['sample'] == sample_name]['path_reads'][0]
+                    sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
+                    faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
+                    output_path = os.path.join(classification_output_path, name_folder, 'scanning',
+                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
+                    done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
+                    if not os.path.exists(done_path):
+                        cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms), output_path, done_path]
+                        if rank_method == 'shuffles':
+                            cmd += ['--shuffles', shuffles]
+                            cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
+                        all_cmds_params.append(cmd)
+                    else:
+                        logger.debug(f'skipping scan as {done_path} found')
+                        num_of_expected_results += 1
+    
+    is_pval = rank_method == 'pval'
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
@@ -217,8 +289,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             sample_name = name_tokens[0]
             bc = name_tokens[1].split('_motifs_')[0]
             split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
-            #assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-            #assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
             cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
                                     logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
             num_of_expected_results += len(current_batch)
@@ -228,7 +298,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     else:
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
 
-
+##############################################################
     # aggregate scanning scores (hits and values)
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: aggregating scores')
@@ -364,7 +434,7 @@ def get_bc_and_sample_from_db(path_db):
     conn, table = connect_and_create_table_db(path_db) 
 
     # Get all the BC and sample that in the database
-    table.execute("Select bc,sample FROM score")
+    table.execute("Select bc,sample,rank_method,rank_factor FROM score")
     return table.fetchall()
 
 def score_in_database(path_db, csv_file_hits, csv_file_values, rank_method, rank_factor):
@@ -391,7 +461,7 @@ def score_in_database(path_db, csv_file_hits, csv_file_values, rank_method, rank
         if (bc,sample,rank_method,rank_factor) not in rows_bc_sample:
             for motif in dict_hits:
                 # Add to the database
-                score = (bc, sample, motif, dict_hits[motif][sample], dict_values[motif][sample],rank_method, rank_factor)
+                score = (bc, sample, motif, dict_hits[motif][sample], dict_values[motif][sample], rank_method, rank_factor)
                 table.execute(sql_add_score, score)  
     conn.commit()
 
@@ -429,7 +499,6 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--smart_scanning', action='store_true', help='verify which scanning have been made and not repeat them')
     parser.add_argument('--db_path', type=str, help='A path for DB that contain all score of hits and values')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -444,6 +513,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-
     process_params(args, args.cross_experiments_config, sys.argv)
-                      
+      
