@@ -389,10 +389,10 @@ def process_params(args, multi_exp_config_inference, argv):
                     argv_new.append(k)
                     argv_new.append(val)
             # create new list of argv of the specific run.
-            infer_motifs(dict_params, run, argv_new)
+            call_infer_motifs(dict_params, run, argv_new)
     else:
         exp_name = ''
-        infer_motifs(base_map, exp_name, argv)
+        call_infer_motifs(base_map, exp_name, argv)
 
 
 def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
@@ -401,6 +401,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
                  minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
+    if exp_name:
+        logger.info(f'{datetime.datetime.now()}: Start motif_inference step for experiments {exp_name})')
     
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
