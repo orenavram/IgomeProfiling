@@ -16,9 +16,15 @@ from auxiliaries.validation_files import is_input_files_valid
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
+<<<<<<< HEAD
                  allowed_gap_frequency, threshold, word_length, discard, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
                  stop_before_random_forest, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
+=======
+                 allowed_gap_frequency, threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference,
+                 stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
+>>>>>>> cross_exp_phase2
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
@@ -74,7 +80,12 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
                              f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
+<<<<<<< HEAD
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', 
+=======
+                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--clustere_algorithm_mode {clustere_algorithm_mode}',
+                             f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
+>>>>>>> cross_exp_phase2
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
@@ -192,6 +203,7 @@ if __name__ == '__main__':
                         help='MSAs with less than the number of required columns will be skipped')
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
 
     # optional parameters for the modelling step
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
@@ -237,13 +249,20 @@ if __name__ == '__main__':
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required, args.gz, args.rpm,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
+<<<<<<< HEAD
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
                  args.stop_before_random_forest, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
+=======
+                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.clustere_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
+                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr, args.multi_exp_config_inference,
+                 args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
+>>>>>>> cross_exp_phase2
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
+<<<<<<< HEAD
                 
 =======
 import datetime
@@ -502,3 +521,6 @@ if __name__ == '__main__':
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
                 
 >>>>>>> cross_exp
+=======
+                
+>>>>>>> cross_exp_phase2

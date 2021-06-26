@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -9,9 +10,55 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import get_cluster_rank_from, wait_for_results, submit_pipeline_step, is_valid_json_structure, \
+                                            change_key_name, schema_inference, count_memes, load_table_to_dict, fetch_cmd
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
+
+map_names_command_line = {
+    "parsed_fastq_results" : "reads_path",
+    "motif_inference_results" : "motifs_path",
+    "logs_dir" : "logs_dir",
+    "samplename2biologicalcondition_path" : "sample2bc",
+    "done_file_path" : "done_path",
+    "max_msas_per_sample" : "max_msas_per_sample",
+    "max_msas_per_bc" : "max_msas_per_bc",
+    "max_number_of_cluster_members_per_sample" : "max_num_of_cluster_per_sample",
+    "max_number_of_cluster_members_per_bc" : "max_num_of_cluster_per_bc",
+    "allowed_gap_frequency" : "gap",
+    "multi_exp_config_inference" : "multi_exp_config_inference",
+    "check_files_valid" : "check_files_valid",
+    "minimal_number_of_columns_required_create_meme" : "min_num_of_columns_meme",
+    "prefix_length_in_clstr" : "prefix_length_in_clstr",
+    "aln_cutoff" : "aln_cutoff",
+    "pcc_cutoff" : "pcc_cutoff", 
+    "threshold" : "threshold",
+    "word_length" : "word_length",
+    "discard" : "discard",
+    "clustere_algorithm_mode" :"clustere_alg_mode",
+    "concurrent_cutoffs" : "concurrent_cutoffs",
+    "meme_split_size" : "meme_split_size",
+    "skip_sample_merge_meme" : "skip_sample_merge_meme",
+    "stop_machines" : "stop_machines_flag",
+    "type_machines_to_stop" : "type_machines_to_stop",
+    "name_machines_to_stop" : "name_machines_to_stop",
+    "error_path" : "error_path",
+    "queue" : "queue",
+    "verbose" : "v",
+    "mapitope" : "m"
+} 
+
+
+def call_infer_motifs(dict_params ,exp_name, argv):
+    infer_motifs(dict_params['reads_path'], dict_params['motifs_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
+                dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
+                dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
+                dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
+                dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['clustere_alg_mode'], dict_params['concurrent_cutoffs'],
+                dict_params['meme_split_size'], dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
+                dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
+                dict_params['error_path'], exp_name, argv) 
+
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
                              motif_inference_output_path, logs_dir, minimal_number_of_columns_required_create_meme, error_path, queue_name, verbose, data_type):
@@ -173,7 +220,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
 
 
 def compute_cutoffs_then_split(biological_conditions, meme_split_size,
-    motif_inference_output_path, logs_dir, queue_name, verbose):
+    motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Compute pssm cutoffs for each bc
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: computing pssms cutoffs for the following biological conditions:\n'
@@ -238,7 +285,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
 
 
 def split_then_compute_cutoffs(biological_conditions, meme_split_size,
-    motif_inference_output_path, logs_dir, queue_name, verbose):
+    motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Count memes per BC (synchrnous)
     memes_per_bc = {}
     for bc in biological_conditions:
@@ -317,13 +364,46 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
         logger.info('Skipping calculate cutoffs, all exists')
 
 
+def process_params(args, multi_exp_config_inference, argv):
+    base_map =  args.__dict__
+    keys = base_map.keys()
+    base_map = change_key_name(base_map, map_names_command_line)
+    if multi_exp_config_inference:    
+        f = open(multi_exp_config_inference)
+        multi_experiments_dict = json.load(f)
+        # validation of the json file
+        is_valid = is_valid_json_structure(multi_exp_config_inference, multi_experiments_dict, schema_inference, logger)
+        if not is_valid:
+            return 
+        configuration = multi_experiments_dict['configuration']
+        base_map.update(configuration)
+        runs = multi_experiments_dict['runs']
+        for run in runs:
+            dict_params = base_map.copy()
+            dict_params.update(runs[run])
+            argv_new = []
+            argv_new.append(argv[0])
+            for k in keys:
+                val = str(dict_params[map_names_command_line[k]])
+                if (val != 'None') and (val != 'False'):
+                    argv_new.append(k)
+                    argv_new.append(val)
+            # create new list of argv of the specific run.
+            call_infer_motifs(dict_params, run, argv_new)
+    else:
+        exp_name = ''
+        call_infer_motifs(base_map, exp_name, argv)
+
+
 def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 gap_frequency, motif_inference_done_path, check_files_valid,
+                 gap_frequency, motif_inference_done_path, check_files_valid, 
                  minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
-                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, argv):
-
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
+    if exp_name:
+        logger.info(f'{datetime.datetime.now()}: Start motif_inference step for experiments {exp_name})')
+    
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
         
@@ -334,6 +414,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
         return
 
+    error_path = error_path if error_path else os.path.join(motif_inference_output_path, 'error.txt')
     samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
@@ -408,7 +489,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         clstr_paths.append(f'{output_prefix}.clstr')
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
         if not os.path.exists(done_path):
-            cmds = [no_cys_faa_path, output_prefix, done_path , sample_name, '--threshold', threshold, '--word_length', word_length,
+            cmds = [no_cys_faa_path, output_prefix, done_path, sample_name, '--threshold', threshold, '--word_length', word_length,
                     '--discard', discard, '--clustere_algorithm_mode', clustere_algorithm_mode]
             all_cmds_params.append(cmds)
         else:
@@ -420,7 +501,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
             sample_name = os.path.split(current_batch[0][1])[-1]
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}', current_batch,
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
                                 logs_dir, f'{sample_name}_cluster', queue_name, verbose)
             num_of_expected_results += len(current_batch)
 
@@ -461,7 +543,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             clusters_sequences_path = current_batch[0][2]
             sample_name = clusters_sequences_path.split('/')[-2]
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
-            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}', current_batch,
+            cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
+                                current_batch,
                                 logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
             num_of_expected_results += len(current_batch)
 
@@ -547,10 +630,10 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
 
     if concurrent_cutoffs:
         split_then_compute_cutoffs(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, verbose)
+            motif_inference_output_path, logs_dir, queue_name, error_path,verbose)
     else:
         compute_cutoffs_then_split(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, verbose)
+            motif_inference_output_path, logs_dir, queue_name, error_path, verbose)
 
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
@@ -585,6 +668,7 @@ if __name__ == '__main__':
 
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
     
+    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file to run multi expirements inference phase')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--minimal_number_of_columns_required_create_meme', default=1, type=int,
                         help='MSAs with less than the number of required columns will be skipped')
@@ -610,7 +694,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
+    
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -624,13 +708,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
+
     concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
-    infer_motifs(args.parsed_fastq_results, args.motif_inference_results, args.logs_dir, args.samplename2biologicalcondition_path,args.max_msas_per_sample,
-                 args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.done_file_path, args.check_files_valid,
-                 args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr, args.aln_cutoff, args.pcc_cutoff, args.threshold,
-                 args.word_length, args.discard, args.clustere_algorithm_mode, concurrent_cutoffs, args.meme_split_size, args.skip_sample_merge_meme, 
-                 args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.queue, args.verbose, args.mapitope, error_path, sys.argv)
-            
+    process_params(args, args.multi_exp_config_inference, sys.argv)          

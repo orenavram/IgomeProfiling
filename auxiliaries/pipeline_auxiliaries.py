@@ -56,6 +56,33 @@ schema_cross_exp = {
         "runs": {
             "description": "A specific run name and is params",
             "type": "object",
+            "patternProperties":{
+                "^[A-Za-z0-9_+]+$":{        
+                    "properties": {
+                        "reads_path": { "type":"string" },
+                        "motifs_path": { "type": "string" },
+                        "sample2bc": { "type": "string" },
+                        "done_path": { "type":"string" }   
+                    },
+                    "required": [ "reads_path", "motifs_path", "sample2bc", "done_path"],
+                }
+            },
+            "additionalProperties": False      
+             }  
+  },
+  "required": ["configuration", "runs"]
+}  
+
+schema_inference = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
             "patternProperties": {
                 "^[A-Za-z0-9_+]+$": {
                     "required": ["configuration", "sample2bc"],
@@ -113,7 +140,7 @@ schema_reads = {
                 }
             },
             "additionalProperties": False   
-        }  
+         }  
   },
   "required": ["configuration", "runs"]
 }
