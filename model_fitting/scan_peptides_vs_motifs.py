@@ -12,7 +12,6 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
-
 from time import time
 
 
@@ -76,4 +75,3 @@ if __name__ == '__main__':
                               args.output_path, args.done_file_path, args.rank_method, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')
-

@@ -58,37 +58,61 @@ schema_cross_exp = {
             "type": "object",
             "patternProperties": {
                 "^[A-Za-z0-9_+]+$": {
-                    "configuration": {        
-                        "properties": {
-                            "reads_path": { "type": "string" },
-                            "motifs_path": { "type": "string" },
-                            "done_path": { "type": "string" },
-                            "sample2bc": { "type": "string" }  
-                        },
-                        "required": [ "reads_path", "motifs_path", "done_path", "sample2bc"]
-                    },
-                    "cross": {
-                        "type": "object",
-                        "patternProperties": {
-                            "^[A-Za-z0-9_+]+$": {
-                                "properties": {
-                                    "motifs": {
-                                        "type":"array",
-                                        "items": {
-                                                "type": "string"
-                                        }
-                                    },
-                                    "samples": {"type":"object"}
-                                },
-                                 "required": [ "motifs", "samples"]
-                            }
-                        }    
-                    },
-                    "required": [ "configuration"]
+                    "required": ["configuration", "sample2bc"],
+                    "properties": {
+                        "configuration": {"type":"object",
+                            "properties": {
+                                "reads_path": {"type":"string"},
+				                "motifs_path": {"type":"string"},
+				                "model_path": {"type":"string"},
+				                "logs_dir": {"type":"string"},
+				                "done_file": {"type":"string"},
+                            },
+                            "required": ["reads_path", "motifs_path", "model_path", "logs_dir","done_file"],
 
+                        },
+                        "sample2bc": { "type": "object" },
+                        "biological_motifs_combain": { 
+                            "type": "object",
+                            "propertyNames": {
+                                "pattern": "^[A-Za-z0-9_]+$"
+                                },
+                            "patternProperties": {
+                            "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
+                              }
+                            },
+                    }
                 }
             },
-            "additionalProperties": False        
+            "additionalProperties": False   
+        }  
+  },
+  "required": ["configuration", "runs"]
+}
+
+schema_reads = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
+                  
+                    "required": [ "fastq", "barcode2sample", "done_path", "reads_path" ],
+                    "properties": {
+                        "fastq": { "type":"string" },
+                        "barcode2sample": { "type": "string" },
+                        "done_path": { "type": "string" },
+                        "reads_path": { "type":"string" }   
+                    }
+                }
+            },
+            "additionalProperties": False   
         }  
   },
   "required": ["configuration", "runs"]
@@ -323,6 +347,7 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
         run(process, shell=True)
     return example_cmd
 
+
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1, executable='python', done_path = None):
@@ -349,8 +374,6 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
     # logger.info(f'Finished:\n{cmd}')
     # except Exception as e:
     #     fail(error_path, e)
-
-
 
 
 def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):

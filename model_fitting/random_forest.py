@@ -8,8 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
-from sklearn.metrics import plot_roc_curve
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -134,7 +133,8 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
                 os.remove(path_file)
     
 
-def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error, rank_method, cv_num_of_splits, seed, random_forest_seed, argv):
+def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,
+                 rank_method, cv_num_of_splits, seed, random_forest_seed, queue_name, verbose, argv):
     logging.info('Preparing output path...')
     csv_folder, csv_file_name = os.path.split(csv_file_path)
     csv_file_prefix = os.path.splitext(csv_file_name)[0]  # without extension
@@ -190,40 +190,38 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
         os.makedirs(output_path_i, exist_ok=True)
         file_save_configuration = save_configuration_to_txt_file(configuration, output_path_i)
         logging.info(f'Configuration #{i} hyper-parameters are:\n{configuration}')
-        done_file_path=os.path.join(logs_dir, f'{model_number}_done_train_random_forest.txt')
-        cmds=[file_save_configuration, csv_file_path, is_hits_data, output_path_i,
+        done_file_path=os.path.join(logs_dir, f'{model_number}_{csv_file_prefix}_done_train_random_forest.txt')
+        cmds=[file_save_configuration, csv_file_path, rank_method, output_path_i,
                 model_number, done_file_path, '--random_forest_seed', random_forest_seed,
                 '--cv_num_of_splits', cv_num_of_splits]
         if not os.path.exists(done_file_path):
             all_cmds_params.append(cmds)
         else: 
             logger.debug(f'Skipping random forest train as {done_file_path} found')
-           
-    
-    queue_name = 'pupkoweb'
-    verbose = True
-    executable = 'python'
+            num_of_expected_results +=1
+
+    executable = 'python'  
     if len(all_cmds_params) > 0:
         stop = False
         for count, cmds_params in enumerate(all_cmds_params):
+            model_number = cmds_params[4]
             cmd = submit_pipeline_step(script_name, [cmds_params],
-                                logs_dir, '_done_train_random_forest.txt',
+                                logs_dir, f'{csv_file_prefix}_{model_number}_train_random_forest',
                                 queue_name, verbose, executable=executable)
             num_of_expected_results += 1  # a single job for each train random forest
             if (count + 1) % number_parallel_random_forest == 0 or (count + 1) == num_of_configurations_to_sample:
-                print('Start waiting to the filles....')
                 wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                        error_file_path = error_path, suffix = '_done_train_random_forest.txt') 
+                        error_file_path = error_path, suffix = f'_{csv_file_prefix}_done_train_random_forest.txt') 
                 #write the results to feature_selection_summary file
                 write_results_feature_selection_summary(feature_selection_summary_path, output_path)
                 #check if we found the best model and can stop run
                 models_stats = pd.read_csv(feature_selection_summary_path, sep='\t', dtype={'model_number': str, 'num_of_features':int, 'final_error_rate': float })
                 for feature, error in zip(models_stats['num_of_features'], models_stats['final_error_rate']):
-                    if feature == 1 and error == min_value_error:
+                    if feature == 1 and error <= min_value_error:
                         stop = True
                         break
-            if stop:
-                break
+                if stop:
+                    break
     else:
          logger.info(f'Skipping random forest train, all found')       
 
@@ -309,6 +307,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
+    parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
     import logging
@@ -319,4 +318,4 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     train_models(args.data_path, args.done_file_path, args.logs_dir, args.error_path, args.num_of_configurations_to_sample, args.number_parallel_random_forest,
-     args.min_value_error_random_forest, args.rank_method, args.cv_num_of_splits, args.seed, args.random_forest_seed, argv=sys.argv)
+                 args.min_value_error_random_forest, args.rank_method, args.cv_num_of_splits, args.seed, args.random_forest_seed, args.queue ,args.verbose, argv=sys.argv)

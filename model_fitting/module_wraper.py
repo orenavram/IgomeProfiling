@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -9,7 +10,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, submit_pipeline_step, run_step_locally, wait_for_results, change_key_name, is_valid_json_structure, schema_cross_exp
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
@@ -393,7 +394,5 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
-
-    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
     process_params(args, args.cross_experiments_config, sys.argv)
