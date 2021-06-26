@@ -9,6 +9,7 @@ import numpy as np
 import logging
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
+import sqlite3
 
 
 nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
@@ -93,6 +94,16 @@ schema_cross_exp = {
   "required": ["configuration", "runs"]
 }
 
+
+sql_create_table = """CREATE TABLE IF NOT EXISTS score (
+                                    BC text NOT NULL,
+                                    motif text NOT NULL,
+                                    sample text NOT NULL,
+                                    hit integer NOT NULL,
+                                    value REAL NOT NULL,
+                                    rank_method text NOT NULL,
+                                    rank_factor integer NOT NULL
+                                );"""
 
 
 def verify_file_is_not_empty(file_path):
@@ -482,4 +493,28 @@ def change_key_name(old_names_dict, map_name):
             new_dict[map_name[key]] = old_names_dict[key]
         return new_dict
     return old_names_dict
-    
+
+
+def connect_and_create_table_db(path_db):
+    conn = None
+    table = None
+    try:
+        conn = sqlite3.connect(path_db)
+    except  sqlite3.Error as e:
+        logger.error(f'Error - {e} when try to connect to DB {path_db}')
+        return
+    try:
+        table = conn.cursor()
+        table.execute(sql_create_table)
+    except  sqlite3.Error as e:
+        logger.error(f'Error - {e} when try to create table in DB {path_db}')
+        return
+    return conn,table
+
+
+def get_data_db(path_db):
+    conn, table = connect_and_create_table_db(path_db) 
+
+    # Get all the BC and sample that in the database
+    table.execute("Select bc,sample,rank_method,rank_factor FROM score")
+    return table.fetchall()
