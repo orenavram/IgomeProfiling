@@ -8,8 +8,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
 
 
-def predict(data_path, model_paths):
+def predict(data_path, model_paths, output_path):
     data = pd.read_csv(data_path)
+    os.makedirs(output_path, exist_ok=True)
     model_with_perfect_classification = []
     # e.g., ..../model_fitting/17b/17b_significant_pvalues_model/best_model/Top_1_features_model.pkl
     for model_path in sorted(model_paths, key=lambda x: -int(x.split('/')[-1].split('_')[1])):
@@ -34,8 +35,8 @@ def predict(data_path, model_paths):
                                     'error': errors})
             logger.info(f'Model with *{number_of_features}* features has {sum(errors)} prediction errors')
             logger.info('\n' + results.reindex(['sample names', 'predictions', 'true labels', 'error'], axis=1).to_string() + '\n\n')
-            output_path = f'{os.path.split(data_path)[0]}/Top_{number_of_features}_model_predictions.txt'
-            with open(output_path, 'w') as f:
+            output = f'{output_path}/Top_{number_of_features}_model_predictions.txt'
+            with open(output, 'w') as f:
                 f.write(f'Error rate: {error_rate}\n')
                 f.write(f'sample name\ttrue label\tprediction\tprediction score\n')
                 for i in range(len(predictions)):
@@ -45,16 +46,16 @@ def predict(data_path, model_paths):
 
         if error_rate:
             new_file = False
-            if not os.path.exists(f'{os.path.split(data_path)[0]}/error_rates.txt'):
+            if not os.path.exists(f'{output_path}/error_rates.txt'):
                 new_file = True
-            with open(f'{os.path.split(data_path)[0]}/error_rates.txt', 'a') as f:
+            with open(f'{output_path}/error_rates.txt', 'a') as f:
                 if new_file:
                     f.write(f'number_of_features\terror_rate\tnum_of_errors\n')
                 f.write(f'{number_of_features}\t\t\t{error_rate}\t\t{errors.sum()}\n')
 
         logger.debug(f'Prediction error rate is {error_rate} (for debugging)')
 
-    with open(f'{os.path.split(data_path)[0]}/perfect_classifiers.txt', 'a') as f:
+    with open(f'{output_path}/perfect_classifiers.txt', 'a') as f:
         f.write('\n'.join(model_with_perfect_classification[::-1]))
 
 
@@ -64,7 +65,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('model_path', type=lambda x: x.rstrip('/'), help='A path to a pickel file with a ML model')
-    parser.add_argument('data_path', help='A path to a file with samples to predict')
+    parser.add_argument('data_path', type=str, help='A path to a file with samples to predict')
+    parser.add_argument('output_path', type=str, help='A path to dir to print all results')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -82,4 +84,5 @@ if __name__ == '__main__':
         model_paths = [args.model_path]
 
     logger.info('\n' + '#' * 70 + '\nMAKE SURE TO PREDICT WITH THE SAME FEATURES THE MODEL USES!\n' + '#' * 70)
-    predict(args.data_path, model_paths)
+    
+    predict(args.data_path, model_paths, args.output_path)
