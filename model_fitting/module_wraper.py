@@ -107,7 +107,8 @@ def get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name):
         samplename2biologicalcondition_path = dict_sample2bc['motifs&samples']
     else:
         if "motifs" not in dict_sample2bc or "samples" not in dict_sample2bc:
-            logger.info('')
+            logger.info('Missing file samplenames2biologicalcondition of motifs and samples')
+            return sample_names, biological_conditions, samplename2biologicalcondition_path
         else:
             samplename2biologicalcondition = load_table_to_dict(dict_sample2bc['motifs'], 'Barcode {} belongs to more than one sample_name!!')
             biological_conditions = sorted(set(samplename2biologicalcondition.values()))
@@ -137,9 +138,14 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     error_path = error_path if error_path else os.path.join(classification_output_path, 'error.txt')
 
-
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
-        return
+    multi_experiments_dict = {}
+    if cross_experiments_config:
+        multi_experiments_dict = json.load(open(cross_experiments_config))
+    
+    all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
+    for sample2bc in all_sample2bc:
+        if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
+            return
                      
     use_merge_pvalues = True if rank_method == 'pval' or rank_method == 'shuffles' else False
     is_pval = rank_method == 'pval'
@@ -154,9 +160,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     sample_names = []
     biological_conditions = []
-    multi_experiments_dict = {}
-    if cross_experiments_config:
-        multi_experiments_dict = json.load(open(cross_experiments_config))
+    if multi_experiments_dict:
         sample_names, biological_conditions, samplename2biologicalcondition_path =  get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name)    
     else:
         samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
