@@ -20,7 +20,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
-                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
+                 num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations, use_factor,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, run_summary_path, error_path, queue, verbose, argv):
     
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
@@ -103,7 +103,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}',
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
-                             f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
+                             f'--random_forest_seed_configurations {random_forest_seed_configurations}',
+                             f'--rank_method {rank_method}', f'--use_factor' if use_factor else '', 
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -211,7 +212,8 @@ if __name__ == '__main__':
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
-    
+    parser.add_argument('--use_factor', action='store_true', help='Multiplay hits by factor rpm for normalization')
+
     # general optional parameters
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
@@ -244,7 +246,7 @@ if __name__ == '__main__':
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme, args.prefix_length_in_clstr,
                  args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.number_of_random_pssms, args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
-                 args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
+                 args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations, args.use_factor,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
                 
