@@ -64,12 +64,12 @@ int main(int argc, char *argv[]) {
 // The first is -pssm <name_of_pssm_in_Mast_format>. 
 // The second is- pssm_cutoffs <filename_for PSSM_cutoffs>
 size_t get_running_mode(int argc, char *argv[]){
-	int max_required_params = 5;
+	int max_required_params = 6;
 	int min_required_params = 2;
 	if ((argc > (max_required_params * 2) + 2) || (argc < (min_required_params * 2) + 2)) {// each with its flag and mode flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
 		cout << "Usage is in one of few modes: <<endl";
 		cout << "[1: CalcPSSM_Cutoff] " << argv[0] << " -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -CalcPSSM_Cutoff -total_memes <total memes, used if input is splitted otherwise 0>" << endl; // Inform the user of how to use the program
-		cout << "[2: CalcPSSM_Pval] "<<argv[0]<<" -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out> -NrandPSSM <number_of_random_PSSMs> -CalcPSSM_Pval" << endl; // Inform the user of how to use the program
+		cout << "[2: CalcPSSM_Pval] "<<argv[0]<<" -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out> -NrandPSSM <number_of_random_PSSMs> -userFactor <is use factor> -CalcPSSM_Pval" << endl; // Inform the user of how to use the program
 		cout << "[3: CalcPSSM_Hits] " << argv[0] << " -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out> -CalcPSSM_Hits " << endl; // Inform the user of how to use the program
 		cout << "\n\nThe number of provided arguments is "<<argc<<endl;
 		exit(12);
@@ -153,6 +153,39 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		else if (string(argv[i]) == "-seq") Seq_FASTA_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-out") Hits_Out_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-NrandPSSM") numberOfRandomPSSM=size_t(atoi(argv[i + 1]));
+		cout<<argv[i]<<" ";
+	}
+	if (numberOfRandomPSSM == 0) {
+		cout<<"ERROR: could not parse the number of random PSSMs for Pvalue computation"<<endl;
+		exit (99);
+	}
+	cout<<endl;
+}
+
+void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName, size_t & numberOfRandomPSSM, bool &use_factor) {
+	// parse ARGV arguments
+	size_t num_required_params = 6;
+	if (argc != (num_required_params * 2)+2) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
+		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out>\n"; // Inform the user of how to use the program
+		exit(12);
+	}
+	cout << argv[0] <<" ";
+	for (int i = 1; i < argc; ++i) // iterate over flags
+	{
+		/* We will iterate over argv[] to get the parameters stored inside.
+		* Note that we're starting on 1 because we don't need to know the
+		* name of the program, which is stored in argv[0] */
+		if (string(argv[i]) == "-pssm") PSSM_FileName = string(argv[i + 1]);
+		else if (string(argv[i]) == "-pssm_cutoffs") CutofsPerPSSM_FileName = string(argv[i + 1]);
+		else if (string(argv[i]) == "-seq") Seq_FASTA_FileName = string(argv[i + 1]);
+		else if (string(argv[i]) == "-out") Hits_Out_FileName = string(argv[i + 1]);
+		else if (string(argv[i]) == "-NrandPSSM") numberOfRandomPSSM=size_t(atoi(argv[i + 1]));
+		else if (string (argv[i]) == "-useFactor"){
+			if (string(argv[i + 1]) == "True"){
+			use_factor = true;
+			}
+		}
+
 		cout<<argv[i]<<" ";
 	}
 	if (numberOfRandomPSSM == 0) {
@@ -374,10 +407,6 @@ exit(15);
 
 }
 
-
-
-
-
 vector<SEQ> get_sort_seq_vector_by_scores(vector<SEQ> & seq_vector, vector<double> & scores_vector)
 {
 
@@ -426,12 +455,18 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 	}
 }
 
-double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const size_t verbose=0) {
+double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, bool use_factor=false ,const size_t verbose=0) {
 	vector <HIT> hits;
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
+	
 	for (size_t k = 0; k < hits.size(); ++k) {
 		sum += hits[k]._seq._CopyNumber;
+	}
+	if ((Seq_array.size() != 0) & (use_factor)){
+		cout << "get here" <<endl;
+		float factor = 1000000 / Seq_array.size();
+		sum *= factor;
 	}
 	return sum;
 }
@@ -450,7 +485,8 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	string CutofsPerPSSM_FileName = "";
 	string Hits_Out_FileName = "";
 	size_t numberOfRandomPSSM = 0;
-	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName,numberOfRandomPSSM);
+	bool use_factor = false;
+	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, use_factor);
 	cout<<"Number of random PSSMs to calculate Pval: "<< numberOfRandomPSSM <<endl;
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
@@ -464,7 +500,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	listOfPvaluesFile << "## PSSM_name\tp_Value\tTrue_Hits: num_of_hits" <<endl;
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
-		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array,1);
+		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, use_factor, 1);
 		vector<double> numSigPeptides;
 		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {

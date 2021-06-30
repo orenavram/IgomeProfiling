@@ -23,7 +23,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
         # TODO: any modules to load?
         if rank_method == 'pval':
             cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {cutoffs_path} -seq {faa_path} ' \
-                f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
+                f'-out {output_path} -NrandPSSM {number_of_random_pssms} -useFactor {use_factor} -CalcPSSM_Pval'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
         elif rank_method == 'tfidf':
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
