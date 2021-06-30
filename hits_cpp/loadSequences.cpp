@@ -7,7 +7,7 @@
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath, bool verbose) {
+SequencesMap loadSequences(string faaPath, float *factor, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;
@@ -37,7 +37,9 @@ SequencesMap loadSequences(string faaPath, bool verbose) {
             count++;
         }
     }
-
+    if (count != 0){
+        *factor = 1000000 / count;
+    }
     cout << "total sequences: " << count << endl;
     return sequences;
 }
