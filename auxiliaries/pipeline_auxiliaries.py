@@ -57,18 +57,29 @@ schema_cross_exp = {
             "description": "A specific run name and is params",
             "type": "object",
             "patternProperties":{
-                "^[A-Za-z0-9_+]+$":{        
+                "^[A-Za-z0-9_+]+$":{
+                    "type": "object",
                     "properties": {
-                        "reads_path": { "type":"string" },
-                        "motifs_path": { "type": "string" },
-                        "sample2bc": { "type": "string" },
-                        "done_path": { "type":"string" }   
+                        "configuration":{
+                            "type": "object",
+                            "properties": {
+                                "reads_path": { "type":"string" },
+                                "motifs_path": { "type": "string" },
+                                "model_path": { "type": "string" },
+                                "logs_dir": { "type":"string" },
+                                "done_path": { "type":"string" }
+                            },
+                            "required": [ "reads_path", "motifs_path", "model_path", "logs_dir", "done_path"]
+                        },    
+                        "sample2bc": {"type": "object"},
+                        "biological_motifs_combain": {"type": "object"}
                     },
                     "required": [ "reads_path", "motifs_path", "sample2bc", "done_path"],
-                }
+                },    
+                   
             },
-            "additionalProperties": False      
-             }  
+            "additionalProperties": False
+        },
   },
   "required": ["configuration", "runs"]
 }  

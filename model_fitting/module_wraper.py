@@ -142,10 +142,11 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     if cross_experiments_config:
         multi_experiments_dict = json.load(open(cross_experiments_config))
     
-    all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
-    for sample2bc in all_sample2bc:
-        if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
-            return
+    if check_files_valid:
+        all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
+        for sample2bc in all_sample2bc:
+            if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
+                return
                      
     use_merge_pvalues = True if rank_method == 'pval' or rank_method == 'shuffles' else False
     is_pval = rank_method == 'pval'

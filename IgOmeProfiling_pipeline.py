@@ -1,6 +1,8 @@
 import datetime
+from genericpath import exists
 import os
 import sys
+import json 
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -10,7 +12,62 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
-from auxiliaries.validation_files import is_input_files_valid 
+from auxiliaries.validation_files import is_input_files_valid,
+
+schema = {
+    'reads': schema_reads,
+    'inference': schema_inference,
+    'model': schema_cross_exp
+}
+
+def get_path_from_config(config, phase, logger):
+    f = open(config)
+    config_dict = json.load(f)
+    samplename2biologicalcondition_paths = []
+    barcode2samplename_paths = []
+    is_valid = is_valid_json_structure(config, config_dict, schema[phase], logger)
+    if not is_valid:
+        logger.info(f'Json file {config} is not valid')
+        return False
+    runs = config_dict['runs']
+    for run in runs:
+        if phase == 'reads':
+            barcode2samplename_paths.append(runs[run]['barcode2sample'])
+        if phase == 'inference':
+            samplename2biologicalcondition_paths.append(runs[run]['sample2bc'])
+        if phase == 'model':
+            samplename2biologicalcondition_paths.append(runs[run]['sample2bc'].values())
+    for path in barcode2samplename_paths:
+        is_valid = is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=path, logger=logger)
+        if not is_valid:
+            return False
+    samplename2biologicalcondition_paths = list(set(samplename2biologicalcondition_paths))
+    for path in samplename2biologicalcondition_paths:
+        is_valid = is_input_files_valid(samplename2biologicalcondition_path=path, barcode2samplename_path='', logger=logger)
+        if not is_valid:
+            return False        
+    return True
+
+def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross_experiments_config, samplename2biologicalcondition_path, barcode2samplename_path, logger):
+    files_are_valid = True
+    files_are_valid_reads = True
+    files_are_valid_inference = True
+    files_are_valid_model = True
+
+    if os.path.exists(samplename2biologicalcondition_path) and os.path.exists(barcode2samplename_path):
+        files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+    else:
+        if multi_exp_config_reads:
+            files_are_valid_reads = get_path_from_config(multi_exp_config_reads, 'reads', logger)
+        if multi_exp_config_inference:
+            files_are_valid_inference = get_path_from_config(multi_exp_config_reads, 'inference', logger)
+        if cross_experiments_config:
+            files_are_valid_model = get_path_from_config(multi_exp_config_reads, 'model', logger)
+
+    if not files_are_valid or not files_are_valid_reads or not files_are_valid_inference or not files_are_valid_model:
+        return False
+    return True
+
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm, multi_exp_config_reads,
@@ -23,8 +80,13 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config,
                  run_summary_path, error_path, queue, verbose, argv):
     
+    files_are_valid = True
+    if multi_exp_config_reads or multi_exp_config_inference or cross_experiments_config:
+        files_are_valid = is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross_experiments_config,
+                                             samplename2biologicalcondition_path, barcode2samplename_path, logger)
+    else:    
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+        files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
     if not files_are_valid:
         return
 

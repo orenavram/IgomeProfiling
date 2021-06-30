@@ -401,8 +401,9 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
                  minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
+    
     if exp_name:
-        logger.info(f'{datetime.datetime.now()}: Start motif_inference step for experiments {exp_name})')
+        logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name})')
     
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return

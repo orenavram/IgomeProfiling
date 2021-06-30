@@ -87,6 +87,9 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                     check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                     rpm, gz, verbose, use_mapitope, error_path, queue, exp_name, argv):
 
+    if exp_name:
+        logger.info(f'{datetime.datetime.now()}: Start reads filtration step for experiments {exp_name})')
+
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
         return
