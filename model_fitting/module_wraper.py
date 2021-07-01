@@ -34,6 +34,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      
 
     is_pval = rank_method == 'pval'
+    is_shuffles = rank_method == 'shuffles'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -86,7 +87,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            done_path_index = -1 if is_pval else -2
+            done_path_index = -7 if is_shuffles else -1
             done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
             name_tokens = done_file_name.split('_peptides_vs_')
             logger.info(name_tokens)
