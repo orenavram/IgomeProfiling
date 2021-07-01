@@ -205,11 +205,14 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
                     num_of_expected_results += 1
+    
+    index_done_shuffles = -7
+    index_done_pval = -1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            done_path_index = -1 if is_pval else -7
+            done_path_index = index_done_pval if is_pval else index_done_shuffles
             done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
             print(f'print the done_file_name: {done_file_name}')
             name_tokens = done_file_name.split('_peptides_vs_')
