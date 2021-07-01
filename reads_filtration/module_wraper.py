@@ -52,6 +52,7 @@ def call_run_first_phase(dict_params, exp_name, argv):
 
 def process_params(args, multi_experiments_config, argv):
     # create data structure for running filter_reads
+    done_file = args.done_file_path
     base_map =  args.__dict__
     keys = base_map.keys()
     base_map = change_key_name(base_map, map_names_command_line)
@@ -77,6 +78,10 @@ def process_params(args, multi_experiments_config, argv):
                     argv_new.append(k)
                     argv_new.append(val)              
             call_run_first_phase(dict_params, run, argv_new)
+    
+        with open(done_file, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+
     else:
         exp_name = ''
         call_run_first_phase(base_map, exp_name, argv)
@@ -89,7 +94,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start reads filtration step for experiments {exp_name})')
-
+    
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
         return

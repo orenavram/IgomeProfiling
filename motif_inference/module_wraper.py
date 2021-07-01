@@ -365,6 +365,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 
 
 def process_params(args, multi_exp_config_inference, argv):
+    done_file = args.done_file_path
     base_map =  args.__dict__
     keys = base_map.keys()
     base_map = change_key_name(base_map, map_names_command_line)
@@ -390,6 +391,10 @@ def process_params(args, multi_exp_config_inference, argv):
                     argv_new.append(val)
             # create new list of argv of the specific run.
             call_infer_motifs(dict_params, run, argv_new)
+
+        with open(done_file, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+    
     else:
         exp_name = ''
         call_infer_motifs(base_map, exp_name, argv)
@@ -403,7 +408,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
     
     if exp_name:
-        logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name})')
+        logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name}')
     
     if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
         return
@@ -683,7 +688,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
-    parser.add_argument('--clustere_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
+    parser.add_argument('--clustere_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -709,7 +714,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-
-    concurrent_cutoffs = True if args.concurrent_cutoffs else False
 
     process_params(args, args.multi_exp_config_inference, sys.argv)          

@@ -64,6 +64,7 @@ def call_build_classifier(dict_params, exp_name, argv):
 
 def process_params(args, cross_experiments_config, argv):
     # create data structure for running filter_reads
+    done_file = args.done_file_path
     base_map =  args.__dict__
     keys = base_map.keys()
     base_map = change_key_name(base_map, map_names_command_line)
@@ -72,9 +73,8 @@ def process_params(args, cross_experiments_config, argv):
         multi_experiments_dict = json.load(f)
         # validation of the json file
         is_valid = is_valid_json_structure(cross_experiments_config, multi_experiments_dict, schema_cross_exp, logger)
-        is_valid = True
         if not is_valid:
-            return 
+            return
         configuration = multi_experiments_dict['configuration']
         base_map.update(configuration)
         runs = multi_experiments_dict['runs']
@@ -90,6 +90,9 @@ def process_params(args, cross_experiments_config, argv):
                     argv_new.append(val)
                 # create new list of argv of the specific run.
                 call_build_classifier(dict_params, run, argv_new)
+        
+        with open(done_file, 'w') as f:
+            f.write(' '.join(argv) + '\n')   
     else:
         exp_name = ''
         call_build_classifier(base_map, exp_name, argv)
@@ -135,7 +138,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                      queue_name, verbose, error_path, use_mapitope, exp_name, argv):     
-
+    
+    if exp_name:
+        logger.info(f'{datetime.datetime.now()}: Start model fitting step for experiments {exp_name}')
+    
     error_path = error_path if error_path else os.path.join(classification_output_path, 'error.txt')
 
     multi_experiments_dict = {}
@@ -378,7 +384,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
     parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
-    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')

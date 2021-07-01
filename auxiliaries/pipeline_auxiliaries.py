@@ -41,7 +41,7 @@ schema_sample2bc = {
         "pattern": "^[A-Za-z0-9_]+$"
     },
     "patternProperties": {
-        "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
+        "^[A-Za-z0-9_]+$" : { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9_]+$" } } 
     }
 }
 
@@ -56,33 +56,34 @@ schema_cross_exp = {
         "runs": {
             "description": "A specific run name and is params",
             "type": "object",
-            "patternProperties":{
-                "^[A-Za-z0-9_+]+$":{
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
                     "type": "object",
                     "properties": {
-                        "configuration":{
+                        "configuration": {
                             "type": "object",
                             "properties": {
-                                "reads_path": { "type":"string" },
+                                "reads_path": { "type": "string" },
                                 "motifs_path": { "type": "string" },
                                 "model_path": { "type": "string" },
-                                "logs_dir": { "type":"string" },
-                                "done_path": { "type":"string" }
+                                "done_path": { "type": "string" },
+                                "logs_dir": { "type": "string" }
                             },
-                            "required": [ "reads_path", "motifs_path", "model_path", "logs_dir", "done_path"]
+                            "required": [ "reads_path", "motifs_path", "model_path", "done_path", "logs_dir" ]
                         },    
                         "sample2bc": {"type": "object"},
                         "biological_motifs_combain": {"type": "object"}
                     },
-                    "required": [ "reads_path", "motifs_path", "sample2bc", "done_path"],
+                    "required": [ "configuration", "sample2bc" ],
                 },    
                    
             },
             "additionalProperties": False
         },
   },
-  "required": ["configuration", "runs"]
+  "required": [ "configuration", "runs" ]
 }  
+
 
 schema_inference = {
     "type": "object",
@@ -96,37 +97,22 @@ schema_inference = {
             "type": "object",
             "patternProperties": {
                 "^[A-Za-z0-9_+]+$": {
-                    "required": ["configuration", "sample2bc"],
                     "properties": {
-                        "configuration": {"type":"object",
-                            "properties": {
-                                "reads_path": {"type":"string"},
-				                "motifs_path": {"type":"string"},
-				                "model_path": {"type":"string"},
-				                "logs_dir": {"type":"string"},
-				                "done_file": {"type":"string"},
-                            },
-                            "required": ["reads_path", "motifs_path", "model_path", "logs_dir","done_file"],
-
+                        "reads_path": {"type":"string"},
+				        "motifs_path": {"type":"string"},
+                        "sample2bc": {"type": "string"},
+				        "done_path": {"type":"string"},
+                        "logs_dir": { "type": "string" }
                         },
-                        "sample2bc": { "type": "object" },
-                        "biological_motifs_combain": { 
-                            "type": "object",
-                            "propertyNames": {
-                                "pattern": "^[A-Za-z0-9_]+$"
-                                },
-                            "patternProperties": {
-                            "^[A-Za-z0-9_]+$" : { "type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} } 
-                              }
-                            },
+                        "required": ["reads_path", "motifs_path", "sample2bc", "done_path", "logs_dir" ],
                     }
-                }
             },
             "additionalProperties": False   
         }  
   },
-  "required": ["configuration", "runs"]
+  "required": [ "configuration", "runs" ]
 }
+
 
 schema_reads = {
     "type": "object",
@@ -140,32 +126,21 @@ schema_reads = {
             "type": "object",
             "patternProperties": {
                 "^[A-Za-z0-9_+]+$": {
-                  
-                    "required": [ "fastq", "barcode2sample", "done_path", "reads_path" ],
+                    "required": [ "fastq", "barcode2sample", "done_path", "reads_path", "logs_dir" ],
                     "properties": {
-                        "fastq": { "type":"string" },
+                        "fastq": { "type": "string" },
                         "barcode2sample": { "type": "string" },
                         "done_path": { "type": "string" },
-                        "reads_path": { "type":"string" }   
+                        "reads_path": { "type": "string" },
+                        "logs_dir": { "type": "string" }
                     }
                 }
             },
             "additionalProperties": False   
          }  
   },
-  "required": ["configuration", "runs"]
+  "required": ["configuration", "runs" ]
 }
-
-
-sql_create_table = """CREATE TABLE IF NOT EXISTS score (
-                                    BC text NOT NULL,
-                                    motif text NOT NULL,
-                                    sample text NOT NULL,
-                                    hit integer NOT NULL,
-                                    value REAL NOT NULL,
-                                    rank_method text NOT NULL,
-                                    rank_factor integer NOT NULL
-                                );"""
 
 
 def verify_file_is_not_empty(file_path):
@@ -554,28 +529,3 @@ def change_key_name(old_names_dict, map_name):
             new_dict[map_name[key]] = old_names_dict[key]
         return new_dict
     return old_names_dict
-
-
-def connect_and_create_table_db(path_db):
-    conn = None
-    table = None
-    try:
-        conn = sqlite3.connect(path_db)
-    except  sqlite3.Error as e:
-        logger.error(f'Error - {e} when try to connect to DB {path_db}')
-        return
-    try:
-        table = conn.cursor()
-        table.execute(sql_create_table)
-    except  sqlite3.Error as e:
-        logger.error(f'Error - {e} when try to create table in DB {path_db}')
-        return
-    return conn,table
-
-
-def get_data_db(path_db):
-    conn, table = connect_and_create_table_db(path_db) 
-
-    # Get all the BC and sample that in the database
-    table.execute("Select bc,sample,rank_method,rank_factor FROM score")
-    return table.fetchall()
