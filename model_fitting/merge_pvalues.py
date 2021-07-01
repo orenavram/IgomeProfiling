@@ -146,5 +146,3 @@ if __name__ == '__main__':
                               args.biological_condition, args.samplename2biologicalcondition_path,
                               args.aggregated_pvalues_path, args.aggregated_hits_path,
                               args.done_file_path, args.rank_method, args.sample_to_label, sys.argv)
-
-

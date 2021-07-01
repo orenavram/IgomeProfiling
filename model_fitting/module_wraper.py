@@ -156,7 +156,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                      
     use_merge_pvalues = True if rank_method == 'pval' or rank_method == 'shuffles' else False
     is_pval = rank_method == 'pval'
-
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
