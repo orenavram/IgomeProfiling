@@ -11,7 +11,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, is_valid_json_structure, schema_reads, change_key_name
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, process_params
 from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
@@ -30,119 +30,65 @@ map_names_command_line = {
     "minimal_length_required" : "minimal_length_required",
     "multi_exp_config_reads" : "multi_experiments_config",
     "check_files_valid" : "check_files_valid",
-    "stop_machines" : "stop_machines",
+    "stop_machines" : "stop_machines_flag",
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
     "gz" : "gz",
-    "verbose" : "v",
+    "verbose" : "verbose",
     "error_path" : "error_path",
     "queue" : "queue",
     "rpm" : "rpm",
-    "mapitope" : "m"
+    "mapitope" : "mapitope"
 }
 
 
-def call_run_first_phase(dict_params, exp_name, argv):
-    run_first_phase(dict_params['fastq'], dict_params['reads_path'], dict_params['logs_dir'], dict_params['barcode2sample'], dict_params['done_path'],
-                    dict_params['left_construct'], dict_params['right_construct'], dict_params['max_mismatches_allowed'], dict_params['min_sequencing_quality'], 
-                    dict_params['minimal_length_required'],dict_params['check_files_valid'], dict_params['stop_machines'], dict_params['type_machines_to_stop'],
-                    dict_params['name_machines_to_stop'],dict_params['rpm'], dict_params['gz'], dict_params['v'],
-                    dict_params['m'], dict_params['error_path'], dict_params['queue'], exp_name, argv)
-
-
-def process_params(args, multi_experiments_config, argv):
-    # create data structure for running filter_reads
-    done_file = args.done_file_path
-    base_map =  args.__dict__
-    keys = base_map.keys()
-    base_map = change_key_name(base_map, map_names_command_line)
-    if multi_experiments_config:    
-        f = open(multi_experiments_config)
-        multi_experiments_dict = json.load(f)
-        # validation of the json file
-        is_valid = is_valid_json_structure(multi_experiments_config, multi_experiments_dict, schema_reads, logger)
-        if not is_valid:
-            return 
-        configuration = multi_experiments_dict['configuration']
-        base_map.update(configuration)
-        runs = multi_experiments_dict['runs']
-        for run in runs:
-            dict_params = base_map.copy()
-            dict_params.update(runs[run])
-            # create new list of argv of the specific run.
-            argv_new = []
-            argv_new.append(argv[0])
-            for k in keys:
-                val = str(dict_params[map_names_command_line[k]])
-                if (val != 'None') and (val != 'False'):
-                    argv_new.append(k)
-                    argv_new.append(val)              
-            call_run_first_phase(dict_params, run, argv_new)
-    
-        with open(done_file, 'w') as f:
-            f.write(' '.join(argv) + '\n')
-
-    else:
-        exp_name = ''
-        call_run_first_phase(base_map, exp_name, argv)
-
-
-def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2samplename, first_phase_done_path,
+def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                    check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
-                    rpm, gz, verbose, use_mapitope, error_path, queue, exp_name, argv):
+                    multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
+                    rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start reads filtration step for experiments {exp_name})')
     
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2samplename, logger=logger):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2sample, logger=logger):
         return
 
-    if os.path.exists(first_phase_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({first_phase_done_path} already exists)')
+    if os.path.exists(done_path):
+        logger.info(f'{datetime.datetime.now()}: skipping reads_filtration step ({done_path} already exists)')
         return        
         
-    os.makedirs(first_phase_output_path, exist_ok=True)
+    os.makedirs(reads_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
         
-    barcode2samplename_dict = load_table_to_dict(barcode2samplename, 'Barcode {} belongs to more than one sample_name!!')
+    barcode2samplename_dict = load_table_to_dict(barcode2sample, 'Barcode {} belongs to more than one sample_name!!')
     sample_names = sorted(barcode2samplename_dict.values())
-    error_path = error_path if error_path else os.path.join(first_phase_output_path, 'error.txt')
+    error_path = error_path or os.path.join(reads_path, 'error.txt')
 
     script_name = 'filter_reads.py'
-    num_of_expected_results = 0
     done_path = f'{logs_dir}/{exp_name}_done_demultiplexing.txt'
+    logger.info('_' * 100)
+    logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {done_path}')
     if not os.path.exists(done_path):
-        logger.info('_' * 100)
-        logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {done_path}')
-        all_cmds_params = []
-        if not os.path.exists(done_path):
-            cmds = [fastq_path, first_phase_output_path, logs_dir,
-                    done_path, barcode2samplename, 'summary_log.txt',
-                    f'--error_path {error_path}',
-                    f'--left_construct {left_construct}',
-                    f'--right_construct {right_construct}',
-                    f'--max_mismatches_allowed {max_mismatches_allowed}',
-                    f'--min_sequencing_quality {min_sequencing_quality}',
-                    f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
-            all_cmds_params.append(cmds)
-        else:
-            logger.debug(f'skipping filter reads as {done_path} found')
-            num_of_expected_results += 1
-        
-        if len(all_cmds_params)>0:
-            script_path=f'{src_dir}/reads_filtration/{script_name}'
-            for cmds_params in all_cmds_params:
-                cmd = fetch_cmd(script_path, cmds_params, verbose, error_path, done_path)
-                num_of_expected_results += 1
-                
-            wait_for_results(script_name, logs_dir, num_of_expected_results,
-                                    error_file_path=error_path, suffix=f'_done_demultiplexing.txt')
-    else:
-        logger.info(f'{datetime.datetime.now()}: skipping filter_reads.py ({done_path} exists)')
+        # run filter_reads.py
+        parameters = [fastq, reads_path, logs_dir,
+                      done_path, barcode2sample,
+                      f'--error_path {error_path}',
+                      f'--left_construct {left_construct}',
+                      f'--right_construct {right_construct}',
+                      f'--max_mismatches_allowed {max_mismatches_allowed}',
+                      f'--min_sequencing_quality {min_sequencing_quality}',
+                      f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
 
-    if use_mapitope:
+        fetch_cmd(f'{src_dir}/reads_filtration/{script_name}',
+                  parameters, verbose, error_path)
+        num_of_expected_results = 1
+        wait_for_results(script_name, logs_dir, num_of_expected_results,
+                         error_file_path=error_path, suffix='demultiplexing.txt')
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({done_path} exists)')
+
+    if mapitope:
         script_name = 'mapitope_conversion.py'
         mapitope_done_path = f'{logs_dir}/01_done_mapitope_encoding.txt'
         if not os.path.exists(mapitope_done_path):
@@ -151,25 +97,25 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
             # run mapitope_conversion.py
             num_of_expected_results = 0
             for sample_name in sorted(sample_names):
-                dir_path = os.path.join(first_phase_output_path, sample_name)
+                dir_path = os.path.join(reads_path, sample_name)
                 if not os.path.isdir(dir_path):
                     continue
                 done_path = f'{logs_dir}/01_{sample_name}_done_converting_to_mapitope.txt'
                 parameters = [
-                            f'{first_phase_output_path}/{sample_name}/{sample_name}.faa',
-                            f'{first_phase_output_path}/{sample_name}/{sample_name}_mapitope.faa',
+                            f'{reads_path}/{sample_name}/{sample_name}.faa',
+                            f'{reads_path}/{sample_name}/{sample_name}_mapitope.faa',
                             done_path
                             ]
-                fetch_cmd(f'{src_dir}/reads_filtration/mapitope_conversion.py', parameters, verbose, error_path, done_path)
+                fetch_cmd(f'{src_dir}/reads_filtration/{script_name}', parameters, verbose, error_path, done_path)
                 num_of_expected_results += 1
 
-            wait_for_results('mapitope_conversion.py', logs_dir, num_of_expected_results, error_file_path=error_path, suffix='mapitope.txt')
+            wait_for_results(script_name, logs_dir, num_of_expected_results, error_file_path=error_path, suffix='mapitope.txt')
                     
             with open(mapitope_done_path, 'w') as f:
                 f.write(' '.join(argv) + '\n')
 
         else:
-            logger.info(f'{datetime.datetime.now()}: skipping mapitope_conversion.py ({mapitope_done_path} exists)')
+            logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({mapitope_done_path} exists)')
         
     script_name = 'count_and_collapse_duplicates.py'
     collapsing_done_path = f'{logs_dir}/02_done_collapsing_all.txt'
@@ -178,7 +124,7 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
         logger.info(f'{datetime.datetime.now()}: demultiplexig sequences for {collapsing_done_path}')
         num_of_expected_results = 0
         for dir_name in sorted(sample_names):
-            dir_path = os.path.join(first_phase_output_path, dir_name)
+            dir_path = os.path.join(reads_path, dir_name)
             if not os.path.isdir(dir_path):
                 continue
             for file in os.listdir(dir_path):
@@ -192,28 +138,27 @@ def run_first_phase(fastq_path, first_phase_output_path, logs_dir, barcode2sampl
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
                 factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
                 parameters = [file_path, output_file_path, done_path]
-                if not os.path.exists(done_path):
-                    if rpm:
-                        rpm_factors_path =  f'{first_phase_output_path}/{factors_file_name}.txt'
-                        parameters.append('--rpm')
-                        parameters.append(rpm_factors_path)        
-                        fetch_cmd(f'{src_dir}/reads_filtration/count_and_collapse_duplicates.py', parameters, verbose, error_path, done_path)
-                        num_of_expected_results += 1
+                if not os.path.exists(done_path) and rpm:
+                    rpm_factors_path =  f'{reads_path}/{factors_file_name}.txt'
+                    parameters.append('--rpm')
+                    parameters.append(rpm_factors_path)        
+                    fetch_cmd(f'{src_dir}/reads_filtration/{script_name}', parameters, verbose, error_path, done_path)
+                    num_of_expected_results += 1
 
                 else:
                     logger.debug(f'skipping filter reads as {done_path} found')
                     num_of_expected_results += 1    
                 
 
-        wait_for_results('count_and_collapse_duplicates.py', logs_dir, num_of_expected_results,
+        wait_for_results(script_name, logs_dir, num_of_expected_results,
                     error_file_path=error_path, suffix='collapsing.txt')
     else:
-        logger.info(f'{datetime.datetime.now()}: skipping count_and_collapse_duplicates.py ({collapsing_done_path} exists)')
+        logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({collapsing_done_path} exists)')
 
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
-    with open(first_phase_done_path, 'w') as f:
+    with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 
@@ -257,4 +202,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    process_params(args, args.multi_exp_config_reads, sys.argv)
+    process_params(args, args.multi_exp_config_reads, map_names_command_line, run_first_phase, 'reads_filtration',sys.argv)

@@ -68,12 +68,12 @@ def get_results_shuffles(consensusesValues, sample_name, path):
             motifSamples[sample_name] = { 'hits': hits, 'pvalue': pvalue }
 
 
-def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplename2biologicalcondition_path,
-                              aggregated_pvalues_path, aggregated_hits_path, done_path, rank_method, sample_to_label, argv='no_argv'):
-    if not sample_to_label:
+def aggregate_values_results(meme_path, scanning_results_dir_path, bc, samplename2biologicalcondition_path,
+                              aggregated_pvalues_path, aggregated_hits_path, done_path, rank_method, bc_sample_names, argv='no_argv'):
+    if not bc_sample_names:
         samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path,
                                                 'Barcode {} belongs to more than one sample_name!!')
-        sample_to_label = [sample for sample in samplename2biologicalcondition if samplename2biologicalcondition[sample] == bc]
+        bc_sample_names = [sample for sample in samplename2biologicalcondition if samplename2biologicalcondition[sample] == bc]
     
     all_consensuses = get_consensus_sequences_from_meme(meme_path)
     samples = set()
@@ -95,7 +95,7 @@ def aggregate_pvalues_results(meme_path, scanning_results_dir_path, bc, samplena
     hits_f.write(header)
 
     for sample in sorted(samples):
-        label = bc if sample in sample_to_label else 'other'
+        label = bc if sample in bc_sample_names else 'other'
         pvalues_f.write(f'{sample},{label}')
         hits_f.write(f'{sample},{label}')
         for consensus in all_consensuses:
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully')
     parser.add_argument('--rank_method', choices=['pval', 'shuffles'], default='shuffles', help='Motifs ranking method')
-    parser.add_argument('--sample_to_label', type=str, help='Samples that are for the label bc, seperate by comma')
+    parser.add_argument('--bc_sample_names', type=str, help='Samples that are for the label bc, seperate by comma')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -142,7 +142,8 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    aggregate_pvalues_results(args.meme_path, args.scanning_results_dir_path,
-                              args.biological_condition, args.samplename2biologicalcondition_path,
-                              args.aggregated_pvalues_path, args.aggregated_hits_path,
-                              args.done_file_path, args.rank_method, args.sample_to_label, sys.argv)
+    aggregate_values_results(args.meme_path, args.scanning_results_dir_path,
+                            args.biological_condition, args.samplename2biologicalcondition_path,
+                            args.aggregated_pvalues_path, args.aggregated_hits_path,
+                            args.done_file_path, args.rank_method, args.bc_sample_names, sys.argv)
+

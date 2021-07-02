@@ -10,8 +10,8 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import get_cluster_rank_from, wait_for_results, submit_pipeline_step, is_valid_json_structure, \
-                                            change_key_name, schema_inference, count_memes, load_table_to_dict, fetch_cmd
+from auxiliaries.pipeline_auxiliaries import get_cluster_rank_from, wait_for_results, submit_pipeline_step, \
+                                             count_memes, load_table_to_dict, fetch_cmd, process_params
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
@@ -35,7 +35,7 @@ map_names_command_line = {
     "threshold" : "threshold",
     "word_length" : "word_length",
     "discard" : "discard",
-    "clustere_algorithm_mode" :"clustere_alg_mode",
+    "cluster_algorithm_mode" :"cluster_alg_mode",
     "concurrent_cutoffs" : "concurrent_cutoffs",
     "meme_split_size" : "meme_split_size",
     "skip_sample_merge_meme" : "skip_sample_merge_meme",
@@ -44,20 +44,9 @@ map_names_command_line = {
     "name_machines_to_stop" : "name_machines_to_stop",
     "error_path" : "error_path",
     "queue" : "queue",
-    "verbose" : "v",
-    "mapitope" : "m"
+    "verbose" : "verbose",
+    "mapitope" : "mapitope"
 } 
-
-
-def call_infer_motifs(dict_params ,exp_name, argv):
-    infer_motifs(dict_params['reads_path'], dict_params['motifs_path'], dict_params['logs_dir'], dict_params['sample2bc'], 
-                dict_params['max_msas_per_sample'], dict_params['max_msas_per_bc'], dict_params['max_num_of_cluster_per_sample'], dict_params['max_num_of_cluster_per_bc'],
-                dict_params['gap'], dict_params['done_path'], dict_params['check_files_valid'], dict_params['min_num_of_columns_meme'],
-                dict_params['prefix_length_in_clstr'], dict_params['aln_cutoff'], dict_params['pcc_cutoff'],
-                dict_params['threshold'], dict_params['word_length'], dict_params['discard'], dict_params['clustere_alg_mode'], dict_params['concurrent_cutoffs'],
-                dict_params['meme_split_size'], dict_params['skip_sample_merge_meme'], dict_params['stop_machines_flag'], dict_params['type_machines_to_stop'], 
-                dict_params['name_machines_to_stop'], dict_params['queue'], dict_params['v'], dict_params['m'],
-                dict_params['error_path'], exp_name, argv) 
 
 
 def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_frequency,
@@ -364,64 +353,29 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
         logger.info('Skipping calculate cutoffs, all exists')
 
 
-def process_params(args, multi_exp_config_inference, argv):
-    done_file = args.done_file_path
-    base_map =  args.__dict__
-    keys = base_map.keys()
-    base_map = change_key_name(base_map, map_names_command_line)
-    if multi_exp_config_inference:    
-        f = open(multi_exp_config_inference)
-        multi_experiments_dict = json.load(f)
-        # validation of the json file
-        is_valid = is_valid_json_structure(multi_exp_config_inference, multi_experiments_dict, schema_inference, logger)
-        if not is_valid:
-            return 
-        configuration = multi_experiments_dict['configuration']
-        base_map.update(configuration)
-        runs = multi_experiments_dict['runs']
-        for run in runs:
-            dict_params = base_map.copy()
-            dict_params.update(runs[run])
-            argv_new = []
-            argv_new.append(argv[0])
-            for k in keys:
-                val = str(dict_params[map_names_command_line[k]])
-                if (val != 'None') and (val != 'False'):
-                    argv_new.append(k)
-                    argv_new.append(val)
-            # create new list of argv of the specific run.
-            call_infer_motifs(dict_params, run, argv_new)
+def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
+                 max_msas_per_sample, max_msas_per_bc, max_num_of_cluster_per_sample, max_num_of_cluster_per_bc,
+                 gap, done_path, check_files_valid, multi_exp_config_inference,
+                 min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
+                 threshold, word_length, discard, cluster_alg_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue, verbose, mapitope, error_path, exp_name, argv):
 
-        with open(done_file, 'w') as f:
-            f.write(' '.join(argv) + '\n')
-    
-    else:
-        exp_name = ''
-        call_infer_motifs(base_map, exp_name, argv)
-
-
-def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir, samplename2biologicalcondition_path,
-                 max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 gap_frequency, motif_inference_done_path, check_files_valid, 
-                 minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
-                 threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
-                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue_name, verbose, use_mapitope, error_path, exp_name, argv):
-    
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name}')
     
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
         return
         
-    os.makedirs(motif_inference_output_path, exist_ok=True)
+    os.makedirs(motifs_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    if os.path.exists(motif_inference_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({motif_inference_done_path} already exists)')
+    if os.path.exists(done_path):
+        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({done_path} already exists)')
         return
 
-    error_path = error_path if error_path else os.path.join(motif_inference_output_path, 'error.txt')
-    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample!!')
+    error_path = error_path or os.path.join(motifs_path, 'error.txt')
+
+    samplename2biologicalcondition = load_table_to_dict(sample2bc, 'Barcode {} belongs to more than one sample!!')
     sample_names = sorted(samplename2biologicalcondition)
     biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
@@ -432,21 +386,21 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
     num_of_expected_results = 0
     upper_faa_paths = [] # keep all faas' paths for the next step
     for sample_name in sample_names:
-        dir_path = os.path.join(first_phase_output_path, sample_name)
+        dir_path = os.path.join(reads_path, sample_name)
         assert os.path.exists(dir_path), f'reads filtration directory does not exist!\n{dir_path}'
         if not os.path.isdir(dir_path):
             # skip files or folders of non-related biological condition
             continue
 
         for file_name in os.listdir(dir_path):
-            if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == use_mapitope:
+            if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == mapitope:
                 faa_filename = file_name
                 break
         else:
             raise ValueError(f'No faa file at {dir_path}')
 
-        in_faa_path = os.path.join(first_phase_output_path, sample_name, faa_filename)
-        out_faa_dir = os.path.join(motif_inference_output_path, sample_name)
+        in_faa_path = os.path.join(reads_path, sample_name, faa_filename)
+        out_faa_dir = os.path.join(motifs_path, sample_name)
         os.makedirs(out_faa_dir, exist_ok=True)
         out_faa_path = os.path.join(out_faa_dir, f'{sample_name}_upper{faa_filename.split("unique")[-1]}') # not unique anymore (q->Q)
         upper_faa_paths.append(out_faa_path)
@@ -496,7 +450,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         done_path = f'{logs_dir}/03_{sample_name}_done_clustering.txt'
         if not os.path.exists(done_path):
             cmds = [no_cys_faa_path, output_prefix, done_path, sample_name, '--threshold', threshold, '--word_length', word_length,
-                    '--discard', discard, '--clustere_algorithm_mode', clustere_algorithm_mode]
+                    '--discard', discard, '--cluster_algorithm_mode', cluster_alg_mode]
             all_cmds_params.append(cmds)
         else:
             logger.debug(f'Skipping clustering as {done_path} exists')
@@ -509,7 +463,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
             cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                                 current_batch,
-                                logs_dir, f'{sample_name}_cluster', queue_name, verbose)
+                                logs_dir, f'{sample_name}_cluster', queue, verbose)
             num_of_expected_results += len(current_batch)
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -536,7 +490,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         done_path = f'{logs_dir}/04_{sample_name}_done_extracting_sequences.txt'
         if not os.path.exists(done_path):
             all_cmds_params.append([upper_faa_path, clstr_path, clusters_sequences_path, done_path,
-                                    f'--max_num_of_sequences_to_keep {max_number_of_cluster_members_per_sample}',
+                                    f'--max_num_of_sequences_to_keep {max_num_of_cluster_per_sample}',
                                     f'--prefix_length_in_clstr {prefix_length_in_clstr}',
                                     f'--file_prefix {sample_name}'])
         else:
@@ -551,7 +505,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
             cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                                 current_batch,
-                                logs_dir, f'{sample_name}_extracting_sequences', queue_name, verbose)
+                                logs_dir, f'{sample_name}_extracting_sequences', queue, verbose)
             num_of_expected_results += len(current_batch)
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -560,8 +514,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         logger.info('Skipping sequences extraction, all exist')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
-    align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap_frequency,
-                             motif_inference_output_path, logs_dir, minimal_number_of_columns_required_create_meme, error_path, queue_name, verbose, 'samples')
+    align_clean_pssm_weblogo(sample_names, max_msas_per_sample, gap,
+                             motifs_path, logs_dir, min_num_of_columns_meme, error_path, queue, verbose, 'samples')
 
     # Merge memes of the same biological condition
     logger.info('_'*100)
@@ -573,12 +527,12 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
     all_cmds_params = [] # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         done_path = f'{logs_dir}/08_{bc}_done_meme_merge.txt'
-        bc_folder = os.path.join(motif_inference_output_path, bc)
+        bc_folder = os.path.join(motifs_path, bc)
         os.makedirs(bc_folder, exist_ok=True)
         output_path = os.path.join(bc_folder, 'merged_meme_sorted.txt')
         biological_condition_memes.append(output_path)
         if not os.path.exists(done_path):
-            all_cmds_params.append([motif_inference_output_path, bc, output_path, done_path, samplename2biologicalcondition_path, f'--skip_sample {skip_sample_merge_meme}'])
+            all_cmds_params.append([motifs_path, bc, output_path, done_path, sample2bc, f'--skip_sample {skip_sample_merge_meme}'])
         else:
             logger.debug(f'Skipping merge as {done_path} exists')
             num_of_expected_results += 1
@@ -588,7 +542,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                                 [cmds_params],
                                 logs_dir, f'{bc}_merge_meme',
-                                queue_name, verbose)
+                                queue, verbose)
             num_of_expected_results += 1  # a single job for each biological condition
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -610,8 +564,8 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         output_path = os.path.split(merged_meme_path)[0]
         done_path = f'{logs_dir}/09_{bc}_done_detecting_similar_pssms.txt'
         if not os.path.exists(done_path):
-            all_cmds_params.append([motif_inference_output_path, merged_meme_path, bc, relevant_samples,
-                                    max_number_of_cluster_members_per_bc,
+            all_cmds_params.append([motifs_path, merged_meme_path, bc, relevant_samples,
+                                    max_num_of_cluster_per_bc,
                                     output_path, done_path, f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}'])
         else:
             logger.debug(f'Skipping unite as {done_path} exists')
@@ -622,7 +576,7 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
             cmd = submit_pipeline_step(f'{src_dir}/motif_inference/{script_name}',
                                 [cmds_params],
                                 logs_dir, f'{bc}_detect_similar_pssms',
-                                queue_name, verbose)
+                                queue, verbose)
             num_of_expected_results += 1   # a single job for each biological condition
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -631,22 +585,22 @@ def infer_motifs(first_phase_output_path, motif_inference_output_path, logs_dir,
         logger.info('Skipping unite, all exist')
 
     # 3 steps together!! align each cluster; clean each alignment; calculate pssm for each alignment
-    align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap_frequency,
-                             motif_inference_output_path, logs_dir, minimal_number_of_columns_required_create_meme, error_path, queue_name, verbose, 'biological_conditions')
+    align_clean_pssm_weblogo(biological_conditions, max_msas_per_bc, gap,
+                             motifs_path, logs_dir, min_num_of_columns_meme, error_path, queue, verbose, 'biological_conditions')
 
     if concurrent_cutoffs:
         split_then_compute_cutoffs(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, error_path,verbose)
+            motifs_path, logs_dir, queue, error_path,verbose)
     else:
         compute_cutoffs_then_split(biological_conditions, meme_split_size,
-            motif_inference_output_path, logs_dir, queue_name, error_path, verbose)
+            motifs_path, logs_dir, queue, error_path, verbose)
 
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(motif_inference_done_path, 'w') as f:
+    with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 
@@ -688,7 +642,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
-    parser.add_argument('--clustere_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
+    parser.add_argument('--cluster_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
@@ -714,5 +668,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-
-    process_params(args, args.multi_exp_config_inference, sys.argv)          
+    process_params(args, args.multi_exp_config_inference, map_names_command_line, infer_motifs, 'motif_inference', sys.argv)

@@ -26,7 +26,7 @@ def predict(data_path, model_paths, output_path):
         model_score = model.score(X, y)
         error_rate = 1-model_score
         if error_rate > 0:
-            logger.debug(model_path)
+            logger.debug(f'{model_path} has error rate - {error_rate}')
             predictions = model.predict(X)
             errors = predictions != y
             results = pd.DataFrame({'sample names': sample_name,

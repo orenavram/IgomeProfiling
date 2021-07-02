@@ -10,7 +10,8 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import load_table_to_dict, submit_pipeline_step, run_step_locally, wait_for_results, change_key_name, is_valid_json_structure, schema_cross_exp
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, submit_pipeline_step, run_step_locally, wait_for_results, \
+                                             change_key_name, is_valid_json_structure, schema_cross_exp
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
 
@@ -142,7 +143,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start model fitting step for experiments {exp_name}')
     
-    error_path = error_path if error_path else os.path.join(classification_output_path, 'error.txt')
+    error_path = error_path or os.path.join(classification_output_path, 'error.txt')
 
     multi_experiments_dict = {}
     if cross_experiments_config:
@@ -154,8 +155,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
                 return
                      
-    use_merge_pvalues = True if rank_method == 'pval' or rank_method == 'shuffles' else False
-    is_pval = rank_method == 'pval'
+    use_merge_pvalues = True if rank_method in ['pval','shuffles'] else False
+
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -210,16 +211,12 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
                     num_of_expected_results += 1
-    
-    index_done_shuffles = -7
-    index_done_pval = -1
 
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            done_path_index = index_done_pval if is_pval else index_done_shuffles
+            done_path_index = 6
             done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
-            print(f'print the done_file_name: {done_file_name}')
             name_tokens = done_file_name.split('_peptides_vs_')
             logger.info(name_tokens)
             sample_name = name_tokens[0]
@@ -227,8 +224,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
             assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
-            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
-                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
+            #cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
+            #                        logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
             num_of_expected_results += len(current_batch)
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -237,8 +234,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
 
     get_sample_for_label = False
-    if multi_experiments_dict and "biological_motifs_combain" in multi_experiments_dict['runs'][exp_name]:
-        biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combain']
+    if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
+        biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine']
         get_sample_for_label = True
 
     # aggregate scanning scores (hits and values)
@@ -306,10 +303,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             
             value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}',
                     f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}', f'--seed {random_forest_seed}',
-                    f'--random_forest_seed {random_forest_seed_configurations}', f'--rank_method {rank_method}']
+                    f'--random_forest_seed {random_forest_seed_configurations}', f'--rank_method {rank_method}', f'--queue {queue_name}']
             hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}',
                     f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}', f'--seed {random_forest_seed}',
-                    f'--random_forest_seed {random_forest_seed_configurations}', '--rank_method hits']
+                    f'--random_forest_seed {random_forest_seed_configurations}', '--rank_method hits', f'--queue {queue_name}']
             if not os.path.exists(pvalues_done_path):
                 all_cmds_params.append(value_cmd)
             else:
@@ -376,7 +373,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the module finished running successfully')
     
-    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets')
+    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets at model fitting phase')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')

@@ -141,8 +141,6 @@ def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configura
     output_path = os.path.join(csv_folder, f'{csv_file_prefix}_model')
     os.makedirs(output_path, exist_ok=True)
 
-    is_hits_data = True if rank_method == 'hits' else False
-
     best_model_path = os.path.join(output_path, f'best_model')
 
     feature_selection_summary_path = f'{output_path}/feature_selection_summary.txt'

@@ -13,6 +13,7 @@ sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import *
 from auxiliaries.validation_files import is_input_files_valid
+from auxiliaries.stop_machine_aws import stop_machines
 
 schema = {
     'reads': schema_reads,
@@ -20,7 +21,7 @@ schema = {
     'model': schema_cross_exp
 }
 
-def get_path_from_config(config, phase, logger):
+def validate_input_file(config, phase, logger):
     f = open(config)
     config_dict = json.load(f)
     samplename2biologicalcondition_paths = []
@@ -48,23 +49,24 @@ def get_path_from_config(config, phase, logger):
             return False        
     return True
 
+
 def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross_experiments_config, samplename2biologicalcondition_path, barcode2samplename_path, logger):
-    files_are_valid = True
-    files_are_valid_reads = True
-    files_are_valid_inference = True
-    files_are_valid_model = True
+    is_files_valid = True
+    is_files_valid_reads = True
+    is_files_valid_inference = True
+    is_files_valid_model = True
 
     if os.path.exists(samplename2biologicalcondition_path) and os.path.exists(barcode2samplename_path):
-        files_are_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
+        is_files_valid = is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path=barcode2samplename_path, logger=logger)
     else:
         if multi_exp_config_reads:
-            files_are_valid_reads = get_path_from_config(multi_exp_config_reads, 'reads', logger)
+            is_files_valid_reads = validate_input_file(multi_exp_config_reads, 'reads', logger)
         if multi_exp_config_inference:
-            files_are_valid_inference = get_path_from_config(multi_exp_config_reads, 'inference', logger)
+            is_files_valid_inference = validate_input_file(multi_exp_config_reads, 'inference', logger)
         if cross_experiments_config:
-            files_are_valid_model = get_path_from_config(multi_exp_config_reads, 'model', logger)
+            is_files_valid_model = validate_input_file(multi_exp_config_reads, 'model', logger)
 
-    if not files_are_valid or not files_are_valid_reads or not files_are_valid_inference or not files_are_valid_model:
+    if not is_files_valid or not is_files_valid_reads or not is_files_valid_inference or not is_files_valid_model:
         return False
     return True
 
@@ -72,14 +74,14 @@ def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm, multi_exp_config_reads,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
-                 allowed_gap_frequency, threshold, word_length, discard, clustere_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
+                 allowed_gap_frequency, threshold, word_length, discard, cluster_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference,
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config,
                  run_summary_path, error_path, queue, verbose, argv):
-    
+
     files_are_valid = True
     if multi_exp_config_reads or multi_exp_config_inference or cross_experiments_config:
         files_are_valid = is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross_experiments_config,
@@ -137,7 +139,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              allowed_gap_frequency, second_phase_done_path, '--check_files_valid' if not files_are_valid else '', 
                              f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
-                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--clustere_algorithm_mode {clustere_algorithm_mode}',
+                             f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--cluster_algorithm_mode {cluster_algorithm_mode}',
                              f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
@@ -167,9 +169,6 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
-                             '--stop_machines' if stop_machines_flag else '', 
-                             f'--type_machines_to_stop {type_machines_to_stop}' if type_machines_to_stop else '' , 
-                             f'--name_machines_to_stop {name_machines_to_stop}' if name_machines_to_stop else '' ,
                              '--is_run_random_forest_per_bc_sequentially' if is_run_random_forest_per_bc_sequentially else '',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
@@ -190,6 +189,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
     else:
         logger.info(f'{datetime.datetime.now()}: skipping model fitting. Done file exists {third_phase_done_path}')
 
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
     end_time = datetime.datetime.now()
     f_run_summary_path.write(f'Total running time: {str(end_time-start_time)[:-3]}')
@@ -245,7 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
-    parser.add_argument('--clustere_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
+    parser.add_argument('--cluster_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
@@ -264,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
 
     # optional parameters for the modelling step
-    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets')
+    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets at model fitting phase')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
@@ -310,7 +311,7 @@ if __name__ == '__main__':
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required,
                  args.gz, args.rpm, args.multi_exp_config_reads,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
-                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.clustere_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
+                 args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
                  args.prefix_length_in_clstr, args.multi_exp_config_inference,
                  args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.number_of_random_pssms,

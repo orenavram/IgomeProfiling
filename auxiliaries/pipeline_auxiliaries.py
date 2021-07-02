@@ -72,7 +72,7 @@ schema_cross_exp = {
                             "required": [ "reads_path", "motifs_path", "model_path", "done_path", "logs_dir" ]
                         },    
                         "sample2bc": {"type": "object"},
-                        "biological_motifs_combain": {"type": "object"}
+                        "biological_motifs_combine": {"type": "object"}
                     },
                     "required": [ "configuration", "sample2bc" ],
                 },    
@@ -140,6 +140,13 @@ schema_reads = {
          }  
   },
   "required": ["configuration", "runs" ]
+}
+
+
+schema_to_phase = {
+    'reads_filtration': schema_reads,
+    'motif_inference': schema_inference,
+    'model_fitting': schema_cross_exp
 }
 
 
@@ -521,7 +528,7 @@ def log_scale(df, rank_method):
     return df
 
 
-def change_key_name(old_names_dict, map_name):
+def change_key_name(old_names_dict, map_name, reverse = False):
     new_dict = {}
     if old_names_dict:
         keys = old_names_dict.keys()
@@ -529,3 +536,42 @@ def change_key_name(old_names_dict, map_name):
             new_dict[map_name[key]] = old_names_dict[key]
         return new_dict
     return old_names_dict
+
+
+def process_params(args, config_path, map_name_parameters, func_run, phase, argv):
+    # create data structure for running filter_reads
+    done_file = args.done_file_path
+    base_map =  args.__dict__
+    keys = base_map.keys()
+    base_map = change_key_name(base_map, map_name_parameters)
+    if config_path:    
+        f = open(config_path)
+        multi_experiments_dict = json.load(f)
+        # validation of the json file
+        
+        is_valid = is_valid_json_structure(config_path, multi_experiments_dict, schema_to_phase[phase], logger)
+        if not is_valid:
+            return 
+        configuration = multi_experiments_dict['configuration']
+        base_map.update(configuration)
+        runs = multi_experiments_dict['runs']
+        for run in runs:
+            dict_params = base_map.copy()
+            dict_params.update(runs[run])
+            # create new list of argv of the specific run.
+            f = lambda k: k
+            g = lambda k: str(dict_params[map_name_parameters[k]])
+            argv_new = [func(k) for k in keys if g(k)!='None' if g(k)!='False' for func in [f, g]]
+            argv_new.insert(0, argv[0])   
+
+        dict_params['exp_name'] = run
+        dict_params['argv'] = argv_new
+        func_run(**dict_params)
+    
+        with open(done_file, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+    else:
+        base_map['exp_name'] = ''
+        base_map['argv'] = argv
+        print(base_map)
+        func_run(**base_map)

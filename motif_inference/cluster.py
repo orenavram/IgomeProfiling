@@ -16,7 +16,7 @@ from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, measure_t
 
 
 def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word_length,
-                      throw_sequences_shorter_than, clustere_algorithm_mode, argv='no_argv'):
+                      throw_sequences_shorter_than, cluster_algorithm_mode, argv='no_argv'):
 
     verify_file_is_not_empty(fasta_file)
 
@@ -28,7 +28,7 @@ def cluster_sequences(fasta_file, output_prefix, done_file_path, threshold, word
           f'-c {threshold} ' \
           f'-n {word_length} ' \
           f'-l {throw_sequences_shorter_than} ' \
-          f'-g {clustere_algorithm_mode}'
+          f'-g {cluster_algorithm_mode}'
     logger.info(f'Starting CD-hit. Executed command is:\n{cmd}')
     subprocess.call(cmd, shell=True)
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
-    parser.add_argument('--clustere_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
+    parser.add_argument('--cluster_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -69,6 +69,6 @@ if __name__ == '__main__':
     
     start_time = time()
     cluster_sequences(args.fasta_file, args.output_prefix, args.done_file_path,
-                      args.threshold, args.word_length, args.discard, args.clustere_algorithm_mode, sys.argv)
+                      args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, sys.argv)
     end_time = time()
     logger.info(f'Done cluster sample name {args.sample_name} (took {measure_time(int(end_time-start_time))}).')

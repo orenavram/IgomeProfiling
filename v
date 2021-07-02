@@ -1,1 +1,0 @@
-model_fitting/module_wraper.py parsed_fastq_results output/exp_7_8/analysis/reads

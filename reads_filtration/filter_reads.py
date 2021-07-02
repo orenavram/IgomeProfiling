@@ -354,7 +354,7 @@ if __name__ == '__main__':
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
-    parser.add_argument('name_summary_file', type=str, help='A name for summary file of filter reads.')
+    parser.add_argument('--name_summary_file', default='summary_log.txt', type=str, help='A name for summary file of filter reads.')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')
     parser.add_argument('--right_construct', type=str, default="GCCT", help='right constant sequence')
