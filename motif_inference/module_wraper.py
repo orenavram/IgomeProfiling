@@ -20,7 +20,7 @@ map_names_command_line = {
     "motif_inference_results" : "motifs_path",
     "logs_dir" : "logs_dir",
     "samplename2biologicalcondition_path" : "sample2bc",
-    "done_file_path" : "done_path",
+    "done_file_path" : "done_file_path",
     "max_msas_per_sample" : "max_msas_per_sample",
     "max_msas_per_bc" : "max_msas_per_bc",
     "max_number_of_cluster_members_per_sample" : "max_num_of_cluster_per_sample",
@@ -355,7 +355,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
 
 def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                  max_msas_per_sample, max_msas_per_bc, max_num_of_cluster_per_sample, max_num_of_cluster_per_bc,
-                 gap, done_path, check_files_valid, multi_exp_config_inference,
+                 gap, done_file_path, check_files_valid, multi_exp_config_inference,
                  min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, cluster_alg_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue, verbose, mapitope, error_path, exp_name, argv):
@@ -369,8 +369,8 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
     os.makedirs(motifs_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    if os.path.exists(done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({done_path} already exists)')
+    if os.path.exists(done_file_path):
+        logger.info(f'{datetime.datetime.now()}: skipping motif_inference step ({done_file_path} already exists)')
         return
 
     error_path = error_path or os.path.join(motifs_path, 'error.txt')
@@ -600,7 +600,7 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(done_path, 'w') as f:
+    with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 

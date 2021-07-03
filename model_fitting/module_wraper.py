@@ -23,7 +23,7 @@ map_names_command_line = {
     "logs_dir" : "logs_dir",
     "samplename2biologicalcondition_path" : "sample2bc",
     "number_of_random_pssms" : "num_of_random_pssms",
-    "done_file_path" : "done_path", 
+    "done_file_path" : "done_file_path", 
     "cross_experiments_config" : "cross_experiments_config",
     "check_files_valid" : "check_files_valid",
     "stop_before_random_forest" : "stop_before_random_forest",
@@ -84,7 +84,7 @@ def repeat_items(list):
                       
 
 def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, num_of_random_pssms,
-                     done_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
+                     done_file_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
                      is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, rf_seed, rf_seed_configurations, use_factor,
@@ -111,8 +111,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     os.makedirs(model_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    if os.path.exists(done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({done_path} already exists)')
+    if os.path.exists(done_file_path):
+        logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({done_file_path} already exists)')
         return
 
 
@@ -175,8 +175,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             split_num = name_tokens[1].split('_motifs_')[1].split('_done_')[0]
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
             assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
-            #cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
-            #                        logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
+            cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
+                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue, verbose)
             num_of_expected_results += len(current_batch)
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -294,7 +294,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(done_path, 'w') as f:
+    with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 
