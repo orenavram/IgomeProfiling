@@ -63,7 +63,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
-    parser.add_argument('--use_factor', action='store_true', help='Multiplay hits by factor rpm for normalization')
+    parser.add_argument('--use_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 

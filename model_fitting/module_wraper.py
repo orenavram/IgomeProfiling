@@ -74,7 +74,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms), output_path, done_path, f'--use_factor' if use_factor else '']
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms), output_path, done_path, '' if use_factor else '--use_factor']
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
@@ -255,7 +255,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--use_factor', action='store_true', help='Multiplay hits by factor rpm for normalization')
+    parser.add_argument('--use_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

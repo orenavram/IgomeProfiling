@@ -104,7 +104,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--shuffles_percent {shuffles_percent}', f'--shuffles_digits {shuffles_digits}',
                              f'--cv_num_of_splits {cv_num_of_splits}', f'--seed_random_forest {seed_random_forest}',
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}',
-                             f'--rank_method {rank_method}', f'--use_factor' if use_factor else '', 
+                             f'--rank_method {rank_method}', '' if use_factor else '--use_factor', 
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
     parser.add_argument('--seed_random_forest', default=42, help='Seed number for reconstructing experiments')
     parser.add_argument('--random_forest_seed_configurations', default=123 , type=int, help='Random seed value for generating random forest configurations')
-    parser.add_argument('--use_factor', action='store_true', help='Multiplay hits by factor rpm for normalization')
+    parser.add_argument('--use_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
 
     # general optional parameters
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
