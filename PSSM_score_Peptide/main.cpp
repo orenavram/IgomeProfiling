@@ -455,18 +455,13 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 	}
 }
 
-double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, bool use_factor=false ,const size_t verbose=0) {
+double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const size_t verbose=0) {
 	vector <HIT> hits;
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
 	
 	for (size_t k = 0; k < hits.size(); ++k) {
 		sum += hits[k]._seq._CopyNumber;
-	}
-	if ((Seq_array.size() != 0) & (use_factor)){
-		cout << "get here" <<endl;
-		float factor = 1000000 / Seq_array.size();
-		sum *= factor;
 	}
 	return sum;
 }
@@ -500,7 +495,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	listOfPvaluesFile << "## PSSM_name\tp_Value\tTrue_Hits: num_of_hits" <<endl;
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
-		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, use_factor, 1);
+		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, 1);
 		vector<double> numSigPeptides;
 		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
@@ -522,6 +517,10 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
 		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
+		if (use_factor & Seq_array.size() > 0) {
+			float factor = 1000000 / Seq_array.size();
+			numberOfHitsInRealPSSM *= factor;
+		}
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}

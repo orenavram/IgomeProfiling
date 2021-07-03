@@ -216,9 +216,7 @@ void setHitsFactor(float factor, Memes& memes){
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     while (memesIter != memesEnd) {
-        cout << "Hits before factor" << memesIter->second.getHitCount() << endl;
         memesIter->second.setHitCount(factor);
-        cout << "Hits after factor" << memesIter->second.getHitCount() << endl;
         memesIter++;
     }
 }

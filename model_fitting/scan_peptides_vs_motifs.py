@@ -30,7 +30,9 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')
         else:  # shuffles
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles} '\
-                f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits} --useFactor {use_factor}'
+                f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
+            if use_factor:
+                cmd += f' --useFactor {use_factor}'
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
             
         subprocess.run(cmd, shell=True)
