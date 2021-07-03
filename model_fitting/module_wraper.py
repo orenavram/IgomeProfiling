@@ -43,6 +43,7 @@ map_names_command_line = {
     "stop_machines" : "stop_machines_flag",
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
+    "use_factor": "use_factor",
     "queue" : "queue",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -86,7 +87,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                      done_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
                      is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
-                     cv_num_of_splits, rf_seed, rf_seed_configurations,
+                     cv_num_of_splits, rf_seed, rf_seed_configurations, use_factor,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                      queue, verbose, error_path, mapitope, exp_name, argv):     
     
@@ -153,7 +154,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(num_of_random_pssms), output_path, done_path]
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(num_of_random_pssms), output_path, done_path, '' if use_factor else '--use_factor']
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
@@ -338,6 +339,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--use_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
