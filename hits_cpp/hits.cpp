@@ -77,7 +77,7 @@ bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq, bool 
 }
 
 void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& hits, 
-    int printInterval, bool isOutputSequences, float factor, bool verbose, bool isMultiplyFactor=false) {
+    int printInterval, bool isOutputSequences, bool verbose) {
     auto sequencesTypesIter = sequences.begin();
     auto sequencesTypesEnd = sequences.end();
     int counter = 0;
@@ -98,14 +98,10 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
         }
         sequencesTypesIter++;
     }
-    if (isMultiplyFactor){
-        //cout << "factor rpm of sample: " << std::fixed << std::setprecision(5) << factor << endl;
-        meme.setHitCount(factor);
-    }
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, float factor, bool useFactor ,bool verbose) {
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
@@ -125,7 +121,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
             cout << "Calculating hits for " << memesIter->first << endl;
         }
         memeHits(memesIter->second, alphabet, sequences, hits, 
-            printInterval, isOutputSequences, factor, verbose, useFactor);
+            printInterval, isOutputSequences, verbose);
         auto memeShuffles = &shuffles[memesIter->first];
         if (memeShuffles->size()) {
             counter = 0;
@@ -136,7 +132,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
                     cout << "Calculating hits for shuffle " << ++counter << endl;
                 }
                 memeHits(*shufflesIter, alphabet, sequences, shuffleHits,
-                    printInterval, isOutputSequences, factor, verbose);
+                    printInterval, isOutputSequences, verbose);
                 shufflesIter++;
             }            
         }
@@ -216,6 +212,18 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
+void setHitsFactor(float factor, Memes& memes){
+    auto memesIter = memes.getMemes().begin();
+    auto memesEnd = memes.getMemes().end();
+    while (memesIter != memesEnd) {
+        cout << "Hits before factor" << memesIter->second.getHitCount() << endl;
+        memesIter->second.setHitCount(factor);
+        cout << "Hits after factor" << memesIter->second.getHitCount() << endl;
+        memesIter++;
+    }
+}
+
+
 void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
@@ -275,10 +283,13 @@ int main(int argc, char *argv[])
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
     SequencesMap sequences = loadSequences(sequencesPath, &factor, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
-    getHits(memes, sequences, memesShuffles, isOutputSequences, factor, useFactor, isVerbose);
+    getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
+    }
+    if (useFactor) {
+        setHitsFactor(factor, memes);
     }
     writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shufflesDigits);
 
