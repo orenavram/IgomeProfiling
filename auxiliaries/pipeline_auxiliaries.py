@@ -548,7 +548,6 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
         f = open(config_path)
         multi_experiments_dict = json.load(f)
         # validation of the json file
-        
         is_valid = is_valid_json_structure(config_path, multi_experiments_dict, schema_to_phase[phase], logger)
         if not is_valid:
             return 
@@ -557,7 +556,10 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
         runs = multi_experiments_dict['runs']
         for run in runs:
             dict_params = base_map.copy()
-            dict_params.update(runs[run])
+            if phase == 'model_fitting':
+                dict_params.update(runs[run]['configuration'])
+            else:
+                dict_params.update(runs[run])
             # create new list of argv of the specific run.
             f = lambda k: k
             g = lambda k: str(dict_params[map_name_parameters[k]])
@@ -573,5 +575,4 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
     else:
         base_map['exp_name'] = ''
         base_map['argv'] = argv
-        print(base_map)
         func_run(**base_map)
