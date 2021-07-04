@@ -66,10 +66,10 @@ schema_cross_exp = {
                                 "reads_path": { "type": "string" },
                                 "motifs_path": { "type": "string" },
                                 "model_path": { "type": "string" },
-                                "done_path": { "type": "string" },
+                                "done_file_path": { "type": "string" },
                                 "logs_dir": { "type": "string" }
                             },
-                            "required": [ "reads_path", "motifs_path", "model_path", "done_path", "logs_dir" ]
+                            "required": [ "reads_path", "motifs_path", "model_path", "done_file_path", "logs_dir" ]
                         },    
                         "sample2bc": {"type": "object"},
                         "biological_motifs_combine": {"type": "object"}
@@ -101,10 +101,10 @@ schema_inference = {
                         "reads_path": {"type":"string"},
 				        "motifs_path": {"type":"string"},
                         "sample2bc": {"type": "string"},
-				        "done_path": {"type":"string"},
+				        "done_file_path": {"type":"string"},
                         "logs_dir": { "type": "string" }
                         },
-                        "required": ["reads_path", "motifs_path", "sample2bc", "done_path", "logs_dir" ],
+                        "required": ["reads_path", "motifs_path", "sample2bc", "done_file_path", "logs_dir" ],
                     }
             },
             "additionalProperties": False   
@@ -126,11 +126,11 @@ schema_reads = {
             "type": "object",
             "patternProperties": {
                 "^[A-Za-z0-9_+]+$": {
-                    "required": [ "fastq", "barcode2sample", "done_path", "reads_path", "logs_dir" ],
+                    "required": [ "fastq", "barcode2sample", "done_file_path", "reads_path", "logs_dir" ],
                     "properties": {
                         "fastq": { "type": "string" },
                         "barcode2sample": { "type": "string" },
-                        "done_path": { "type": "string" },
+                        "done_file_path": { "type": "string" },
                         "reads_path": { "type": "string" },
                         "logs_dir": { "type": "string" }
                     }
@@ -561,11 +561,11 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
             else:
                 dict_params.update(runs[run])
             # create new list of argv of the specific run.
-            f = lambda k: k
-            g = lambda k: str(dict_params[map_name_parameters[k]])
-            argv_new = [func(k) for k in keys if g(k)!='None' if g(k)!='False' for func in [f, g]]
+            get_key = lambda k: k
+            get_value = lambda k: str(dict_params[map_name_parameters[k]])
+            argv_new = [func(k) for k in keys if get_value(k)!='None' if get_value(k)!='False' for func in [get_key, get_value]]
             argv_new.insert(0, argv[0])   
-
+        print(argv_new)
         dict_params['exp_name'] = run
         dict_params['argv'] = argv_new
         func_run(**dict_params)

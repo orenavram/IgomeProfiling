@@ -16,9 +16,11 @@ from time import time
 
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
-                              shuffles, shuffles_percent, shuffles_digits, use_factor, output_path, done_path, rank_method, argv='no_argv',
+                              shuffles, shuffles_percent, shuffles_digits, no_rpm_factor, output_path, done_path, rank_method, argv='no_argv',
                               pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
+    use_factor = 1 if no_rpm_factor else 0
+    
     if not os.path.exists(output_path):
         # TODO: any modules to load?
         if rank_method == 'pval':
@@ -30,9 +32,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')
         else:  # shuffles
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles} '\
-                f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
-            if use_factor:
-                cmd += f' --useFactor {use_factor}'
+                f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits} --useFactor {use_factor}'
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
             
         subprocess.run(cmd, shell=True)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
-    parser.add_argument('--use_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
+    parser.add_argument('--no_rpm_factor', action='store_false', help='Multiplay hits by factor rpm for normalization')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     start = time()
     calculate_pssm_thresholds(args.meme_file_path, args.cutoffs_file_path, args.faa_file_path,
-                              args.number_of_random_pssms, args.shuffles, args.shuffles_percent, args.shuffles_digits, args.use_factor,
+                              args.number_of_random_pssms, args.shuffles, args.shuffles_percent, args.shuffles_digits, args.no_rpm_factor,
                               args.output_path, args.done_file_path, args.rank_method, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')

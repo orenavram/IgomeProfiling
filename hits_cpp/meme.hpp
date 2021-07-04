@@ -57,7 +57,7 @@ public:
         return this->_hitCount;
     }
 
-    void setHitCount(float factor) {
+    void factorHitCount(float factor) {
         this->_hitCount *=factor;
     }
 
