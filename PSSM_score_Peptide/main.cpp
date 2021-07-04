@@ -162,10 +162,10 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 	cout<<endl;
 }
 
-void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName, size_t & numberOfRandomPSSM, int &useFactor) {
+void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName, size_t & numberOfRandomPSSM, bool &useFactor) {
 	// parse ARGV arguments
 	size_t num_required_params = 6;
-	if (argc != (num_required_params * 2)+2) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
+	if ((argc != (num_required_params * 2)+ 1) & (argc != (num_required_params * 2))) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
 		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out>\n"; // Inform the user of how to use the program
 		exit(12);
 	}
@@ -180,7 +180,7 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		else if (string(argv[i]) == "-seq") Seq_FASTA_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-out") Hits_Out_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-NrandPSSM") numberOfRandomPSSM = size_t(atoi(argv[i + 1]));
-		else if (string (argv[i]) == "-useFactor") useFactor = (atoi(argv[i + 1]));
+		else if (string (argv[i]) == "-useFactor") useFactor = true;
 		
 		cout<<argv[i]<<" ";
 	}
@@ -476,7 +476,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	string CutofsPerPSSM_FileName = "";
 	string Hits_Out_FileName = "";
 	size_t numberOfRandomPSSM = 0;
-	int useFactor = 0;
+	bool useFactor = false;
 	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, useFactor);
 	cout<<"Number of random PSSMs to calculate Pval: "<< numberOfRandomPSSM <<endl;
 	readPSSM_info_from_file rpif(PSSM_FileName);
