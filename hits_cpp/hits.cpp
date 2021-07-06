@@ -15,7 +15,7 @@
 
 Memes loadMemes(string memePath, int limit, bool verbose);
 void loadCutoffs(string cutoffsPath, Memes& memes, int limit, bool verbose);
-SequencesMap loadSequences(string faaPath, bool verbose);
+SequencesMap loadSequences(string faaPath, int& numSequences, bool verbose);
 
 // TODO support Repeats_
 // TODO move createShuffles, isHit and getHits?
@@ -212,6 +212,24 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
+float getRpmFactor(int numSequences) {
+    float factor;
+    if (numSequences != 0) {
+        factor = 1000000 / numSequences;
+    }
+    return factor;
+}
+
+void factorHits(Memes& memes, float factor) {
+    auto memesIter = memes.getMemes().begin();
+    auto memesEnd = memes.getMemes().end();
+    while (memesIter != memesEnd) {
+        memesIter->second.factorHitCount(factor);
+        memesIter++;
+    }
+}
+
+
 void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
@@ -249,7 +267,7 @@ int main(int argc, char *argv[])
         ("shuffles", "Create shuffles and rate memes by them (0 = disable)", cxxopts::value<int>()->default_value("0"))
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
         ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
-        //shufflesintersections
+        ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
@@ -262,18 +280,23 @@ int main(int argc, char *argv[])
     auto shuffles = result["shuffles"].as<int>();
     auto shufflesPercent = result["shufflesPercent"].as<float>();
     auto shufflesDigits = result["shufflesDigits"].as<int>();
+    auto useFactor = result["useFactor"].as<bool>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
-
+    int numSequences;
     auto memes = loadMemes(memesPath, maxMemes, isVerbose);
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
-    SequencesMap sequences = loadSequences(sequencesPath, isVerbose);
+    SequencesMap sequences = loadSequences(sequencesPath, numSequences, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
     getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
+    }
+    if (useFactor) {
+        float factor = getRpmFactor(numSequences);
+        factorHits(memes, factor);
     }
     writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shufflesDigits);
 

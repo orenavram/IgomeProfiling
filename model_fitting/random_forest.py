@@ -300,9 +300,9 @@ if __name__ == '__main__':
     
     parser.add_argument('--num_of_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
-    parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
-    parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
-    parser.add_argument('--seed', default=42, type=int, help='Seed number for reconstructing experiments')    
+    parser.add_argument('--min_value_error_random_forest', default=0, type=float, help='A random forest model error value for convergence allowing to stop early')
+    parser.add_argument('--cv_num_of_splits', type=int ,default=2, help='How folds should be in the cross validation process? (use 0 for leave one out)')
+    parser.add_argument('--seed', type=int, default=42, help='Seed number for reconstructing experiments')    
     parser.add_argument('--random_forest_seed', default=123 , type=int, help='Random seed value for generating random forest configurations')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

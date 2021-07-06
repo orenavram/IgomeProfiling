@@ -1,6 +1,7 @@
 import datetime
 import os
 import sys
+import json
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -9,9 +10,70 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import *
+from auxiliaries.pipeline_auxiliaries import load_table_to_dict, submit_pipeline_step, run_step_locally,\
+                                             wait_for_results, process_params
 from auxiliaries.stop_machine_aws import stop_machines
 from auxiliaries.validation_files import is_input_files_valid 
+
+
+map_names_command_line = {
+    "parsed_fastq_results" : "reads_path",
+    "motif_inference_results" : "motifs_path",
+    "classification_output_path" : "model_path",
+    "logs_dir" : "logs_dir",
+    "samplename2biologicalcondition_path" : "sample2bc",
+    "number_of_random_pssms" : "num_of_random_pssms",
+    "done_file_path" : "done_file_path", 
+    "cross_experiments_config" : "cross_experiments_config",
+    "check_files_valid" : "check_files_valid",
+    "stop_before_random_forest" : "stop_before_random_forest",
+    "num_of_random_configurations_to_sample" : "num_of_random_configurations_to_sample", 
+    "is_run_random_forest_per_bc_sequentially" : "is_run_random_forest_per_bc_sequentially",
+    "number_parallel_random_forest" : "number_parallel_rf",
+    "min_value_error_random_forest" : "min_value_error_rf",
+    "rank_method" : "rank_method",
+    "tfidf_method" : "tfidf_method",
+    "tfidf_factor" : "tfidf_factor",
+    "shuffles" : "shuffles",
+    "shuffles_percent" : "shuffles_percent",
+    "shuffles_digits" : "shuffles_digits",
+    "cv_num_of_splits" : "cv_num_of_splits",
+    "seed_random_forest" : "rf_seed",
+    "random_forest_seed_configurations" : "rf_seed_configurations",
+    "stop_machines" : "stop_machines_flag",
+    "type_machines_to_stop" : "type_machines_to_stop",
+    "name_machines_to_stop" : "name_machines_to_stop",
+    "no_rpm_factor": "no_rpm_factor",
+    "queue" : "queue",
+    "verbose" : "verbose",
+    "error_path" : "error_path",
+    "mapitope" : "mapitope"
+}
+
+
+def get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name):
+    dict_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc']
+    sample_names = []
+    biological_conditions = []
+    samplename2biologicalcondition_path = ''
+    if "motifs&samples" in dict_sample2bc:
+        samplename2biologicalcondition = load_table_to_dict(dict_sample2bc['motifs&samples'], 'Barcode {} belongs to more than one sample_name!!')
+        sample_names = sorted(samplename2biologicalcondition)
+        biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+        samplename2biologicalcondition_path = dict_sample2bc['motifs&samples']
+    else:
+        if "motifs" not in dict_sample2bc or "samples" not in dict_sample2bc:
+            logger.info('Missing file samplenames2biologicalcondition of motifs and samples')
+            return sample_names, biological_conditions, samplename2biologicalcondition_path
+        else:
+            samplename2biologicalcondition = load_table_to_dict(dict_sample2bc['motifs'], 'Barcode {} belongs to more than one sample_name!!')
+            biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+            samplename2biologicalcondition_path = dict_sample2bc['motifs']
+            samplename2biologicalcondition = load_table_to_dict(dict_sample2bc['samples'], 'Barcode {} belongs to more than one sample_name!!')
+            sample_names = sorted(samplename2biologicalcondition)
+   
+    return sample_names, biological_conditions, samplename2biologicalcondition_path
+
 
 def repeat_items(list):
     output = []
@@ -20,34 +82,51 @@ def repeat_items(list):
         output.append(x)
     return output
                       
-def build_classifier(first_phase_output_path, motif_inference_output_path,
-                     classification_output_path, logs_dir, samplename2biologicalcondition_path, number_of_random_pssms,
-                     fitting_done_path, check_files_valid, stop_before_random_forest, is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample,
-                     number_parallel_random_forest, min_value_error_random_forest,
-                     rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
-                     cv_num_of_splits, random_forest_seed, random_forest_seed_configurations,
+
+def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, num_of_random_pssms,
+                     done_file_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
+                     is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
+                     min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
+                     cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
-                     queue_name, verbose, error_path, use_mapitope, argv):     
+                     queue, verbose, error_path, mapitope, exp_name, argv):     
 
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path=samplename2biologicalcondition_path, barcode2samplename_path='', logger=logger):
-        return
+    if exp_name:
+        logger.info(f'{datetime.datetime.now()}: Start model fitting step for experiments {exp_name}')
+    
+    error_path = error_path or os.path.join(model_path, 'error.txt')
+
+    multi_experiments_dict = {}
+    if cross_experiments_config:
+        multi_experiments_dict = json.load(open(cross_experiments_config))
+    
+    if check_files_valid:
+        all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
+        for sample2bc in all_sample2bc:
+            if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
+                return
                      
+    use_merge_pvalues = rank_method in ['pval','shuffles']
 
-    is_pval = rank_method == 'pval'
-    is_shuffles = rank_method == 'shuffles'
-    os.makedirs(classification_output_path, exist_ok=True)
+    os.makedirs(model_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
-    if os.path.exists(fitting_done_path):
-        logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({fitting_done_path} already exists)')
+    if os.path.exists(done_file_path):
+        logger.info(f'{datetime.datetime.now()}: skipping model_fitting step ({done_file_path} already exists)')
         return
 
-    samplename2biologicalcondition = load_table_to_dict(samplename2biologicalcondition_path, 'Barcode {} belongs to more than one sample_name!!')
-    sample_names = sorted(samplename2biologicalcondition)
-    biological_conditions = sorted(set(samplename2biologicalcondition.values()))
+
+    sample_names = []
+    biological_conditions = []
+    if multi_experiments_dict:
+        sample_names, biological_conditions, samplename2biologicalcondition_path =  get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name)    
+    else:
+        samplename2biologicalcondition = load_table_to_dict(sample2bc, 'Barcode {} belongs to more than one sample_name!!')
+        sample_names = sorted(samplename2biologicalcondition)
+        biological_conditions = sorted(set(samplename2biologicalcondition.values()))
 
     for bc in biological_conditions:
-        bc_dir_path = os.path.join(classification_output_path, bc)
+        bc_dir_path = os.path.join(model_path, bc)
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
@@ -61,21 +140,22 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
         # get current biological condition (splitted) motifs folder
-        memes_path = os.path.join(motif_inference_output_path, bc, 'memes')
-        cutoffs_path = os.path.join(motif_inference_output_path, bc, 'cutoffs')
+        memes_path = os.path.join(motifs_path, bc, 'memes')
+        cutoffs_path = os.path.join(motifs_path, bc, 'cutoffs')
 
         for file_name in sorted(os.listdir(memes_path)):
             # extract each split of the motifs to scan peptides against it
             meme_file_path = os.path.join(memes_path, file_name)
             cutoffs_file_path = os.path.join(cutoffs_path, file_name)
             for sample_name in sample_names:
-                sample_first_phase_output_path = os.path.join(first_phase_output_path, sample_name)
-                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, use_mapitope)
-                output_path = os.path.join(classification_output_path, bc, 'scanning',
+                sample_first_phase_output_path = os.path.join(reads_path, sample_name)
+                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, mapitope)
+                output_path = os.path.join(model_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
-                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(number_of_random_pssms), output_path, done_path]
+                    cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(num_of_random_pssms), output_path, done_path,
+                          '' if no_rpm_factor else '--no_rpm_factor']
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
@@ -87,7 +167,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     if len(all_cmds_params) > 0:
         for i in range(0, len(all_cmds_params), num_of_cmds_per_job):
             current_batch = all_cmds_params[i: i + num_of_cmds_per_job]
-            done_path_index = -7 if is_shuffles else -1
+            done_path_index = 6
             done_file_name = os.path.split(current_batch[0][done_path_index])[-1]
             name_tokens = done_file_name.split('_peptides_vs_')
             logger.info(name_tokens)
@@ -97,7 +177,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             assert sample_name in sample_names, f'Sample {sample_name} not in sample names list:\n{sample_names}'
             assert bc in biological_conditions, f'Biological condition {bc} not in bc names list:\n{biological_conditions}'
             cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}', current_batch,
-                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue_name, verbose)
+                                    logs_dir, f'{sample_name}_vs_{bc}_scan_{split_num}', queue, verbose)
             num_of_expected_results += len(current_batch)
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -105,6 +185,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     else:
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
 
+    get_sample_for_label = False
+    if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
+        biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine']
+        get_sample_for_label = True
 
     # aggregate scanning scores (hits and values)
     logger.info('_'*100)
@@ -113,16 +197,16 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     num_of_expected_results = 0
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
     for bc in biological_conditions:
-        meme_path = os.path.join(motif_inference_output_path, bc, 'meme.txt')
-        scanning_dir_path = os.path.join(classification_output_path, bc, 'scanning')
+        meme_path = os.path.join(motifs_path, bc, 'meme.txt')
+        scanning_dir_path = os.path.join(model_path, bc, 'scanning')
         done_path = os.path.join(logs_dir, f'{bc}_done_aggregate_scores.txt')
         if not os.path.exists(done_path):
-            if not is_pval:
+            if not use_merge_pvalues:
                 cmds = ['--memes', meme_path,
                         '--bc', bc,
                         '--sam2bc', samplename2biologicalcondition_path,
                         '--scan', scanning_dir_path,
-                        '--output', classification_output_path,
+                        '--output', model_path,
                         '--method', tfidf_method,
                         '--factor', str(tfidf_factor),
                         '--done', done_path]
@@ -130,21 +214,25 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                     cmds.append('--rank')
                 all_cmds_params.append(cmds)
             else:
-                aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
-                aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
-                all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
-                                        aggregated_hits_path, samplename2biologicalcondition_path, done_path])
+                aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
+                aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
+                cmd_merge = [meme_path, scanning_dir_path, bc, aggregated_values_path,
+                    aggregated_hits_path, samplename2biologicalcondition_path, done_path, f'--rank_method {rank_method}']                        
+                if get_sample_for_label:
+                    sample_to_label =','.join(multi_experiments_dict['runs'][exp_name]['biological_motifs_combain'][bc])
+                    cmd_merge += [f'--sample_to_label {sample_to_label}']
+                all_cmds_params.append(cmd_merge)
         else:
             logger.debug(f'skipping score aggregation as {done_path} found')
             num_of_expected_results += 1
 
     if len(all_cmds_params) > 0:
-        executable = 'python' if is_pval else None
-        script_path = f'{src_dir}/model_fitting/{script_name}' if is_pval else f'{src_dir}/tfidf/tfidf'
+        executable = 'python' if use_merge_pvalues else None
+        script_path = f'{src_dir}/model_fitting/{script_name}' if use_merge_pvalues else f'{src_dir}/tfidf/tfidf'
         for cmds_params, bc in zip(all_cmds_params, biological_conditions):
             cmd = submit_pipeline_step(script_path,[cmds_params],
                                 logs_dir, f'{bc}_aggregate_scores',
-                                queue_name, verbose, executable=executable)
+                                queue, verbose, executable=executable)
             num_of_expected_results += 1  # a single job for each biological condition
 
         wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -152,7 +240,6 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
     else:
         logger.info(f'skipping aggregating scores, all scores found')
 
-    
     # fitting a random forest model (hits and values)
     if not stop_before_random_forest:
         logger.info('_'*100)
@@ -161,17 +248,17 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         num_of_expected_results = 0
         all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
         for bc in biological_conditions:
-            aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
+            aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
             pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
-            aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+            aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
             
             value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}',
-                    f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}', f'--seed {random_forest_seed}',
-                    f'--random_forest_seed {random_forest_seed_configurations}', f'--rank_method {rank_method}', f'--queue {queue_name}']
+                    f'--number_parallel_random_forest {number_parallel_rf}', f'--min_value_error_random_forest {min_value_error_rf}', f'--seed {rf_seed}',
+                    f'--random_forest_seed {rf_seed_configurations}', f'--rank_method {rank_method}', f'--queue {queue}']
             hits_cmd = [aggregated_hits_path, hits_done_path, logs_dir, error_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}',
-                    f'--number_parallel_random_forest {number_parallel_random_forest}', f'--min_value_error_random_forest {min_value_error_random_forest}', f'--seed {random_forest_seed}',
-                    f'--random_forest_seed {random_forest_seed_configurations}', '--rank_method hits', f'--queue {queue_name}']
+                    f'--number_parallel_random_forest {number_parallel_rf}', f'--min_value_error_random_forest {min_value_error_rf}', f'--seed {rf_seed}',
+                    f'--random_forest_seed {rf_seed_configurations}', '--rank_method hits', f'--queue {queue}']
             if not os.path.exists(pvalues_done_path):
                 all_cmds_params.append(value_cmd)
             else:
@@ -190,14 +277,10 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
                 cmd = ''
                 if is_run_random_forest_per_bc_sequentially:
                     cmd = run_step_locally(f'{src_dir}/model_fitting/{script_name}',
-                                    [cmds_params],
-                                    logs_dir, f'{bc}_model',
-                                    queue_name, verbose)
+                                          [cmds_params], logs_dir, f'{bc}_model', queue, verbose)
                 else:
                     cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                                    [cmds_params],
-                                    logs_dir, f'{bc}_model',
-                                    queue_name, verbose)
+                                              [cmds_params], logs_dir, f'{bc}_model', queue, verbose)
                 num_of_expected_results += 1  # a single job for each biological condition
 
             wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
@@ -212,7 +295,7 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
-    with open(fitting_done_path, 'w') as f:
+    with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
 
@@ -238,13 +321,14 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the module finished running successfully')
     
+    parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets at model fitting phase')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_before_random_forest', action='store_true', help='A boolean flag for mark if we need to run the random forest')
     parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('--number_parallel_random_forest', default=20, type=int, help='How many random forest configurations to run in parallel')
     parser.add_argument('--min_value_error_random_forest', default=0.0, type=float, help='A random forest model error value for convergence allowing to stop early')
-    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
+    parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
@@ -256,6 +340,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
+    parser.add_argument('--no_rpm_factor', action='store_false', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -269,14 +354,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger('main')
 
-    error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
-
-    build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
-                     args.logs_dir, args.samplename2biologicalcondition_path, args.number_of_random_pssms, args.done_file_path,
-                     args.check_files_valid, args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.num_of_random_configurations_to_sample,
-                     args.number_parallel_random_forest, args.min_value_error_random_forest, args.rank_method,
-                     args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
-                     args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations, 
-                     args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop,
-                     args.queue, args.verbose, error_path, args.mapitope, sys.argv)
-                      
+    process_params(args, args.cross_experiments_config, map_names_command_line, build_classifier, 'model_fitting', sys.argv)
+    
