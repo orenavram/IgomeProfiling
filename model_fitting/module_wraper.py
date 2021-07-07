@@ -130,7 +130,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
-
+    
     # compute scanning scores (hits and values)
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: scanning peptides vs motifs (hits and values)')
@@ -184,10 +184,10 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                         error_file_path=error_path, suffix='_done_scan.txt')
     else:
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
-
+    
     get_sample_for_label = False
     if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
-        biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine']
+        biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'].keys()
         get_sample_for_label = True
 
     # aggregate scanning scores (hits and values)
@@ -219,13 +219,13 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                 cmd_merge = [meme_path, scanning_dir_path, bc, aggregated_values_path,
                     aggregated_hits_path, samplename2biologicalcondition_path, done_path, f'--rank_method {rank_method}']                        
                 if get_sample_for_label:
-                    sample_to_label =','.join(multi_experiments_dict['runs'][exp_name]['biological_motifs_combain'][bc])
-                    cmd_merge += [f'--sample_to_label {sample_to_label}']
+                    bc_sample_names =','.join(multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'][bc])
+                    cmd_merge += [f'--bc_sample_names {bc_sample_names}']
                 all_cmds_params.append(cmd_merge)
         else:
             logger.debug(f'skipping score aggregation as {done_path} found')
             num_of_expected_results += 1
-
+    
     if len(all_cmds_params) > 0:
         executable = 'python' if use_merge_pvalues else None
         script_path = f'{src_dir}/model_fitting/{script_name}' if use_merge_pvalues else f'{src_dir}/tfidf/tfidf'
