@@ -100,12 +100,16 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     if cross_experiments_config:
         multi_experiments_dict = json.load(open(cross_experiments_config))
     
+    all_sample2bc = []
     if check_files_valid:
-        all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
+        if multi_experiments_dict:
+            all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
+        else:
+            all_sample2bc = [sample2bc]
         for sample2bc in all_sample2bc:
             if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
                 return
-                     
+               
     use_merge_pvalues = rank_method in ['pval','shuffles']
 
     os.makedirs(model_path, exist_ok=True)
