@@ -106,8 +106,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             all_sample2bc = multi_experiments_dict['runs'][exp_name]['sample2bc'].values()
         else:
             all_sample2bc = [sample2bc]
-        for sample2bc in all_sample2bc:
-            if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc, barcode2samplename_path='', logger=logger):
+        for sample2bc_path in all_sample2bc:
+            if not is_input_files_valid(samplename2biologicalcondition_path=sample2bc_path, barcode2samplename_path='', logger=logger):
                 return
                
     use_merge_pvalues = rank_method in ['pval','shuffles']
@@ -123,7 +123,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     sample_names = []
     biological_conditions = []
     if multi_experiments_dict:
-        sample_names, biological_conditions, samplename2biologicalcondition_path =  get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name)    
+        sample_names, biological_conditions, sample2bc =  get_sample_and_bc_from_sample2bc(multi_experiments_dict, exp_name)    
     else:
         samplename2biologicalcondition = load_table_to_dict(sample2bc, 'Barcode {} belongs to more than one sample_name!!')
         sample_names = sorted(samplename2biologicalcondition)
@@ -208,7 +208,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             if not use_merge_pvalues:
                 cmds = ['--memes', meme_path,
                         '--bc', bc,
-                        '--sam2bc', samplename2biologicalcondition_path,
+                        '--sam2bc', sample2bc,
                         '--scan', scanning_dir_path,
                         '--output', model_path,
                         '--method', tfidf_method,
@@ -221,7 +221,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                 aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
                 aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
                 cmd_merge = [meme_path, scanning_dir_path, bc, aggregated_values_path,
-                    aggregated_hits_path, samplename2biologicalcondition_path, done_path, f'--rank_method {rank_method}']                        
+                    aggregated_hits_path, sample2bc, done_path, f'--rank_method {rank_method}']                        
                 if get_sample_for_label:
                     bc_sample_names =','.join(multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'][bc])
                     cmd_merge += [f'--bc_sample_names {bc_sample_names}']
