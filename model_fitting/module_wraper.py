@@ -193,7 +193,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
         biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'].keys()
         get_sample_for_label = True
-    print(biological_conditions)
+
     # aggregate scanning scores (hits and values)
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: aggregating scores')
