@@ -566,9 +566,10 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
             has_value = lambda k: str(dict_params[map_name_parameters[k]]) if dict_params[map_name_parameters[k]] in ['','0','0.0'] else bool(dict_params[map_name_parameters[k]])
             argv_new = [func(k) for k in keys if has_value(k)!=False for func in [get_key, get_value]]
             argv_new.insert(0, argv[0])   
-        dict_params['exp_name'] = run
-        dict_params['argv'] = argv_new
-        func_run(**dict_params)
+            
+            dict_params['exp_name'] = run
+            dict_params['argv'] = argv_new
+            func_run(**dict_params)
     
         with open(done_file, 'w') as f:
             f.write(' '.join(argv) + '\n')

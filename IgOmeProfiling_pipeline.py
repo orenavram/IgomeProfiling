@@ -62,9 +62,9 @@ def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross
         if multi_exp_config_reads:
             is_files_valid_reads = validate_input_file(multi_exp_config_reads, 'reads', logger)
         if multi_exp_config_inference:
-            is_files_valid_inference = validate_input_file(multi_exp_config_reads, 'inference', logger)
+            is_files_valid_inference = validate_input_file(multi_exp_config_inference, 'inference', logger)
         if cross_experiments_config:
-            is_files_valid_model = validate_input_file(multi_exp_config_reads, 'model', logger)
+            is_files_valid_model = validate_input_file(cross_experiments_config, 'model', logger)
 
     if not is_files_valid or not is_files_valid_reads or not is_files_valid_inference or not is_files_valid_model:
         return False
