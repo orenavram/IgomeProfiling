@@ -42,6 +42,7 @@ map_names_command_line = {
     "stop_machines" : "stop_machines_flag",
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
+    "precent_random_hit_pssm": "precent_random_hit_pssm",
     "error_path" : "error_path",
     "queue" : "queue",
     "verbose" : "verbose",
@@ -208,7 +209,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
         logger.info('Skipping memes creation, all found')
 
 
-def compute_cutoffs_then_split(biological_conditions, meme_split_size,
+def compute_cutoffs_then_split(biological_conditions, meme_split_size, precent_random_hit_pssm,
     motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Compute pssm cutoffs for each bc
     logger.info('_'*100)
@@ -223,7 +224,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
         output_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
         if not os.path.exists(done_path):
-            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0])
+            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0, '--precent_random_hit_pssm', precent_random_hit_pssm])
         else:
             logger.debug(f'Skipping cutoff as {done_path} exists')
             num_of_expected_results += 1
@@ -273,7 +274,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size,
         logger.info('Skipping split, all exist')
 
 
-def split_then_compute_cutoffs(biological_conditions, meme_split_size,
+def split_then_compute_cutoffs(biological_conditions, meme_split_size, precent_random_hit_pssm,
     motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Count memes per BC (synchrnous)
     memes_per_bc = {}
@@ -333,7 +334,7 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size,
             output_path = os.path.join(bc_cutoffs_folder, file_name)
             done_path = f'{logs_dir}/14_{bc}_{file_name}_done_compute_cutoffs.txt'
             if not os.path.exists(done_path):
-                all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc]])
+                all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc], '--precent_random_hit_pssm', precent_random_hit_pssm])
                 cutoffs_bcs.append(bc)
             else:
                 logger.debug(f'Skipping calculate cutoff as {done_path} exists')
@@ -358,7 +359,8 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                  gap, done_file_path, check_files_valid, multi_exp_config_inference,
                  min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, cluster_alg_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
-                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, queue, verbose, mapitope, error_path, exp_name, argv):
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, precent_random_hit_pssm,
+                 queue, verbose, mapitope, error_path, exp_name, argv):
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name}')
@@ -589,10 +591,10 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                              motifs_path, logs_dir, min_num_of_columns_meme, error_path, queue, verbose, 'biological_conditions')
 
     if concurrent_cutoffs:
-        split_then_compute_cutoffs(biological_conditions, meme_split_size,
+        split_then_compute_cutoffs(biological_conditions, meme_split_size, precent_random_hit_pssm,
             motifs_path, logs_dir, queue, error_path,verbose)
     else:
-        compute_cutoffs_then_split(biological_conditions, meme_split_size,
+        compute_cutoffs_then_split(biological_conditions, meme_split_size, precent_random_hit_pssm,
             motifs_path, logs_dir, queue, error_path, verbose)
 
     if stop_machines_flag:
@@ -654,7 +656,8 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    
+    parser.add_argument('--precent_random_hit_pssm', type=float, default=0.05, help='Precent of random hits per PSSM, for calculate cutoffs')
+
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

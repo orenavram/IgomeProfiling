@@ -96,9 +96,9 @@ size_t get_running_mode(int argc, char *argv[]){
 	return mode;
 }
 
-void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, int & totalMemes) {
+void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, int & totalMemes, double & PercentOfRandomHitsPerPSSM) {
 	// parse ARGV arguments
-	size_t num_required_params = 3;
+	size_t num_required_params = 4;
 	if (argc != (num_required_params * 2)+2) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
 		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -total_memes <total memes, used if input is splitted otherwise 0>\n"; // Inform the user of how to use the program
 		exit(17);
@@ -112,6 +112,7 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		if (string(argv[i]) == "-pssm") PSSM_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-pssm_cutoffs") CutofsPerPSSM_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-total_memes") totalMemes = stoi(string(argv[i + 1]));
+		else if (string(argv[i]) == "-precent_random_hit_pssm") PercentOfRandomHitsPerPSSM = stod(string(argv[i + 1]));
 	}
 }
 
@@ -197,11 +198,12 @@ int computeCutoffsOfPssmMain(int argc, char *argv[])
 	string PSSM_FileName = "";
 	string CutofsPerPSSM_FileName = "";
 	int totalMemes = 0;
-	getFileNamesFromArgv(argc,argv,PSSM_FileName, CutofsPerPSSM_FileName, totalMemes);
+	double PercentOfRandomHitsPerPSSM = 0.05;
+	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, totalMemes, PercentOfRandomHitsPerPSSM);
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	if (totalMemes == 0) 
 		totalMemes = rpif._PSSM_array.size();
-	computePSSM_cutoffs cpc1(rpif._PSSM_array, TotalNumberOfRandoSeq, rpif._alph, CutofsPerPSSM_FileName, totalMemes);
+	computePSSM_cutoffs cpc1(rpif._PSSM_array, TotalNumberOfRandoSeq, rpif._alph, CutofsPerPSSM_FileName, totalMemes, PercentOfRandomHitsPerPSSM);
 	return 0;
 }
 
