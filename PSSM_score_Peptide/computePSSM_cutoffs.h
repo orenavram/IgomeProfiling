@@ -32,7 +32,6 @@ private:
 	//vector<char> const & _correspondingCharacters;
 	map<string, randomPeptides> _randomPeptideDataSet; // map between seqType and object containing the random peptides dataset
 	string const & _CutofsPerPSSM_FileName;
-	//const double PercentOfRandomHitsPerPSSM = 0.05;
 	alphabet& _alph;
 	int _totalMemes;
 	double _PercentOfRandomHitsPerPSSM;
