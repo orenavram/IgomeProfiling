@@ -79,7 +79,7 @@ if __name__ == '__main__':
     if os.path.isdir(args.model_path):
         # in case its a folder with several models
         model_paths = [f'{args.model_path}/{file_name}' for file_name in os.listdir(args.model_path) if
-                       file_name.endswith('pkl')]
+                       file_name.startswith('Top') and file_name.endswith('pkl')]
     else:
         model_paths = [args.model_path]
 
