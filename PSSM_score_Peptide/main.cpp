@@ -112,7 +112,7 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		if (string(argv[i]) == "-pssm") PSSM_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-pssm_cutoffs") CutofsPerPSSM_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-total_memes") totalMemes = stoi(string(argv[i + 1]));
-		else if (string(argv[i]) == "-precent_random_hit_pssm") PercentOfRandomHitsPerPSSM = stod(string(argv[i + 1]));
+		else if (string(argv[i]) == "-cutoff_random_peptitdes_percentile") PercentOfRandomHitsPerPSSM = stod(string(argv[i + 1]));
 	}
 }
 
