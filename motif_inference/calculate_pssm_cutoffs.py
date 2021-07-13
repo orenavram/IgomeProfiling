@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('output_path', help='A path in which a new subfolder with the united motifs will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully')
     parser.add_argument('--total_memes', type=int, default=0, help='Total memes in biological condition. Used if input data is splitted')
-    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Set the top percentile of random peptides and define it a cutoff score')
+    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 

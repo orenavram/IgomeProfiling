@@ -265,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
     parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
-    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Set the top percentile of random peptides and define it a cutoff score')
+    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
 
     # optional parameters for the modelling step
     parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets at model fitting phase')

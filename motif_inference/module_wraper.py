@@ -656,7 +656,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Set the top percentile of random peptides and define it a cutoff score')
+    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
