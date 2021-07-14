@@ -75,7 +75,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm, multi_exp_config_reads,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, threshold, word_length, discard, cluster_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
-                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference,
+                 pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference, cutoff_random_peptitdes_percentile,
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
@@ -142,6 +142,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--cluster_algorithm_mode {cluster_algorithm_mode}',
                              f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
+                             f'--cutoff_random_peptitdes_percentile {cutoff_random_peptitdes_percentile}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']       
         if concurrent_cutoffs:
             module_parameters.append('--concurrent_cutoffs')
@@ -264,6 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--prefix_length_in_clstr', default=20, type=int,
                         help='How long should be the prefix that is taken from the clstr file (cd-hit max prefix is 20)')
     parser.add_argument('--multi_exp_config_inference', type=str, help='Configuration file for inference motifs phase to run multi expirements')
+    parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
 
     # optional parameters for the modelling step
     parser.add_argument('--cross_experiments_config', type=str, help='Configuration file to run cross expiremets at model fitting phase')
@@ -315,7 +317,7 @@ if __name__ == '__main__':
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
-                 args.prefix_length_in_clstr, args.multi_exp_config_inference,
+                 args.prefix_length_in_clstr, args.multi_exp_config_inference, args.cutoff_random_peptitdes_percentile,
                  args.stop_before_random_forest, args.is_run_random_forest_per_bc_sequentially, args.number_of_random_pssms,
                  args.number_parallel_random_forest, args.min_value_error_random_forest,
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
