@@ -59,6 +59,7 @@ def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {s
                                      'too_many_mistakes',
                                      'stop_codon',
                                      'too_short',
+                                     'too_long',
                                      'total_translated_sequences',
                                      'uag'], 0)
         barcode2statistics[barcode]['lib_type'] = {}
@@ -86,7 +87,7 @@ def write_header(f_handler, txt):
 def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                  done_path, barcode2samplename_path, name_summary_file,
                  left_construct, right_construct, max_mismatches_allowed,
-                 min_sequencing_quality, minimal_length_required, gz):
+                 min_sequencing_quality, minimal_length_required, maximum_length_required, gz):
 
     start_time = datetime.datetime.now()
     from auxiliaries.pipeline_auxiliaries import nnk_table
@@ -211,6 +212,13 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\trandom peptide is too short\t{random_peptide}\n")
                     # all set and documented. We can continue to the next read...
                     continue
+                if (len(random_peptide) > maximum_length_required or 
+                    (random_peptide.startswith('C') and random_peptide.endswith('C') and
+                    len(random_peptide) - 2 > maximum_length_required)):
+                    barcode2statistics[barcode]['too_long'] += 1
+                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\trandom peptide is too long\t{random_peptide}\n")
+                    # all set and documented. We can continue to the next read...
+                    continue
 
                 # reached here? read is valid!! woohoo
                 barcode2statistics[barcode]['total_translated_sequences'] += 1
@@ -259,7 +267,8 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
             total_filtered_reads_per_barcode = barcode2statistics[barcode]['poor_quality_barcode'] + \
                                    barcode2statistics[barcode]['too_many_mistakes'] + \
                                    barcode2statistics[barcode]['stop_codon'] + \
-                                   barcode2statistics[barcode]['too_short']
+                                   barcode2statistics[barcode]['too_short'] + \
+                                   barcode2statistics[barcode]['too_long']
 
             sanity_check = barcode2statistics[barcode]['poor_quality_barcode'] + barcode2statistics[barcode]['high_quality_barcode'] == barcode2statistics[barcode]['legal_barcode']
             assert sanity_check, 'poor_quality + high_quality != total'
@@ -269,7 +278,8 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
             f.write(f"Poor quality barcode -> {barcode2statistics[barcode]['poor_quality_barcode']}\n" 
                     f"More than {max_mismatches_allowed} mistakes in the flanking constant sequences -> {barcode2statistics[barcode]['too_many_mistakes']}\n"
                     f"Nonsense stop codon -> {barcode2statistics[barcode]['stop_codon']}\n"           
-                    f"Too short NNK sequences -> {barcode2statistics[barcode]['too_short']}\n")
+                    f"Too short NNK sequences -> {barcode2statistics[barcode]['too_short']}\n"
+                    f"Too long NNK sequrnces -> {barcode2statistics[barcode]['too_long']}\n")
 
             write_header(f, f"\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {barcode2statistics[barcode]['total_translated_sequences']}\n\n")
 
@@ -307,7 +317,8 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
         total_filtered_reads = sum(barcode2statistics[barcode]['poor_quality_barcode'] +
                                barcode2statistics[barcode]['too_many_mistakes'] +
                                barcode2statistics[barcode]['stop_codon'] +
-                               barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)
+                               barcode2statistics[barcode]['too_short']+
+                               barcode2statistics[barcode]['too_long'] for barcode in barcode2samplename)
 
         write_header(log_f, f"Total number of reads that were filtered (due to the following reasons) -> {total_filtered_reads}\n")
 
@@ -315,7 +326,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     f"More than {max_mismatches_allowed} mistakes in the flanking constant sequences -> "
                                f"{sum(barcode2statistics[barcode]['too_many_mistakes'] for barcode in barcode2samplename)}\n"
                     f"Nonsense stop codon -> {sum(barcode2statistics[barcode]['stop_codon'] for barcode in barcode2samplename)}\n"
-                    f"Not NNK sequences -> {sum(barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)}\n")
+                    f"Not NNK sequences -> {sum(barcode2statistics[barcode]['too_short'] + barcode2statistics[barcode]['too_long'] for barcode in barcode2samplename)}\n")
 
         total_translated_sequences = sum(barcode2statistics[barcode]['total_translated_sequences'] for barcode in barcode2samplename)
         write_header(log_f, f'\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {total_translated_sequences}\n\n')
@@ -367,6 +378,7 @@ if __name__ == '__main__':
     # parser.add_argument('--lib_types', type=str.upper, default='6,C6C,8,C8C,10,C10C,12', help='OBSOLETE: Ignore this param. CxC,x')
     parser.add_argument('--minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
+    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -383,4 +395,4 @@ if __name__ == '__main__':
     filter_reads(sys.argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
                  args.done_file_path, args.barcode2samplename, args.name_summary_file,
                  args.left_construct, args.right_construct, args.max_mismatches_allowed,
-                 args.min_sequencing_quality, args.minimal_length_required, args.gz)
+                 args.min_sequencing_quality, args.minimal_length_required, args.maximum_length_required, args.gz)

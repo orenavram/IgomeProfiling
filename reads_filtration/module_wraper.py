@@ -28,6 +28,7 @@ map_names_command_line = {
     "max_mismatches_allowed" : "max_mismatches_allowed",
     "min_sequencing_quality" : "min_sequencing_quality",
     "minimal_length_required" : "minimal_length_required",
+    "maximum_length_required" : "maximum_length_required",
     "multi_exp_config_reads" : "multi_experiments_config",
     "check_files_valid" : "check_files_valid",
     "stop_machines" : "stop_machines_flag",
@@ -43,7 +44,7 @@ map_names_command_line = {
 
 
 def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
-                    left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
+                    left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, maximum_length_required,
                     multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                     rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
 
@@ -78,7 +79,8 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                       f'--right_construct {right_construct}',
                       f'--max_mismatches_allowed {max_mismatches_allowed}',
                       f'--min_sequencing_quality {min_sequencing_quality}',
-                      f'--minimal_length_required {minimal_length_required}'] + (['--gz'] if gz else [])
+                      f'--minimal_length_required {minimal_length_required}',
+                      f'--maximum_length_required {maximum_length_required}'] + (['--gz'] if gz else [])
 
         fetch_cmd(f'{src_dir}/reads_filtration/{script_name}',
                   parameters, verbose, error_path)
@@ -179,9 +181,9 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
-    parser.add_argument('minimal_length_required', default=3, type=int,
-                        help='Shorter peptides will be discarded')
-
+    parser.add_argument('minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')
+    
+    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
