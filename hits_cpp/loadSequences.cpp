@@ -18,7 +18,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
     regex pattern("^>.+_(.+)$");
     smatch matches;
     auto end = sequences.end();
-
+    int countAllSequrnces = 0;
     int count = 0;
     while (getline(file, line)) {
         if (line[0] == '>') {
@@ -30,8 +30,6 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             }
             auto seqType = result[3];
             int unique_rpm = stoi(result[7]);
-            //auto lastIndex = line.find_last_of('_');
-            //auto seqType = line.substr(lastIndex + 1);
             rtrim(seqType);
         
             auto iter = sequences.find(seqType);
@@ -45,10 +43,11 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             getline(file, line);
             sequencesByType->push_back(line);
             sequncesRpm[line] = unique_rpm;
-            count++;
+            count++ ;
+            countAllSequrnces += unique_rpm;
         }
     }
-    numSequences = count;
+    numSequences = countAllSequrnces;
     cout << "total sequences: " << count << endl;
     return sequences;
 }

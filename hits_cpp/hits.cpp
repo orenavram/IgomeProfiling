@@ -90,14 +90,13 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
                 cout << "seq: " << counter << ", overall hits: " << hits << endl;
             }
             counter++;
-            cout<< "uniqe rpm:  " << sequncesRpm.find(*sequencesIter)->second<<endl;
             if (isHit(meme, alphabet, sequencesTypesIter->first, *sequencesIter, verbose)) {
                 if (isUseUniqueRpm){
                     meme.addHitSequence(*sequencesIter, isOutputSequences, sequncesRpm.find(*sequencesIter)->second);
                 } else {
                     meme.addHitSequence(*sequencesIter, isOutputSequences);
                 }
-                hits++;
+                hits += sequncesRpm.find(*sequencesIter)->second;
             }
             sequencesIter++;
         }

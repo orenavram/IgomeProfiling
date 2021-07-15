@@ -62,7 +62,6 @@ public:
     }
 
     void addHitSequence(string& sequence, bool isStoreSequences = true, int count = 1) {
-        cout << "what is the count: "<< count <<endl;
         this->_hitCount += count;
         if (isStoreSequences) {
             if (this->_hitSequences.find(sequence) == this->_hitSequences.end()) {
