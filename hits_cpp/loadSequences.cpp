@@ -2,12 +2,14 @@
 #include <string>
 #include <fstream>
 #include <regex>
+#include <sstream>
+#include <vector>
 
 #include "types.hpp"
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath, int& numSequences, bool verbose) {
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;
@@ -20,8 +22,16 @@ SequencesMap loadSequences(string faaPath, int& numSequences, bool verbose) {
     int count = 0;
     while (getline(file, line)) {
         if (line[0] == '>') {
-            auto lastIndex = line.find_last_of('_');
-            auto seqType = line.substr(lastIndex + 1);
+            replace(line.begin(), line.end(), '_', ' ');  // replace '_' by ' '
+            istringstream iss(line);
+            vector<string> result;
+            for(string s;iss>>s;){
+                result.push_back(s);
+            }
+            auto seqType = result[3];
+            int unique_rpm = stoi(result[7]);
+            //auto lastIndex = line.find_last_of('_');
+            //auto seqType = line.substr(lastIndex + 1);
             rtrim(seqType);
         
             auto iter = sequences.find(seqType);
@@ -34,6 +44,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, bool verbose) {
             
             getline(file, line);
             sequencesByType->push_back(line);
+            sequncesRpm[line] = unique_rpm;
             count++;
         }
     }
