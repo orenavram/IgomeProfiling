@@ -262,7 +262,9 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     f'left_construct = {left_construct}\n'
                     f'right_construct = {right_construct}\n'
                     f'max_mismatches_allowed = {max_mismatches_allowed}\n'
-                    f'min_sequencing_quality = {min_sequencing_quality}\n')
+                    f'min_sequencing_quality = {min_sequencing_quality}\n'
+                    f'minimal_length_required = {minimal_length_required}\n'
+                    f'maximum_length_required = {maximum_length_required}\n')
 
             total_filtered_reads_per_barcode = barcode2statistics[barcode]['poor_quality_barcode'] + \
                                    barcode2statistics[barcode]['too_many_mistakes'] + \
