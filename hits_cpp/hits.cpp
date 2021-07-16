@@ -15,7 +15,7 @@
 
 Memes loadMemes(string memePath, int limit, bool verbose);
 void loadCutoffs(string cutoffsPath, Memes& memes, int limit, bool verbose);
-SequencesMap loadSequences(string faaPath, int& numSequences, bool verbose);
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& seeuncesRpm, bool verbose);
 
 // TODO support Repeats_
 // TODO move createShuffles, isHit and getHits?
@@ -77,7 +77,7 @@ bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq, bool 
 }
 
 void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& hits, 
-    int printInterval, bool isOutputSequences, bool verbose) {
+    int printInterval, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool isUseUniqueRpm, bool verbose) {
     auto sequencesTypesIter = sequences.begin();
     auto sequencesTypesEnd = sequences.end();
     int counter = 0;
@@ -91,8 +91,12 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
             }
             counter++;
             if (isHit(meme, alphabet, sequencesTypesIter->first, *sequencesIter, verbose)) {
-                meme.addHitSequence(*sequencesIter, isOutputSequences);
-                hits++;
+                if (isUseUniqueRpm){
+                    meme.addHitSequence(*sequencesIter, isOutputSequences, sequncesRpm.find(*sequencesIter)->second);
+                } else {
+                    meme.addHitSequence(*sequencesIter, isOutputSequences);
+                }
+                hits += sequncesRpm.find(*sequencesIter)->second;
             }
             sequencesIter++;
         }
@@ -101,7 +105,7 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, string sequenceHitMotifPath, bool verbose) {
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, string sequenceHitMotifPath, SequencesRpmMap& sequncesRpm, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
@@ -124,7 +128,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
             cout << "Calculating hits for " << memesIter->first << endl;
         }
         memeHits(memesIter->second, alphabet, sequences, hits, 
-            printInterval, isOutputSequences, verbose);
+            printInterval, isOutputSequences, sequncesRpm, true, verbose);
         //print all the sequences that has hit with the motif
         if (isOutputSequences){
             fileSequenceHit << "Motif seq: " << memesIter->first << endl;
@@ -132,7 +136,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
             auto sequencesTypesIter = hitSequences.begin();
             auto sequencesTypesEnd = hitSequences.end();
             while (sequencesTypesIter != sequencesTypesEnd){
-                fileSequenceHit << sequencesTypesIter->first << endl;
+                fileSequenceHit << sequencesTypesIter->first << ", rpm: " << sequncesRpm.find(sequencesTypesIter->first)->second << endl;
                 sequencesTypesIter++;
             }
         }
@@ -146,7 +150,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
                     cout << "Calculating hits for shuffle " << ++counter << endl;
                 }
                 memeHits(*shufflesIter, alphabet, sequences, shuffleHits,
-                    printInterval, isOutputSequences, verbose);
+                    printInterval, isOutputSequences, sequncesRpm, false, verbose);
                 shufflesIter++;
             }            
         }
@@ -304,11 +308,12 @@ int main(int argc, char *argv[])
 
     auto begin = chrono::steady_clock::now();
     int numSequences;
+    SequencesRpmMap sequncesRpm;
     auto memes = loadMemes(memesPath, maxMemes, isVerbose);
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
-    SequencesMap sequences = loadSequences(sequencesPath, numSequences, isVerbose);
+    SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
-    getHits(memes, sequences, memesShuffles, isOutputSequences, sequenceHitMotifPath, isVerbose);
+    getHits(memes, sequences, memesShuffles, isOutputSequences, sequenceHitMotifPath, sequncesRpm ,isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
