@@ -498,7 +498,6 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
 		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, 1);
-		cout<< "print numberOfHitsInRealPSSM:  "<< numberOfHitsInRealPSSM<< endl;
 		vector<double> numSigPeptides;
 		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
