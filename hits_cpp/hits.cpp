@@ -101,14 +101,14 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, bool verbose) {
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, string sequenceHitMotifPath, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
     auto alphabet = memes.getAlphabet();
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
-
+    ofstream fileSequenceHit;
     int hits = 0;
     int shuffleHits = 0;
     int counter = 0;
@@ -116,12 +116,26 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     if (verbose) {
         printInterval = 10000;
     }
+    if (isOutputSequences){
+        fileSequenceHit.open(sequenceHitMotifPath);
+    }
     while (memesIter != memesEnd) {
         if (verbose) {
             cout << "Calculating hits for " << memesIter->first << endl;
         }
         memeHits(memesIter->second, alphabet, sequences, hits, 
             printInterval, isOutputSequences, verbose);
+        //print all the sequences that has hit with the motif
+        if (isOutputSequences){
+            fileSequenceHit << "Motif seq: " << memesIter->first << endl;
+            SequencesCount hitSequences = (memesIter->second).getHitSequences();
+            auto sequencesTypesIter = hitSequences.begin();
+            auto sequencesTypesEnd = hitSequences.end();
+            while (sequencesTypesIter != sequencesTypesEnd){
+                fileSequenceHit << sequencesTypesIter->first << endl;
+                sequencesTypesIter++;
+            }
+        }
         auto memeShuffles = &shuffles[memesIter->first];
         if (memeShuffles->size()) {
             counter = 0;
@@ -138,6 +152,9 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
         }
 
         memesIter++;
+    }
+    if (isOutputSequences){
+        fileSequenceHit.close();
     }
     cout << "total hits: " << hits << endl;
     return hits;
@@ -268,6 +285,7 @@ int main(int argc, char *argv[])
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
         ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
         ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
+        ("sequenceHitMotifPath", "Path for results of sequence that had hit with motif", cxxopts::value<string>())
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
@@ -281,6 +299,7 @@ int main(int argc, char *argv[])
     auto shufflesPercent = result["shufflesPercent"].as<float>();
     auto shufflesDigits = result["shufflesDigits"].as<int>();
     auto useFactor = result["useFactor"].as<bool>();
+    auto sequenceHitMotifPath = result["sequenceHitMotifPath"].as<string>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -289,7 +308,7 @@ int main(int argc, char *argv[])
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
     SequencesMap sequences = loadSequences(sequencesPath, numSequences, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
-    getHits(memes, sequences, memesShuffles, isOutputSequences, isVerbose);
+    getHits(memes, sequences, memesShuffles, isOutputSequences, sequenceHitMotifPath, isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
