@@ -457,11 +457,27 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 	}
 }
 
+void writeSequenceHits(const PSSM& pssm1, const vector <HIT> & hits, string sequenceHitsPath){
+	ofstream fileSequenceHit;
+	fileSequenceHit.open(sequenceHitsPath);
+	fileSequenceHit << "Motif seq: " << pssm1.PSSM_name << endl;
+	cout<<hits[1]._seq.getStringOfSeq() <<endl;
+    for (size_t k = 0; k < hits.size(); ++k) {
+        fileSequenceHit << hits[k]._seq.getStringOfSeq() << ", rpm: " << hits[k]._seq._CopyNumber << endl;
+    }
+	fileSequenceHit.close();
+}
+
+
 double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const size_t verbose=0) {
 	vector <HIT> hits;
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
-	
+	//print the sequence that had hit with the motif 
+	string sequenceHitsPath = "output/small_mock/seq_pval.txt";
+	if (verbose){
+		writeSequenceHits(pssm1, hits, sequenceHitsPath);
+	}
 	for (size_t k = 0; k < hits.size(); ++k) {
 		sum += hits[k]._seq._CopyNumber;
 	}
