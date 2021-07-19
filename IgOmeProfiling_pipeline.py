@@ -72,7 +72,8 @@ def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross
 
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
-                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, gz, rpm, multi_exp_config_reads,
+                 left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
+                 maximum_length_required, gz, rpm, multi_exp_config_reads,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, threshold, word_length, discard, cluster_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference, cutoff_random_peptitdes_percentile,
@@ -115,7 +116,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
 
         module_parameters = [fastq_path, first_phase_output_path, first_phase_logs_path,
                             barcode2samplename_path, left_construct, right_construct,
-                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required, '--check_files_valid' if not files_are_valid else '',
+                            max_mismatches_allowed, min_sequencing_quality, first_phase_done_path, minimal_length_required, 
+                            f'--maximum_length_required {maximum_length_required}',
+                            '--check_files_valid' if not files_are_valid else '',
                             f'--multi_exp_config_reads {multi_exp_config_reads}' if multi_exp_config_reads else '',
                             '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
         
@@ -126,7 +129,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                          error_file_path=error_path, suffix='reads_filtration_done.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping reads filtration. Done file exists at:\n{first_phase_done_path}')
-
+    
     second_phase_done_path = f'{logs_dir}/motif_inference_done.txt'
     if not os.path.exists(second_phase_done_path):
         os.makedirs(second_phase_output_path, exist_ok=True)
@@ -223,8 +226,8 @@ if __name__ == '__main__':
     parser.add_argument('--min_sequencing_quality', type=int, default=38,
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
-    parser.add_argument('--minimal_length_required', default=3, type=int,
-                        help='Shorter peptides will be discarded')                             
+    parser.add_argument('--minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')                             
+    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
@@ -313,7 +316,7 @@ if __name__ == '__main__':
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required,
-                 args.gz, args.rpm, args.multi_exp_config_reads,
+                 args.maximum_length_required, args.gz, args.rpm, args.multi_exp_config_reads,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
