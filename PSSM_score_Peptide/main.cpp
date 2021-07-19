@@ -516,7 +516,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		//cout << "place = " << place << endl;
 		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
 		if (useFactor & Seq_array.size() > 0) {
-			float factor = 1000000 / Seq_array.size();
+			float factor = float(1000000) / float(Seq_array.size());
 			numberOfHitsInRealPSSM *= factor;
 		}
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
