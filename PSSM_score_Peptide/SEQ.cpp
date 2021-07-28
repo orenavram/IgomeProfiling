@@ -5,7 +5,6 @@
 
 void SEQ::setCopyNmber()
 {
-	_CopyNumber = 1.0;
 	smatch match;
 	regex rgx(".*Repeats_([\\d.]+)_Type");
 	if (regex_search(_Seq_Name, match, rgx))
@@ -59,6 +58,5 @@ SEQ::SEQ(string & SeqString, const string & SeqName, const double CopyNumber, al
 		_Seq.push_back(alph._alphabetMap[i]);
 	}
 	setSeq_Type();
-	//setCopyNmber();
-	
+	setCopyNmber();
 };

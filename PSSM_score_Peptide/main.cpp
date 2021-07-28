@@ -21,7 +21,7 @@ using namespace std;
 string PadSeq (string seq, size_t PaddingLength);
 void fromFileToVectorOfString(const string fileName,vector<string> & allLines);
 void readFileToPSSM_array(const string fileName, vector <PSSM> & PSSM_array, map<string,int> & PSSM_Name_To_ArrayIndex);
-void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useCountDuplicate);
+void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useRpmFaaScanning);
 void get_top_hits (const vector<SEQ> & sorted_seq,double fraction, vector <SEQ> & top_hits);
 void fill_Seq_Hits_PSSM_map(const vector<SEQ> & seq_Hits_vector,map<string,vector<string>> &PSSM_Hits, string PSSM_name);
 vector<SEQ> get_sort_seq_vector_by_scores (vector<SEQ> & seq_vector, vector <double> & scores_vector);
@@ -163,10 +163,11 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 	cout<<endl;
 }
 
-void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName, size_t & numberOfRandomPSSM, bool &useFactor) {
+void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, \
+							string & Hits_Out_FileName, size_t & numberOfRandomPSSM, bool &useFactor, bool &useRpmFaaScanning) {
 	// parse ARGV arguments
 	size_t num_required_params = 6;
-	if ((argc != (num_required_params * 2)+ 1) & (argc != (num_required_params * 2))) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
+	if ((argc != (num_required_params * 2)+ 1) & (argc != (num_required_params * 2)) & (argc != (num_required_params * 2)+2)) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
 		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out>\n"; // Inform the user of how to use the program
 		exit(12);
 	}
@@ -182,6 +183,7 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		else if (string(argv[i]) == "-out") Hits_Out_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-NrandPSSM") numberOfRandomPSSM = size_t(atoi(argv[i + 1]));
 		else if (string (argv[i]) == "-useFactor") useFactor = true;
+		else if (string (argv[i]) == "-useRpmFaaScanning") useRpmFaaScanning = true;
 		
 		cout<<argv[i]<<" ";
 	}
@@ -348,7 +350,7 @@ vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
 		return tempSeqPadded;
 }
 
-void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useCountDuplicate) {
+void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useRpmFaaScanning) {
 	vector<string> allLines;
 	size_t total_seq=0;
 	fromFileToVectorOfString(fileName,allLines);
@@ -362,7 +364,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 		{
 			string Seq;
 			string name = currLine.substr(1);
-			if (useCountDuplicate) {
+			if (useRpmFaaScanning) {
 				auto lastIndex = currLine.find_last_of('_');
             	count = stod(currLine.substr(lastIndex + 1));
 			}
@@ -482,15 +484,16 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	string CutofsPerPSSM_FileName = "";
 	string Hits_Out_FileName = "";
 	size_t numberOfRandomPSSM = 0;
-
 	bool useFactor = false;
-	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, useFactor);
+	bool useRpmFaaScanning = false;
+
+	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, useFactor, useRpmFaaScanning);
 	cout<<"Number of random PSSMs to calculate Pval: "<< numberOfRandomPSSM <<endl;
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, true);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning);
 
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
@@ -525,8 +528,10 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 			for (size_t k = 0; k < Seq_array.size(); ++k) {
 				numberOfSeq += Seq_array[k]._CopyNumber;
 			}
-			float factor = 1000000 / numberOfSeq;
-			numberOfHitsInRealPSSM *= factor;
+			if (numberOfSeq != 0 ){ 
+				float factor = 1000000 / numberOfSeq;
+				numberOfHitsInRealPSSM *= factor;
+			}
 		}
 
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
