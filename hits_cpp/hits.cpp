@@ -15,7 +15,7 @@
 
 Memes loadMemes(string memePath, int limit, bool verbose);
 void loadCutoffs(string cutoffsPath, Memes& memes, int limit, bool verbose);
-SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& seeuncesRpm, bool verbose);
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& seeuncesRpm, bool useUniqueFaaScanning, bool verbose);
 
 // TODO support Repeats_
 // TODO move createShuffles, isHit and getHits?
@@ -94,7 +94,7 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
                 if (isUseUniqueRpm){
                     meme.addHitSequence(*sequencesIter, isOutputSequences, sequncesRpm.find(*sequencesIter)->second);
                 } else {
-                    meme.addHitSequence(*sequencesIter, isOutputSequences);
+                    meme.addHitSequence(*sequencesIter, isOutputSequences, 1);
                 }
                 hits += sequncesRpm.find(*sequencesIter)->second;
             }
@@ -105,7 +105,7 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool verbose) {
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool useUniqueFaaScanning, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
@@ -125,7 +125,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
             cout << "Calculating hits for " << memesIter->first << endl;
         }
         memeHits(memesIter->second, alphabet, sequences, hits, 
-            printInterval, isOutputSequences, sequncesRpm, true, verbose);
+            printInterval, isOutputSequences, sequncesRpm, useUniqueFaaScanning, verbose);
         auto memeShuffles = &shuffles[memesIter->first];
         if (memeShuffles->size()) {
             counter = 0;
@@ -272,6 +272,7 @@ int main(int argc, char *argv[])
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
         ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
         ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
+        ("useUniqueFaaScanning", "Performance of scanning script with rpm faa file", cxxopts::value<bool>()->default_value("false"))
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
@@ -285,6 +286,7 @@ int main(int argc, char *argv[])
     auto shufflesPercent = result["shufflesPercent"].as<float>();
     auto shufflesDigits = result["shufflesDigits"].as<int>();
     auto useFactor = result["useFactor"].as<bool>();
+    auto useUniqueFaaScanning = result["useUniqueFaaScanning"].as<bool>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -292,9 +294,9 @@ int main(int argc, char *argv[])
     SequencesRpmMap sequncesRpm;
     auto memes = loadMemes(memesPath, maxMemes, isVerbose);
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
-    SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, isVerbose);
+    SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, useUniqueFaaScanning, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
-    getHits(memes, sequences, memesShuffles, isOutputSequences, sequncesRpm, isVerbose);
+    getHits(memes, sequences, memesShuffles, isOutputSequences, sequncesRpm, useUniqueFaaScanning, isVerbose);
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
