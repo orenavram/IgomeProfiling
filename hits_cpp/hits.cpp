@@ -219,7 +219,7 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
 float getRpmFactor(int numSequences) {
     float factor;
     if (numSequences != 0) {
-        factor = 1000000 / numSequences;
+        factor = float(1000000) / float(numSequences);
     }
     return factor;
 }

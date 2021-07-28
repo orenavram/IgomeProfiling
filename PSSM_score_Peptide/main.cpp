@@ -521,8 +521,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		}
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
-		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
-		
+		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;		
 		if (useFactor) {
 			int numberOfSeq = 0;
 			for (size_t k = 0; k < Seq_array.size(); ++k) {
