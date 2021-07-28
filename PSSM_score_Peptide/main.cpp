@@ -21,7 +21,7 @@ using namespace std;
 string PadSeq (string seq, size_t PaddingLength);
 void fromFileToVectorOfString(const string fileName,vector<string> & allLines);
 void readFileToPSSM_array(const string fileName, vector <PSSM> & PSSM_array, map<string,int> & PSSM_Name_To_ArrayIndex);
-void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useRpmFaaScanning);
+void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq);
 void get_top_hits (const vector<SEQ> & sorted_seq,double fraction, vector <SEQ> & top_hits);
 void fill_Seq_Hits_PSSM_map(const vector<SEQ> & seq_Hits_vector,map<string,vector<string>> &PSSM_Hits, string PSSM_name);
 vector<SEQ> get_sort_seq_vector_by_scores (vector<SEQ> & seq_vector, vector <double> & scores_vector);
@@ -221,14 +221,14 @@ int associatePeptidesWithPSSM(int argc, char *argv[])
 	string Seq_FASTA_FileName = "";
 	string CutofsPerPSSM_FileName = "";
 	string Hits_Out_FileName = "";
-
+	int numberOfSeq = 0;
 	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName);
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, false);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, false, numberOfSeq);
 
 	ofstream HitsReport_OutFileHandle;
 	HitsReport_OutFileHandle.open(Hits_Out_FileName);
@@ -350,9 +350,9 @@ vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
 		return tempSeqPadded;
 }
 
-void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useRpmFaaScanning) {
+void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq) {
 	vector<string> allLines;
-	size_t total_seq=0;
+	size_t total_seq = 0;
 	fromFileToVectorOfString(fileName,allLines);
 	for (size_t i=0; i<allLines.size(); ++i) {
 		double count = 1;
@@ -384,11 +384,12 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 				}
 			}
 			SEQ currSeq(Seq, name, count, alph);
-			total_seq++;
+			total_seq += count;
 			Seq_array.push_back(currSeq);
 			i--; // got to new seq
 		}
 	}
+	numberOfSeq = total_seq;
 	cout<<"Total Seq: "<<total_seq<<endl;
 }
 
@@ -486,6 +487,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	size_t numberOfRandomPSSM = 0;
 	bool useFactor = false;
 	bool useRpmFaaScanning = false;
+	int numberOfSeq = 0;
 
 	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, useFactor, useRpmFaaScanning);
 	cout<<"Number of random PSSMs to calculate Pval: "<< numberOfRandomPSSM <<endl;
@@ -493,7 +495,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning, numberOfSeq);
 
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
@@ -521,16 +523,10 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		}
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
-		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;		
-		if (useFactor) {
-			int numberOfSeq = 0;
-			for (size_t k = 0; k < Seq_array.size(); ++k) {
-				numberOfSeq += Seq_array[k]._CopyNumber;
-			}
-			if (numberOfSeq != 0 ){ 
-				float factor = 1000000 / numberOfSeq;
-				numberOfHitsInRealPSSM *= factor;
-			}
+		double p_Value = (double(numberOfRandomPSSM) - double(place)) / double(numberOfRandomPSSM);		
+		if (useFactor & numberOfSeq != 0) {
+			float factor = float(1000000) / float(numberOfSeq);
+			numberOfHitsInRealPSSM *= factor;
 		}
 
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
