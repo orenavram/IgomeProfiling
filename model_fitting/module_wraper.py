@@ -306,8 +306,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
 
 def get_faa_file_name_from_path(path, use_mapitope, use_rpm_faa_scanning):
     for file_name in os.listdir(path):
-        if file_name.endswith('faa') and (('unique' in file_name and use_rpm_faa_scanning) or ('unique' not in file_name and not use_rpm_faa_scanning)) \
-                and ('mapitope' in file_name) == use_mapitope:
+        if file_name.endswith('faa') and ('unique' in file_name) == use_rpm_faa_scanning and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
             break
     return os.path.join(path, file_name)
