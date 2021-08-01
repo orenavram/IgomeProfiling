@@ -9,7 +9,7 @@
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useUniqueFaaScanning, bool verbose) {
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;
@@ -23,7 +23,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
     string seqType;
     while (getline(file, line)) {
         if (line[0] == '>') {
-            if (useUniqueFaaScanning) {
+            if (useRpmFaaScanning) {
                 replace(line.begin(), line.end(), '_', ' ');  // replace '_' by ' '
                 istringstream iss(line);
                 vector<string> result;
@@ -47,7 +47,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             
             getline(file, line);
             sequencesByType->push_back(line);
-            if (useUniqueFaaScanning) {
+            if (useRpmFaaScanning) {
                 sequncesRpm[line] = unique_rpm;
                 count += unique_rpm;
             } else {
