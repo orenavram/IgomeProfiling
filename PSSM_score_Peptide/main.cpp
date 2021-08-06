@@ -21,7 +21,7 @@ using namespace std;
 string PadSeq (string seq, size_t PaddingLength);
 void fromFileToVectorOfString(const string fileName,vector<string> & allLines);
 void readFileToPSSM_array(const string fileName, vector <PSSM> & PSSM_array, map<string,int> & PSSM_Name_To_ArrayIndex);
-void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq);
+void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq, bool isSetCopyNumber=true);
 void get_top_hits (const vector<SEQ> & sorted_seq,double fraction, vector <SEQ> & top_hits);
 void fill_Seq_Hits_PSSM_map(const vector<SEQ> & seq_Hits_vector,map<string,vector<string>> &PSSM_Hits, string PSSM_name);
 vector<SEQ> get_sort_seq_vector_by_scores (vector<SEQ> & seq_vector, vector <double> & scores_vector);
@@ -350,7 +350,7 @@ vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
 		return tempSeqPadded;
 }
 
-void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq) {
+void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useRpmFaaScanning, int& numberOfSeq, bool isSetCopyNumber) {
 	vector<string> allLines;
 	size_t total_seq = 0;
 	fromFileToVectorOfString(fileName,allLines);
@@ -383,7 +383,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 					break;
 				}
 			}
-			SEQ currSeq(Seq, name, count, alph);
+			SEQ currSeq(Seq, name, count, alph, isSetCopyNumber);
 			total_seq += count;
 			Seq_array.push_back(currSeq);
 			i--; // got to new seq
@@ -495,7 +495,8 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning, numberOfSeq);
+	bool isSetCopyNumber = false;
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning, numberOfSeq, isSetCopyNumber);
 
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
