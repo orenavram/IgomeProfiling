@@ -106,10 +106,9 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-<<<<<<< HEAD
 void writeSequenceHits(SequencesCount& hitSequences,  SequencesRpmMap& sequncesRpm, string motif, string sequenceHitMotifPath){
     ofstream fileSequenceHit;
-    fileSequenceHit.open(sequenceHitMotifPath);
+    fileSequenceHit.open(sequenceHitMotifPath, std::ios_base::app);
     fileSequenceHit << "MOTIF " << motif << endl;
     auto sequencesTypesIter = hitSequences.begin();
     auto sequencesTypesEnd = hitSequences.end();
@@ -120,10 +119,8 @@ void writeSequenceHits(SequencesCount& hitSequences,  SequencesRpmMap& sequncesR
     fileSequenceHit.close();
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, string sequenceHitMotifPath, SequencesRpmMap& sequncesRpm, bool verbose) {
-=======
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
->>>>>>> reads_filtration_change_seq_length
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, \
+            SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
@@ -143,16 +140,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
             cout << "Calculating hits for " << memesIter->first << endl;
         }
         memeHits(memesIter->second, alphabet, sequences, hits, 
-<<<<<<< HEAD
-            printInterval, isOutputSequences, sequncesRpm, true, verbose);
-        //print all the sequences that have hit with the motif
-        if (isOutputSequences){
-            SequencesCount hitSequences = (memesIter->second).getHitSequences();
-            writeSequenceHits(hitSequences, sequncesRpm, memesIter->first, sequenceHitMotifPath);
-        }
-=======
             printInterval, isOutputSequences, sequncesRpm, useRpmFaaScanning, verbose);
->>>>>>> reads_filtration_change_seq_length
         auto memeShuffles = &shuffles[memesIter->first];
         if (memeShuffles->size()) {
             counter = 0;
@@ -260,8 +248,8 @@ void factorHits(Memes& memes, float factor) {
     }
 }
 
-
-void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shufflesDigits) {
+void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, SequencesRpmMap& sequncesRpm, bool isOutputSequences, \
+                  string& sequenceHitMotifPath, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -274,6 +262,11 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
             file << "RANK " << std::fixed << std::setprecision(shufflesDigits) <<ratingIter->second << endl;
+        }
+        //print all the sequences that have hit with the motif
+        if (isOutputSequences){
+            SequencesCount hitSequences = (memesIter->second).getHitSequences();
+            writeSequenceHits(hitSequences, sequncesRpm, memesIter->first, sequenceHitMotifPath);
         }
         memesIter++;
     }
@@ -293,11 +286,8 @@ int main(int argc, char *argv[])
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
         ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
         ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
-<<<<<<< HEAD
         ("sequenceHitMotifPath", "Path for results of sequence that had hit with motif", cxxopts::value<string>()->default_value(""))
-=======
         ("useRpmFaaScanning", "Performance of scanning script with rpm faa file", cxxopts::value<bool>()->default_value("false"))
->>>>>>> reads_filtration_change_seq_length
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
@@ -311,11 +301,8 @@ int main(int argc, char *argv[])
     auto shufflesPercent = result["shufflesPercent"].as<float>();
     auto shufflesDigits = result["shufflesDigits"].as<int>();
     auto useFactor = result["useFactor"].as<bool>();
-<<<<<<< HEAD
     auto sequenceHitMotifPath = result["sequenceHitMotifPath"].as<string>();
-=======
     auto useRpmFaaScanning = result["useRpmFaaScanning"].as<bool>();
->>>>>>> reads_filtration_change_seq_length
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -325,11 +312,7 @@ int main(int argc, char *argv[])
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
     SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
-<<<<<<< HEAD
-    getHits(memes, sequences, memesShuffles, isOutputSequences, sequenceHitMotifPath, sequncesRpm ,isVerbose);
-=======
     getHits(memes, sequences, memesShuffles, isOutputSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
->>>>>>> reads_filtration_change_seq_length
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
@@ -338,7 +321,7 @@ int main(int argc, char *argv[])
         float factor = getRpmFactor(numSequences);
         factorHits(memes, factor);
     }
-    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shufflesDigits);
+    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, isVerbose, shufflesDigits);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

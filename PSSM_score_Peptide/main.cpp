@@ -170,7 +170,7 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 	//The first 5 params only - > 12 argc ,
 	//All params together -> 17 
 	// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
-	if ((argc < (num_required_params + 3)) | (argc > (num_required_params + 6))){
+	if ((argc < (num_required_params + 3)) | (argc > (num_required_params + 8))){
 		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out>\n"; // Inform the user of how to use the program
 		exit(12);
 	}
@@ -465,7 +465,7 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 
 void writeSequenceHits(const PSSM& pssm1, const vector <HIT> & hits, const string sequenceHitsPath){
 	ofstream fileSequenceHit;
-	fileSequenceHit.open(sequenceHitsPath);
+	fileSequenceHit.open(sequenceHitsPath, std::ios_base::app);
 	fileSequenceHit << "MOTIF " << pssm1.PSSM_name << endl;
 	cout<<hits[1]._seq.getStringOfSeq() <<endl;
     for (size_t k = 0; k < hits.size(); ++k) {
