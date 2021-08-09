@@ -53,12 +53,13 @@ string SEQ::getStringOfSeq(size_t pos) const {
 	return res;
 }
 
-SEQ::SEQ(string & SeqString, const string & SeqName, const double CopyNumber, alphabet& alph) :  _Seq_Name(SeqName), _CopyNumber(CopyNumber), _alph(alph) {
+SEQ::SEQ(string & SeqString, const string & SeqName, const double CopyNumber, alphabet& alph, bool isSetCopyNumber = true) :  _Seq_Name(SeqName), _CopyNumber(CopyNumber), _alph(alph) {
 	for (size_t k = 0; k < SeqString.length(); ++k) {
 		char i = SeqString.at(k);
 		_Seq.push_back(alph._alphabetMap[i]);
 	}
 	setSeq_Type();
-	//setCopyNmber();
-	
+	if (isSetCopyNumber) {
+		setCopyNmber();
+	}
 };

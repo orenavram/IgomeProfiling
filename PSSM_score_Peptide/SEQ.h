@@ -21,7 +21,7 @@ public:
 		setSeq_Type();
 		setCopyNmber();
 	};
-	SEQ(string & SeqString, const string & SeqName, const double CopyNumber, alphabet& alph);
+	SEQ(string & SeqString, const string & SeqName, const double CopyNumber, alphabet& alph, bool isSetCopyNumber);
 
 	~SEQ(){};
 	void setName(const string name ){ _Seq_Name = name;}
