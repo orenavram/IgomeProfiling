@@ -27,7 +27,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
                 f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
             if rpm_factor:
                 cmd += ' -useFactor'
-            if is_output_sequences_scanning:
+            if is_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' -outputSequences -sequenceHitMotifPath {sequence_hit_motif_path}'    
             if use_rpm_faa_scanning:
                 cmd += ' -useRpmFaaScanning'
@@ -40,7 +40,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
                 f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
             if rpm_factor:
                 cmd += ' --useFactor'
-            if is_output_sequences_scanning:
+            if is_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
             if use_rpm_faa_scanning:
                 cmd += ' --useRpmFaaScanning'    

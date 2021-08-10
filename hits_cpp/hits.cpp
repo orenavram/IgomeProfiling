@@ -119,7 +119,7 @@ void writeSequenceHits(SequencesCount& hitSequences,  SequencesRpmMap& sequncesR
     fileSequenceHit.close();
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, \
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences,
             SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;

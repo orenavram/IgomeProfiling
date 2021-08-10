@@ -369,7 +369,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 			string name = currLine.substr(1);
 			if (useRpmFaaScanning) {
 				auto lastIndex = currLine.find_last_of('_');
-            	count = stod(currLine.substr(lastIndex + 1));
+				count = stod(currLine.substr(lastIndex + 1));
 			}
 			++i;
 			currLine = allLines[i];
@@ -468,9 +468,9 @@ void writeSequenceHits(const PSSM& pssm1, const vector <HIT> & hits, const strin
 	fileSequenceHit.open(sequenceHitsPath, std::ios_base::app);
 	fileSequenceHit << "MOTIF " << pssm1.PSSM_name << endl;
 	cout<<hits[1]._seq.getStringOfSeq() <<endl;
-    for (size_t k = 0; k < hits.size(); ++k) {
-        fileSequenceHit << hits[k]._seq.getStringOfSeq() << " " << hits[k]._seq._CopyNumber << endl;
-    }
+	for (size_t k = 0; k < hits.size(); ++k) {
+		fileSequenceHit << hits[k]._seq.getStringOfSeq() << " " << hits[k]._seq._CopyNumber << endl;
+	}
 	fileSequenceHit.close();
 }
 
@@ -480,7 +480,7 @@ double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
 	//print the sequence that had hit with the motif 
-	if (isOutputSequences){
+	if (isOutputSequences) {
 		writeSequenceHits(pssm1, hits, sequenceHitsPath);
 	}
 	for (size_t k = 0; k < hits.size(); ++k) {
