@@ -106,14 +106,27 @@ void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& h
     cout << "meme hits: " << meme.getHitCount() << endl;
 }
 
-int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
+void writeSequenceHits(SequencesCount& hitSequences,  SequencesRpmMap& sequncesRpm, string motif, string sequenceHitMotifPath){
+    ofstream fileSequenceHit;
+    fileSequenceHit.open(sequenceHitMotifPath, std::ios_base::app);
+    fileSequenceHit << "MOTIF " << motif << endl;
+    auto sequencesTypesIter = hitSequences.begin();
+    auto sequencesTypesEnd = hitSequences.end();
+    while (sequencesTypesIter != sequencesTypesEnd){
+        fileSequenceHit << sequencesTypesIter->first << " " << sequncesRpm.find(sequencesTypesIter->first)->second << endl;
+        sequencesTypesIter++;
+    }
+    fileSequenceHit.close();
+}
+
+int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bool isOutputSequences,
+            SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
     if (verbose) {
         cout << "GET HITS" << endl;
     }
     auto alphabet = memes.getAlphabet();
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
-
     int hits = 0;
     int shuffleHits = 0;
     int counter = 0;
@@ -121,6 +134,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     if (verbose) {
         printInterval = 10000;
     }
+
     while (memesIter != memesEnd) {
         if (verbose) {
             cout << "Calculating hits for " << memesIter->first << endl;
@@ -234,8 +248,8 @@ void factorHits(Memes& memes, float factor) {
     }
 }
 
-
-void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, bool verbose, int shufflesDigits) {
+void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, SequencesRpmMap& sequncesRpm, bool isOutputSequences, \
+                  string& sequenceHitMotifPath, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -249,11 +263,10 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
             file << "RANK " << std::fixed << std::setprecision(shufflesDigits) <<ratingIter->second << endl;
         }
-        auto sequencesIter = memesIter->second.getHitSequences().begin();
-        auto sequencesEnd = memesIter->second.getHitSequences().end();
-        while (sequencesIter != sequencesEnd) {
-            file << sequencesIter->first << " " << sequencesIter->second << endl;
-            sequencesIter++;
+        //print all the sequences that have hit with the motif
+        if (isOutputSequences){
+            SequencesCount hitSequences = (memesIter->second).getHitSequences();
+            writeSequenceHits(hitSequences, sequncesRpm, memesIter->first, sequenceHitMotifPath);
         }
         memesIter++;
     }
@@ -273,6 +286,7 @@ int main(int argc, char *argv[])
         ("shufflesPercent", "Percent from shuffle with greatest number of hits (0-1)", cxxopts::value<float>()->default_value("0.2"))
         ("shufflesDigits", "Number of digits after the point to print in scanning files", cxxopts::value<int>()->default_value("2"))
         ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
+        ("sequenceHitMotifPath", "Path for results of sequence that had hit with motif", cxxopts::value<string>()->default_value(""))
         ("useRpmFaaScanning", "Performance of scanning script with rpm faa file", cxxopts::value<bool>()->default_value("false"))
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
@@ -287,6 +301,7 @@ int main(int argc, char *argv[])
     auto shufflesPercent = result["shufflesPercent"].as<float>();
     auto shufflesDigits = result["shufflesDigits"].as<int>();
     auto useFactor = result["useFactor"].as<bool>();
+    auto sequenceHitMotifPath = result["sequenceHitMotifPath"].as<string>();
     auto useRpmFaaScanning = result["useRpmFaaScanning"].as<bool>();
     auto isVerbose = result["verbose"].as<bool>();
 
@@ -306,7 +321,7 @@ int main(int argc, char *argv[])
         float factor = getRpmFactor(numSequences);
         factorHits(memes, factor);
     }
-    writeResults(memes, memesRating, memesShuffles, outputPath, isVerbose, shufflesDigits);
+    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, isVerbose, shufflesDigits);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;
