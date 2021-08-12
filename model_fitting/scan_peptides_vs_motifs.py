@@ -16,7 +16,7 @@ from time import time
 
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
-                              shuffles, shuffles_percent, shuffles_digits, rpm_factor, output_path, done_path,
+                              shuffles, shuffles_percent, shuffles_digits, no_rpm_factor, output_path, done_path,
                               rank_method, use_rpm_faa_scanning, sequence_hit_motif_path, is_output_sequences_scanning,
                               argv='no_argv', pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
@@ -25,7 +25,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
         if rank_method == 'pval':
             cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {cutoffs_path} -seq {faa_path} ' \
                 f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
-            if rpm_factor:
+            if not no_rpm_factor:
                 cmd += ' -useFactor'
             if is_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' -outputSequences -sequenceHitMotifPath {sequence_hit_motif_path}'    
@@ -38,7 +38,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
         else:  # shuffles
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles} '\
                 f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
-            if rpm_factor:
+            if not no_rpm_factor:
                 cmd += ' --useFactor'
             if is_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
-    parser.add_argument('--no_rpm_factor', action='store_false', help='Disable multiplication hits by factor rpm for normalization')
+    parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--sequence_hit_motif_path', type=str, help='A path for file to write the sequences that had hits with motif')
     parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
     parser.add_argument('--use_rpm_faa_scanning', action='store_true', help='Performance of scanning script with unique rpm faa file')

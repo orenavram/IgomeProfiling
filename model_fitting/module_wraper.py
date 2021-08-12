@@ -163,7 +163,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
                     cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(num_of_random_pssms), output_path, done_path,
-                          '' if no_rpm_factor else '--no_rpm_factor', '--use_rpm_faa_scanning' if use_rpm_faa_scanning else '']
+                          '--no_rpm_factor' if no_rpm_factor else '', '--use_rpm_faa_scanning' if use_rpm_faa_scanning else '']
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
@@ -352,7 +352,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--no_rpm_factor', action='store_false', help='Disable multiplication hits by factor rpm for normalization')
+    parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
     parser.add_argument('--use_rpm_faa_scanning', action='store_true', help='Performance of scanning script with unique rpm faa file')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
