@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import pandas as pd
+import numpy as np
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -10,21 +11,36 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-def normalization(df):
-    # Linear min max normalization
-    normalized_df=(df-df.min())/(df.max()-df.min())
-    # Linear max normalization
-    # column_maxes = df.max()
-    # df_max = column_maxes.max()
-    # normalized_df = df / df_max
+def normalize_max(df, max_value):
+    return df / max_value
+
+
+def normalize_max_min(df, max_value, min_value):
+    return (df - min_value) / (max_value - min_value)
+
+
+def normalize_log(df):
+    return np.log2(df + 1)
+
+
+def min_max_fixed(df, max_value, min_value):
+    df[df > max_value] = max_value
+    df[df < min_value] = min_value
+    return df
+
+
+def normalize(df):
+    normalized_df = normalize_max_min(df, df.max(), df.min())
     return normalized_df
+
 
 def write_results(df, df_statistical, pass_motifs, output_path):
     output_file_statistical = output_path + '_statistical.csv'
     output_file = output_path + '.csv'
-    df_statistical.to_csv(output_file_statistical)
-    df = df[[pass_motifs]]
-    df.to_csv(output_file)
+    df_statistical.to_csv(output_file_statistical, float_format='%.3f')
+    df_positive_motifs = df[pass_motifs]
+    df_positive_motifs.to_csv(output_file)
+
 
 def calculation(df, label):    
     df_mean = pd.DataFrame(df.mean()).transpose()
@@ -40,18 +56,26 @@ def calculation(df, label):
 
 def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference):
     positive_motifs = []
-    for motifs in df.columns():
-        print(motifs)
-
+    # BC: 0 - mean, 1 - std, 2 - median, 3 - max ,4 -min 
+    # other: 5 - mean, 6 - std, 7 - median, 8 - max, 9 - min
+    for (motif_name, motif_data) in df.iteritems():
+        if ((threshold_mean != 0.0 and  motif_data[0] - motif_data[5] > threshold_mean) or threshold_mean == 0.0) \
+            and ((threshold_std != 0.0 and  motif_data[1] - motif_data[6] > threshold_std) or threshold_std == 0.0) \
+            and ((threshold_median != 0.0 and  motif_data[2] - motif_data[7] > threshold_median) or threshold_median ==0.0) \
+            and (min_max_difference and motif_data[4] > motif_data[8] or not min_max_difference):
+            positive_motifs.append(motif_name)
     return positive_motifs
 
-def statistical_calculation(df, biological_condition, output_path, done_path,
-                            threshold_mean, threshold_std, threshold_median,
-                            min_max_difference, rank_method, argv):
+
+def statistical_calculation(df, biological_condition, output_path, done_path, threshold_mean, threshold_std,
+                            threshold_median, min_max_difference, rank_method, argv):
+    source_df = df.copy()
     df = df.drop('sample_name', axis=1)
     df.set_index('label', inplace=True)
     if rank_method == 'hits':
-        df = normalization(df)
+        df = normalize(df) 
+    if rank_method == 'pval':    
+        df = 1-df    
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
     # Calculate the statistical functions - mean, std, median 
@@ -62,7 +86,7 @@ def statistical_calculation(df, biological_condition, output_path, done_path,
     # Left only the positive motifs
     positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference)
     # Write the results 
-    write_results(df,df_statistical, positive_motifs, output_path)
+    write_results(source_df, df_statistical, positive_motifs, output_path)
 
     with open(done_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
@@ -81,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--threshold_mean', type=float, default=0.0, help='If the diffrenece between the mean of BC to the mean of other is smaller than the threshold the motif is positive')
     parser.add_argument('--threshold_std', type=float, default=0.0, help='If the diffrenece between the std of BC to the std of other is smaller than the threshold the motif is positive')
     parser.add_argument('--threshold_median', type=float, default=0.0, help='If the diffrenece between the median of BC to the median of other is smaller than the threshold the motif is positive')
-    parser.add_argument('--min_max_difference', type=bool, help= 'motifs is positive if the minmal val of bc is bigger than the maximal value of other')
+    parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
