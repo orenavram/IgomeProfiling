@@ -90,7 +90,7 @@ def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, mi
     for (motif_name, motif_data) in df.iteritems():
         if ((threshold_mean != 0.0 and  motif_data[0] - motif_data[5] > threshold_mean) or threshold_mean == 0.0) \
             and ((threshold_std != 0.0 and  motif_data[1] - motif_data[6] > threshold_std) or threshold_std == 0.0) \
-            and ((threshold_median != 0.0 and  motif_data[2] - motif_data[7] > threshold_median) or threshold_median ==0.0) \
+            and ((threshold_median != 0.0 and  motif_data[2] - motif_data[7] > threshold_median) or threshold_median == 0.0) \
             and (min_max_difference and motif_data[4] > motif_data[8] or not min_max_difference):
             positive_motifs.append(motif_name)
     return positive_motifs
@@ -153,3 +153,4 @@ if __name__ == '__main__':
     statistical_calculation(df, args.biological_condition, args.output_path, args.done_file_path,
                             args.threshold_mean, args.threshold_std, args.threshold_median, args.min_max_difference,
                             args.rank_method, args.normalize_factor_hits, args.normalize_method_hits, args.normaliza_section, sys.argv)
+                            
