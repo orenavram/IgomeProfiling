@@ -11,6 +11,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
+
 def normalize_max(df, max_value):
     return df / max_value
 
@@ -64,7 +65,7 @@ def write_results(df, df_statistical, pass_motifs, output_path):
     output_file_statistical = output_path + '_statistical.csv'
     output_file = output_path + '.csv'
     df_statistical.to_csv(output_file_statistical, float_format='%.3f')
-    pass_motifs.insert(0,'label')
+    pass_motifs.insert(0, 'label')
     pass_motifs.insert(0, 'sample_name')
     df_positive_motifs = df[pass_motifs]
     df_positive_motifs.to_csv(output_file)
@@ -102,7 +103,7 @@ def statistical_calculation(df, biological_condition, output_path, done_path, th
     df.set_index('label', inplace=True)
     if rank_method == 'hits':
         df = normalize(df, normalize_factor_hits, normalize_method_hits, normaliza_section) 
-    if rank_method == 'pval':    
+    if rank_method == 'pval':
         df = 1-df    
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
