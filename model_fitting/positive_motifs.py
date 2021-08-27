@@ -29,8 +29,36 @@ def min_max_fixed(df, max_value, min_value):
     return df
 
 
-def normalize(df):
-    normalized_df = normalize_max_min(df, df.max(), df.min())
+def normalize(df, normalize_factor_hits, normalize_method_hits, normaliza_section):
+    # For factor log, otherwise it is linear:
+    if normalize_factor_hits == 'log':
+        df = normalize_log(df)
+    
+    min_motifs = df.min() 
+    max_motifs = df.max()
+    min_exp = min(min_motifs)
+    max_exp = max(max_motifs)
+    ['min_max', 'max', 'fixed_min_max']
+    ['per_motif','per_exp']
+    # min_max per motif:
+    if normalize_method_hits == 'min_max' and normaliza_section == 'per_motif':
+        normalized_df = normalize_max_min(df, max_motifs, min_motifs)
+    # min_max per exp:
+    if normalize_method_hits =='min_max' and normaliza_section == 'per_exp':
+        normalized_df = normalize_max_min(df, max_exp, min_exp)
+    # max per motif:
+    if normalize_method_hits =='max' and normaliza_section == 'per_motif':
+        normalized_df = normalize_max(df, max_motifs)
+    # max per motif:
+    if normalize_method_hits =='max' and normaliza_section == 'per_exp':
+        normalized_df = normalize_max(df, max_exp)
+    # fixed_min_max:
+    if normalize_method_hits =='fixed_min_max':
+        fixed_min = 50
+        fixed_max = 10000
+        df = min_max_fixed(df, fixed_max, fixed_min)
+        normalized_df = normalize_max_min(df, fixed_max, fixed_min)
+    
     return normalized_df
 
 
@@ -38,6 +66,8 @@ def write_results(df, df_statistical, pass_motifs, output_path):
     output_file_statistical = output_path + '_statistical.csv'
     output_file = output_path + '.csv'
     df_statistical.to_csv(output_file_statistical, float_format='%.3f')
+    pass_motifs.append('sample_name')
+    pass_motifs.append('label')
     df_positive_motifs = df[pass_motifs]
     df_positive_motifs.to_csv(output_file)
 
@@ -67,13 +97,13 @@ def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, mi
     return positive_motifs
 
 
-def statistical_calculation(df, biological_condition, output_path, done_path, threshold_mean, threshold_std,
-                            threshold_median, min_max_difference, rank_method, argv):
+def statistical_calculation(df, biological_condition, output_path, done_path, threshold_mean, threshold_std, threshold_median,
+                            min_max_difference, rank_method, normalize_factor_hits, normalize_method_hits, normaliza_section, argv):
     source_df = df.copy()
     df = df.drop('sample_name', axis=1)
     df.set_index('label', inplace=True)
     if rank_method == 'hits':
-        df = normalize(df) 
+        df = normalize(df, normalize_factor_hits, normalize_method_hits, normaliza_section) 
     if rank_method == 'pval':    
         df = 1-df    
     df_BC = df.loc[biological_condition]
@@ -107,6 +137,10 @@ if __name__ == '__main__':
     parser.add_argument('--threshold_median', type=float, default=0.0, help='If the diffrenece between the median of BC to the median of other is smaller than the threshold the motif is positive')
     parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
+    parser.add_argument('--normalize_factor_hits', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
+    parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
+                        help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
+    parser.add_argument('--normaliza_section', choices=['per_motif','per_exp'], help='Calculate the min and max per motifs or over all the exp data')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -118,5 +152,5 @@ if __name__ == '__main__':
 
     df = pd.read_csv(args.data_path)
     statistical_calculation(df, args.biological_condition, args.output_path, args.done_file_path,
-                            args.threshold_mean, args.threshold_std, args.threshold_median,
-                            args.min_max_difference, args.rank_method, sys.argv)
+                            args.threshold_mean, args.threshold_std, args.threshold_median, args.min_max_difference,
+                            args.rank_method, args.normalize_factor_hits, args.normalize_method_hits, args.normaliza_section, sys.argv)
