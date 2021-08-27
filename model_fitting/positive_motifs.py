@@ -38,8 +38,7 @@ def normalize(df, normalize_factor_hits, normalize_method_hits, normaliza_sectio
     max_motifs = df.max()
     min_exp = min(min_motifs)
     max_exp = max(max_motifs)
-    ['min_max', 'max', 'fixed_min_max']
-    ['per_motif','per_exp']
+
     # min_max per motif:
     if normalize_method_hits == 'min_max' and normaliza_section == 'per_motif':
         normalized_df = normalize_max_min(df, max_motifs, min_motifs)
@@ -54,11 +53,10 @@ def normalize(df, normalize_factor_hits, normalize_method_hits, normaliza_sectio
         normalized_df = normalize_max(df, max_exp)
     # fixed_min_max:
     if normalize_method_hits =='fixed_min_max':
-        fixed_min = 50
-        fixed_max = 10000
+        fixed_min = 0
+        fixed_max = max_exp
         df = min_max_fixed(df, fixed_max, fixed_min)
         normalized_df = normalize_max_min(df, fixed_max, fixed_min)
-    
     return normalized_df
 
 
@@ -66,8 +64,8 @@ def write_results(df, df_statistical, pass_motifs, output_path):
     output_file_statistical = output_path + '_statistical.csv'
     output_file = output_path + '.csv'
     df_statistical.to_csv(output_file_statistical, float_format='%.3f')
-    pass_motifs.append('sample_name')
-    pass_motifs.append('label')
+    pass_motifs.insert(0,'label')
+    pass_motifs.insert(0, 'sample_name')
     df_positive_motifs = df[pass_motifs]
     df_positive_motifs.to_csv(output_file)
 
@@ -128,10 +126,10 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_path', type=str, help='A csv file with data matrix to model ')
-    parser.add_argument('biological_condition', help='Positive class\' label. All samples of another biological condition will be labeled as "other"')
+    parser.add_argument('data_path', type=str, help='A csv file with data matrix to model')
+    parser.add_argument('biological_condition', type=str, help='Positive class\' label. All samples of another biological condition will be labeled as "other"')
     parser.add_argument('output_path', type=str, help='Path to base name file for output the results')
-    parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--threshold_mean', type=float, default=0.0, help='If the diffrenece between the mean of BC to the mean of other is smaller than the threshold the motif is positive')
     parser.add_argument('--threshold_std', type=float, default=0.0, help='If the diffrenece between the std of BC to the std of other is smaller than the threshold the motif is positive')
     parser.add_argument('--threshold_median', type=float, default=0.0, help='If the diffrenece between the median of BC to the median of other is smaller than the threshold the motif is positive')
@@ -140,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--normalize_factor_hits', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
     parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
                         help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
-    parser.add_argument('--normaliza_section', choices=['per_motif','per_exp'], help='Calculate the min and max per motifs or over all the exp data')
+    parser.add_argument('--normaliza_section', choices=['per_motif','per_exp'],  default='per_motif', help='Calculate the min and max per motifs or over all the exp data')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
