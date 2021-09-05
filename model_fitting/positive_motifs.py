@@ -109,9 +109,9 @@ def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, mi
     positive_motifs = []
     motifs_value = []
     for motif_name in df.columns:
-        if ((threshold_mean is not None and df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) or threshold_mean is None) \
-            and ((threshold_std is not None and df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) or threshold_std is None) \
-            and ((threshold_median is not None and df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) or threshold_median is None) \
+        if (threshold_mean is None or df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) \
+            and (threshold_std is None or df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) \
+            and (threshold_median is None or df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) \
             and (min_max_difference and df.loc['min_BC', motif_name] > df.loc['max_other', motif_name] or not min_max_difference):
             positive_motifs.append(motif_name)
             motifs_value.append('positive')
