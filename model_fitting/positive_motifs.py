@@ -107,13 +107,22 @@ def calculation(df, label):
 
 def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference):
     positive_motifs = []
+    motifs_value = []
     for motif_name in df.columns:
         if ((threshold_mean is not None and df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) or threshold_mean is None) \
             and ((threshold_std is not None and df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) or threshold_std is None) \
             and ((threshold_median is not None and df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) or threshold_median is None) \
             and (min_max_difference and df.loc['min_BC', motif_name] > df.loc['max_other', motif_name] or not min_max_difference):
             positive_motifs.append(motif_name)
-    return positive_motifs
+            motifs_value.append('positive')
+        else:
+            motifs_value.append('negative')
+
+    df.loc['values'] = motifs_value
+    threshold = [threshold_mean, threshold_std, threshold_median, None, None,
+                 threshold_mean, threshold_std, threshold_median, None, None, None]
+    df.insert(0, 'threshold', threshold)
+    return df,positive_motifs
 
 
 def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_mean, threshold_std, threshold_median,
@@ -139,7 +148,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     # Concat two dataframe to one
     df_statistical = pd.concat([df_BC_statistical, df_other_statistical])
     # Left only the positive motifs
-    positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference)
+    df_statistical, positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference)
     # Write the results 
     write_results(source_df, df_statistical, positive_motifs, output_path)
 
