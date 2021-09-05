@@ -22,10 +22,12 @@ def normalize_max_min(df, max_value, min_value):
 
 
 def normalize_log(df, rank_method):
-    if rank_method=='hits':
+    if rank_method == 'hits':
         return np.log2(df + 1)
-    else:
-        return -np.log2(df + 0.0001)
+    if rank_method == 'shuffles':
+        return -np.log2(1- df + 0.01)
+    return df
+
 
 def min_max_fixed(df, max_value, min_value):
     df[df > max_value] = max_value
@@ -35,12 +37,14 @@ def min_max_fixed(df, max_value, min_value):
 
 def is_artifact(df, bio_cond, invalid_mix):
     artifact_motifs = []
-    motifs = df.columns()
-    motifs.remove(['sample_name','label'])
+    motifs = list(df.columns)
+    motifs.remove('sample_name')
+    motifs.remove('label')
     for motif in motifs:
         bc_min = df.loc[df['label'] == bio_cond, motif].min()
         mixed_samples = list(df.loc[(df['label'] == 'other') & (df[motif] >= bc_min), 'sample_name'])
-        if invalid_mix in mixed_samples:
+        is_artifact = any(invalid_mix in s for s in mixed_samples)
+        if is_artifact:
             artifact_motifs.append(motif)
     return artifact_motifs
 
@@ -50,34 +54,31 @@ def normalize(df, normalize_factor, normalize_method_hits, normaliza_section, ra
     if normalize_factor == 'log':
         df = normalize_log(df, rank_method)
     
-    if rank_method == 'hits':
-        min_motifs = df.min() 
-        max_motifs = df.max()
-        min_exp = min(min_motifs)
-        max_exp = max(max_motifs)
-        # min_max per motif:
-        if normalize_method_hits == 'min_max' and normaliza_section == 'per_motif':
-            normalized_df = normalize_max_min(df, max_motifs, min_motifs)
-        # min_max per exp:
-        if normalize_method_hits =='min_max' and normaliza_section == 'per_exp':
-            normalized_df = normalize_max_min(df, max_exp, min_exp)
-        # max per motif:
-        if normalize_method_hits =='max' and normaliza_section == 'per_motif':
-            normalized_df = normalize_max(df, max_motifs)
-        # max per motif:
-        if normalize_method_hits =='max' and normaliza_section == 'per_exp':
-            normalized_df = normalize_max(df, max_exp)
-        # fixed_min_max:
-        if normalize_method_hits =='fixed_min_max':
-            if fixed_max is None:
-                fixed_max = max_exp
-            if fixed_min is None:
-                fixed_min = 0
-            df = min_max_fixed(df, fixed_max, fixed_min)
-            normalized_df = normalize_max_min(df, fixed_max, fixed_min)
-        return normalized_df
-    else: 
-        return df    
+    min_motifs = df.min() 
+    max_motifs = df.max()
+    min_exp = min(min_motifs)
+    max_exp = max(max_motifs)
+    # min_max per motif:
+    if normalize_method_hits == 'min_max' and normaliza_section == 'per_motif':
+        normalized_df = normalize_max_min(df, max_motifs, min_motifs)
+    # min_max per exp:
+    if normalize_method_hits =='min_max' and normaliza_section == 'per_exp':
+        normalized_df = normalize_max_min(df, max_exp, min_exp)
+    # max per motif:
+    if normalize_method_hits =='max' and normaliza_section == 'per_motif':
+        normalized_df = normalize_max(df, max_motifs)
+    # max per motif:
+    if normalize_method_hits =='max' and normaliza_section == 'per_exp':
+        normalized_df = normalize_max(df, max_exp)
+    # fixed_min_max:
+    if normalize_method_hits =='fixed_min_max':
+        if fixed_max is None:
+            fixed_max = max_exp
+        if fixed_min is None:
+            fixed_min = 0
+        df = min_max_fixed(df, fixed_max, fixed_min)
+        normalized_df = normalize_max_min(df, fixed_max, fixed_min)
+    return normalized_df
 
 
 def write_results(df, df_statistical, pass_motifs, output_path):
@@ -87,6 +88,7 @@ def write_results(df, df_statistical, pass_motifs, output_path):
     pass_motifs.insert(0, 'label')
     pass_motifs.insert(0, 'sample_name')
     df_positive_motifs = df[pass_motifs]
+    df_positive_motifs.set_index('sample_name', inplace=True)
     df_positive_motifs.to_csv(output_file)
 
 
@@ -105,11 +107,11 @@ def calculation(df, label):
 
 def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference):
     positive_motifs = []
-    for motif_name in df.columns():
-        if ((threshold_mean is not None and  df['mean_BC'][motif_name] - df['mean_other'][motif_name] > threshold_mean) or threshold_mean is None) \
-            and ((threshold_std is not None and  df['std_BC'][motif_name] - df['std_other'][motif_name] > threshold_std) or threshold_std is None) \
-            and ((threshold_median is not None and  df['median_BC'][motif_name] - df['median_other'][motif_name] > threshold_median) or threshold_median is None) \
-            and (min_max_difference and  df['min_BC'][motif_name] > df['max_other'][motif_name] or not min_max_difference):
+    for motif_name in df.columns:
+        if ((threshold_mean is not None and df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) or threshold_mean is None) \
+            and ((threshold_std is not None and df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) or threshold_std is None) \
+            and ((threshold_median is not None and df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) or threshold_median is None) \
+            and (min_max_difference and df.loc['min_BC', motif_name] > df.loc['max_other', motif_name] or not min_max_difference):
             positive_motifs.append(motif_name)
     return positive_motifs
 
@@ -118,7 +120,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
                             min_max_difference, rank_method, normalize_factor, normalize_method_hits, normalize_section,
                             fixed_min, fixed_max, argv):
     source_df = df.copy()
-    labels = set(df['label'])
+    labels = list(set(df['label']))
     biological_condition = labels[1] if labels[0]=='other' else labels[0]
     if invalid_mix:
         artifuct_motifs = is_artifact(df, biological_condition, invalid_mix)
@@ -128,8 +130,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     df.set_index('label', inplace=True)
     if rank_method == 'pval':
         df = 1-df
-    if rank_method == 'hits':
-        df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
+    df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
     # Calculate the statistical functions - mean, std, median 
@@ -156,15 +157,15 @@ if __name__ == '__main__':
     parser.add_argument('output_path', type=str, help='Path to base name file for output the results')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
-    parser.add_argument('--threshold_mean', type=float, default=None,
+    parser.add_argument('--threshold_mean', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the mean diffrence should be between 0 to 1'),
                         help='If the diffrenece between the mean of BC to the mean of other is bigger than the motif is seperate')
-    parser.add_argument('--threshold_std', type=float, default=None,
+    parser.add_argument('--threshold_std', default=None, 
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the std diffrence should be between 0 to 1'),
                         help='If the diffrenece between the std of BC to the std of other is bigger than the motif is seperate')
-    parser.add_argument('--threshold_median', type=float, default=None,
+    parser.add_argument('--threshold_median', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the median diffrence should be between 0 to 1'),
                         help='If the diffrenece between the median of BC to the median of other is bigger than the motif is seperate')
