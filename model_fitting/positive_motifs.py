@@ -25,7 +25,7 @@ def normalize_log(df, rank_method):
     if rank_method == 'hits':
         return np.log2(df + 1)
     if rank_method == 'shuffles':
-        return -np.log2(1- df + 0.01)
+        return -np.log2(1 - df + 0.01)
     return df
 
 
