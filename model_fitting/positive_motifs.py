@@ -14,18 +14,18 @@ sys.path.insert(0, src_dir)
 
 
 def normalize_max(df, max_value):
-    return df / max_value
+    return (df / max_value).replace(np.nan, 0)
 
 
 def normalize_max_min(df, max_value, min_value):
-    return (df - min_value) / (max_value - min_value)
+    return ((df - min_value) / (max_value - min_value)).replace(np.nan, 0)
 
 
 def normalize_log(df, rank_method):
     if rank_method == 'hits':
         return np.log2(df + 1)
     if rank_method == 'shuffles':
-        return -np.log2(1- df + 0.01)
+        return -np.log2(1 - df + 0.01)
     return df
 
 
@@ -139,7 +139,8 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     df.set_index('label', inplace=True)
     if rank_method == 'pval':
         df = 1-df
-    df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
+    if normalize_factor == 'log' or  rank_method =='hits':
+        df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
     # Calculate the statistical functions - mean, std, median 
