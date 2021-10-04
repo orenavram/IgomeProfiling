@@ -302,14 +302,13 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     else:
         logger.info(f'Skipping fitting, stop before random forest')
 
-    if stop_machines_flag:
-        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
-
     # TODO: fix this bug with a GENERAL WRAPPER done_path
     # wait_for_results(script_name, num_of_expected_results)
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
-
+    
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
 def get_faa_file_name_from_path(path, use_mapitope, use_rpm_faa_scanning):
     for file_name in os.listdir(path):
@@ -343,7 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
-    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--shuffles', default=10, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
     parser.add_argument('--cv_num_of_splits', default=2, type=int, help='How folds should be in the cross validation process? (use 0 for leave one out)')
