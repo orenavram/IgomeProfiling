@@ -44,8 +44,8 @@ map_names_command_line = {
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
     "no_rpm_factor": "no_rpm_factor",
-    "is_output_sequences_scanning": "is_output_sequences_scanning",
-    "use_rpm_faa_scanning": "use_rpm_faa_scanning",
+    "no_output_sequences_scanning": "no_output_sequences_scanning",
+    "no_use_rpm_faa_scanning": "no_use_rpm_faa_scanning",
     "queue" : "queue",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -89,8 +89,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                      done_file_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
                      is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
-                     cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor, use_rpm_faa_scanning,
-                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, is_output_sequences_scanning,
+                     cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor, no_use_rpm_faa_scanning,
+                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, no_output_sequences_scanning,
                      queue, verbose, error_path, mapitope, exp_name, argv):     
 
     if exp_name:
@@ -157,20 +157,22 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             cutoffs_file_path = os.path.join(cutoffs_path, file_name)
             for sample_name in sample_names:
                 sample_first_phase_output_path = os.path.join(reads_path, sample_name)
-                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, mapitope, use_rpm_faa_scanning)
+                faa_file_path = get_faa_file_name_from_path(sample_first_phase_output_path, mapitope, no_use_rpm_faa_scanning)
                 output_path = os.path.join(model_path, bc, 'scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
                 done_path = os.path.join(logs_dir, f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}_done_scan.txt')
                 if not os.path.exists(done_path):
                     cmd = [meme_file_path, cutoffs_file_path, faa_file_path, rank_method, str(num_of_random_pssms), output_path, done_path,
-                          '--no_rpm_factor' if no_rpm_factor else '', '--use_rpm_faa_scanning' if use_rpm_faa_scanning else '']
+                          '--no_rpm_factor' if no_rpm_factor else '', '--no_use_rpm_faa_scanning' if no_use_rpm_faa_scanning else '']
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
-                    if is_output_sequences_scanning:
+                    if no_output_sequences_scanning:
+                        cmd += ['--no_output_sequences_scanning']
+                    else:       
                         sequnces_hits_path =  os.path.join(model_path, bc, 'sequences_hits_scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
-                        cmd += ['--is_output_sequences_scanning', '--sequence_hit_motif_path', sequnces_hits_path]
+                        cmd += ['--sequence_hit_motif_path', sequnces_hits_path]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
@@ -310,9 +312,9 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     if stop_machines_flag:
         stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
-def get_faa_file_name_from_path(path, use_mapitope, use_rpm_faa_scanning):
+def get_faa_file_name_from_path(path, use_mapitope, no_use_rpm_faa_scanning):
     for file_name in os.listdir(path):
-        if file_name.endswith('faa') and ('unique' in file_name) == use_rpm_faa_scanning and ('mapitope' in file_name) == use_mapitope:
+        if file_name.endswith('faa') and ('unique' not in file_name) == no_use_rpm_faa_scanning and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
             break
     return os.path.join(path, file_name)
@@ -352,8 +354,8 @@ if __name__ == '__main__':
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
-    parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
-    parser.add_argument('--use_rpm_faa_scanning', action='store_true', help='Performance of scanning script with unique rpm faa file')
+    parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
+    parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
