@@ -282,7 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='shuffles', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
-    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--shuffles', default=10, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files.')
     parser.add_argument('--num_of_random_configurations_to_sample', default=100, type=int, help='How many random configurations of hyperparameters should be sampled?')

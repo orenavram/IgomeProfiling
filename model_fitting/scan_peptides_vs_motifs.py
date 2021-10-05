@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', type=int, help='Number of pssm permutations')
     parser.add_argument('output_path', help='A path to which the Pvalues will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully')
-    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--shuffles', default=10, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
