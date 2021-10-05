@@ -161,7 +161,7 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
         f.write(' '.join(argv) + '\n')
 
     if stop_machines_flag:
-            stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
 
 if __name__ == '__main__':
