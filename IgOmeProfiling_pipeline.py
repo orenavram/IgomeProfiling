@@ -73,15 +73,15 @@ def is_all_files_valid(multi_exp_config_reads, multi_exp_config_inference, cross
 
 def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondition_path, analysis_dir, logs_dir,
                  left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required,
-                 maximum_length_required, gz, rpm, multi_exp_config_reads,
+                 maximum_length_required, gz, no_calculate_rpm, multi_exp_config_reads,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, threshold, word_length, discard, cluster_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
                  pcc_cutoff, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr, multi_exp_config_inference, cutoff_random_peptitdes_percentile,
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
-                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor, use_rpm_faa_scanning,
-                 is_output_sequences_scanning, run_summary_path, error_path, queue, verbose, argv):
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor, no_use_rpm_faa_scanning,
+                 no_output_sequences_scanning, run_summary_path, error_path, queue, verbose, argv):
 
     files_are_valid = True
     if multi_exp_config_reads or multi_exp_config_inference or cross_experiments_config:
@@ -120,7 +120,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                             f'--maximum_length_required {maximum_length_required}',
                             '--check_files_valid' if not files_are_valid else '',
                             f'--multi_exp_config_reads {multi_exp_config_reads}' if multi_exp_config_reads else '',
-                            '--rpm' if rpm else '', '--gz' if gz else '', f'--error_path {error_path}', '-v' if verbose else '', '-m' if use_mapitope else '']        
+                            '--no_calculate_rpm' if no_calculate_rpm else '', '--gz' if gz else '', f'--error_path {error_path}',
+                            '-v' if verbose else '', '-m' if use_mapitope else '']        
         
         cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/module_wraper.py',[module_parameters],
                              logs_dir, f'{exp_name}_reads_filtration', queue, verbose)
@@ -175,8 +176,8 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
                              '--is_run_random_forest_per_bc_sequentially' if is_run_random_forest_per_bc_sequentially else '',
                              '--no_rpm_factor' if no_rpm_factor else '',
-                             '--use_rpm_faa_scanning' if use_rpm_faa_scanning else '',
-                             f'--is_output_sequences_scanning' if is_output_sequences_scanning else '',
+                             '--no_use_rpm_faa_scanning' if no_use_rpm_faa_scanning else '',
+                             f'--no_output_sequences_scanning' if no_output_sequences_scanning else '',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -229,9 +230,9 @@ if __name__ == '__main__':
                         help='Minimum average sequencing threshold allowed after filtration'
                              'for more details, see: https://en.wikipedia.org/wiki/Phred_quality_score')
     parser.add_argument('--minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')                             
-    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
+    parser.add_argument('--maximum_length_required', default=14, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
-    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
+    parser.add_argument('--no_calculate_rpm', action='store_true', help='Disable normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
 
     # optional parameters for the motif inference
@@ -247,20 +248,20 @@ if __name__ == '__main__':
                         help='Maximal gap frequency allowed in msa (higher frequency columns are removed)',
                         type=lambda x: float(x) if 0 < float(x) < 1
                                                 else parser.error(f'The threshold of the maximal gap frequency allowed per column should be between 0 to 1'))
-    parser.add_argument('--threshold', default='0.5', help='Minimal sequence similarity threshold required',
+    parser.add_argument('--threshold', default='0.6', help='Minimal sequence similarity threshold required',
                         type=lambda x: float(x) if 0.4 <= float(x) <= 1
                                                 else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
-    parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
+    parser.add_argument('--word_length', default='4', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
-    parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
+    parser.add_argument('--discard', default='4', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
     parser.add_argument('--cluster_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=1, # TODO default of 1, 5 or 10?
                         help='Split size, how many meme per files for calculations')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
-    parser.add_argument('--aln_cutoff', default='20', help='The cutoff for pairwise alignment score to unite motifs of BC') 
-    parser.add_argument('--pcc_cutoff', default='0.6', help='Minimal PCC R to unite motifs of BC')
+    parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC') 
+    parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
     parser.add_argument('--skip_sample_merge_meme', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped in merge meme files, e.g., for testing purposes. More than one sample '
                              'name should be separated by commas but no spaces. '
@@ -293,8 +294,8 @@ if __name__ == '__main__':
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
-    parser.add_argument('--use_rpm_faa_scanning', action='store_true', help='Performance of scanning script with unique rpm faa file')
-    parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
+    parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
+    parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -320,7 +321,7 @@ if __name__ == '__main__':
     run_pipeline(args.fastq_path, args.barcode2samplename_path, args.samplename2biologicalcondition_path,
                  args.analysis_dir.rstrip('/'), args.logs_dir.rstrip('/'),
                  args.left_construct, args.right_construct, args.max_mismatches_allowed, args.min_sequencing_quality, args.minimal_length_required,
-                 args.maximum_length_required, args.gz, args.rpm, args.multi_exp_config_reads,
+                 args.maximum_length_required, args.gz, args.no_calculate_rpm, args.multi_exp_config_reads,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
                  args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
@@ -330,5 +331,5 @@ if __name__ == '__main__':
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_experiments_config,
-                 args.no_rpm_factor, args.use_rpm_faa_scanning, args.is_output_sequences_scanning,
+                 args.no_rpm_factor, args.no_use_rpm_faa_scanning, args.no_output_sequences_scanning,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
