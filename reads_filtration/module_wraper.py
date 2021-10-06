@@ -38,7 +38,7 @@ map_names_command_line = {
     "verbose" : "verbose",
     "error_path" : "error_path",
     "queue" : "queue",
-    "rpm" : "rpm",
+    "no_calculate_rpm" : "no_calculate_rpm",
     "mapitope" : "mapitope"
 }
 
@@ -46,7 +46,7 @@ map_names_command_line = {
 def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, maximum_length_required,
                     multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
-                    rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
+                    no_calculate_rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start reads filtration step for experiments {exp_name})')
@@ -140,7 +140,7 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                 done_path = f'{logs_dir}/02_{sample_name}_done_collapsing.txt'
                 factors_file_name = 'mapitop_rpm_factors' if 'mapitope' in file else 'rpm_factors'
                 parameters = [file_path, output_file_path, done_path]
-                if rpm:
+                if not no_calculate_rpm:
                     rpm_factors_path =  f'{reads_path}/{factors_file_name}.txt'
                     parameters.append('--rpm')
                     parameters.append(rpm_factors_path)
@@ -157,11 +157,11 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
     else:
         logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({collapsing_done_path} exists)')
 
-    if stop_machines_flag:
-        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
-
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
+
+    if stop_machines_flag:
+        stop_machines(type_machines_to_stop, name_machines_to_stop, logger)
 
 
 if __name__ == '__main__':
@@ -183,13 +183,13 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     parser.add_argument('minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')
     
-    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
+    parser.add_argument('--maximum_length_required', default=14, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')
     parser.add_argument('--stop_machines', action='store_true', help='Turn off the machines in AWS at the end of the running')
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
-    parser.add_argument('--rpm', action='store_true', help='Normalize counts to "reads per million" (sequence proportion x 1,000,000)')
+    parser.add_argument('--no_calculate_rpm', action='store_true', help='Disable normalize counts to "reads per million" (sequence proportion x 1,000,000)')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
@@ -203,5 +203,5 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
-
+    
     process_params(args, args.multi_exp_config_reads, map_names_command_line, run_first_phase, 'reads_filtration',sys.argv)

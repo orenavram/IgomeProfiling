@@ -380,7 +380,7 @@ if __name__ == '__main__':
     # parser.add_argument('--lib_types', type=str.upper, default='6,C6C,8,C8C,10,C10C,12', help='OBSOLETE: Ignore this param. CxC,x')
     parser.add_argument('--minimal_length_required', default=3, type=int,
                         help='Shorter peptides will be discarded')
-    parser.add_argument('--maximum_length_required', default=12, type=int, help='Longer peptides will be discarded')
+    parser.add_argument('--maximum_length_required', default=14, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()

@@ -17,7 +17,7 @@ from time import time
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
                               shuffles, shuffles_percent, shuffles_digits, no_rpm_factor, output_path, done_path,
-                              rank_method, use_rpm_faa_scanning, sequence_hit_motif_path, is_output_sequences_scanning,
+                              rank_method, no_use_rpm_faa_scanning, sequence_hit_motif_path, no_output_sequences_scanning,
                               argv='no_argv', pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
@@ -27,9 +27,9 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
                 f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
             if not no_rpm_factor:
                 cmd += ' -useFactor'
-            if is_output_sequences_scanning and sequence_hit_motif_path:
+            if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' -outputSequences -sequenceHitMotifPath {sequence_hit_motif_path}'    
-            if use_rpm_faa_scanning:
+            if not no_use_rpm_faa_scanning:
                 cmd += ' -useRpmFaaScanning'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
         elif rank_method == 'tfidf':
@@ -40,9 +40,9 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
                 f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
             if not no_rpm_factor:
                 cmd += ' --useFactor'
-            if is_output_sequences_scanning and sequence_hit_motif_path:
+            if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
-            if use_rpm_faa_scanning:
+            if not no_use_rpm_faa_scanning:
                 cmd += ' --useRpmFaaScanning'    
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
 
@@ -71,13 +71,13 @@ if __name__ == '__main__':
     parser.add_argument('number_of_random_pssms', type=int, help='Number of pssm permutations')
     parser.add_argument('output_path', help='A path to which the Pvalues will be written to')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully')
-    parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--shuffles', default=10, type=int, help='Number of controlled shuffles permutations')
     parser.add_argument('--shuffles_percent', default=0.2, type=float, help='Percent from shuffle with greatest number of hits (0-1)')
     parser.add_argument('--shuffles_digits', default=2, type=int, help='Number of digits after the point to print in scanning files')
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--sequence_hit_motif_path', type=str, help='A path for file to write the sequences that had hits with motif')
-    parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
-    parser.add_argument('--use_rpm_faa_scanning', action='store_true', help='Performance of scanning script with unique rpm faa file')
+    parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
+    parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     start = time()
     calculate_pssm_thresholds(args.meme_file_path, args.cutoffs_file_path, args.faa_file_path,
                               args.number_of_random_pssms, args.shuffles, args.shuffles_percent, args.shuffles_digits, args.no_rpm_factor,
-                              args.output_path, args.done_file_path, args.rank_method, args.use_rpm_faa_scanning,
-                              args.sequence_hit_motif_path, args.is_output_sequences_scanning, argv=sys.argv)
+                              args.output_path, args.done_file_path, args.rank_method, args.no_use_rpm_faa_scanning,
+                              args.sequence_hit_motif_path, args.no_output_sequences_scanning, argv=sys.argv)
     end = time()
     print(f'total time (sec): {end - start}')

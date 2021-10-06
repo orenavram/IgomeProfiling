@@ -51,12 +51,12 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('sample_name', type=str, help='The name of the sample that cluster on')
     
-    parser.add_argument('--threshold', default='0.5', help='Minimal sequence similarity threshold required',
+    parser.add_argument('--threshold', default='0.6', help='Minimal sequence similarity threshold required',
                         type=lambda x: float(x) if 0.4 <= float(x) <= 1
                                                 else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
-    parser.add_argument('--word_length', default='2', choices=['2', '3', '4', '5'],
+    parser.add_argument('--word_length', default='4', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
-    parser.add_argument('--discard', default='1', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
+    parser.add_argument('--discard', default='4', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
     parser.add_argument('--cluster_algorithm_mode', default='0', help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
