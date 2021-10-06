@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 ### [1.2.0] - 2021-10-05
 
 ### Changes
-- Changed defualt values of parameters:
+- Changed default values of parameters:
     - Phase 1: 
         - Changed maximum_length_required from 12 to 14
-        - Calculate rpm by defualt unless using flag no_calculate_rpm
+        - Calculate rpm by default unless using flag no_calculate_rpm
     - Phase 2:
         - Changed aln_cutoff from 20 to 24
         - Changed pcc_cutoff from 0.6 to 0.7
