@@ -120,18 +120,21 @@ def save_model_features(X, feature_indexes, feature_names, sample_names, output_
 
 
 def write_results_feature_selection_summary(feature_selection_summary_path, path_dir):
-    #feature_selection_summary_f = open(feature_selection_summary_path, 'a')
     models = sorted([x[0] for x in os.walk(path_dir)])
     del models[0]
-    with open(feature_selection_summary_path, 'a') as feature_selection_summary_f:
-        for path_number_model in models:        
-            path_file = f'{path_number_model}/feature_selection.txt'
-            if os.path.exists(path_file):
-                with open(path_file) as infile:
-                    line = infile.readline()
-                    feature_selection_summary_f.write(line)
-                os.remove(path_file)
-    
+    feature_selection_summary_f = open(feature_selection_summary_path, 'a')
+    for path_number_model in models:        
+        path_file = f'{path_number_model}/feature_selection.txt'
+        if os.path.exists(path_file):
+            with open(path_file) as infile:
+                line = infile.readline()
+                feature_selection_summary_f.write(line)
+                logger.info(f'results_feature - {line}')
+            os.remove(path_file)
+    feature_selection_summary_f.flush()
+    feature_selection_summary_f.close()
+    # add 200 millisecond delay before return from function:
+    time.sleep(0.2)
 
 def train_models(csv_file_path, done_path, logs_dir,error_path, num_of_configurations_to_sample, number_parallel_random_forest, min_value_error,
                  rank_method, cv_num_of_splits, seed, random_forest_seed, queue_name, verbose, argv):
