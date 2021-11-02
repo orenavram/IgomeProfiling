@@ -133,10 +133,13 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     biological_condition = labels[1] if labels[0]=='other' else labels[0]
     if invalid_mix:
         artifuct_motifs = is_artifact(df, biological_condition, invalid_mix)
-        df.drop(artifuct_motifs, axis=1)
+        df = df.drop(artifuct_motifs, axis=1)
     source_df = df.copy()
     df = df.drop('sample_name', axis=1)
     df.set_index('label', inplace=True)
+    if len(list(df.columns)) == 0:
+        logger.info('All motifs removed by invalid mix section')
+        return 
     if rank_method == 'pval':
         df = 1-df
     if normalize_factor == 'log' or  rank_method =='hits':
