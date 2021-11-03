@@ -33,7 +33,7 @@ void computePSSM_cutoffs::generateRandomPeptides() {
 	size_t NumberOfRandoSeq = _totalNumberOfRandoSeq;  
 	srand(931); // Set srand for generating random pepties // TODO set srand from input argument
 	map<string, randomPeptides>::iterator it = _randomPeptideDataSet.begin(); // use iteration and insert to add values to map
-	for (size_t length = 5; length <= 12; length++)
+	for (size_t length = 5; length <= 14; length++)
 	{
 		randomPeptides tmp(_alph._aaFreq, NumberOfRandoSeq, length);
 		tmp.generateRandomSequences();
