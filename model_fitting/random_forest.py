@@ -129,7 +129,6 @@ def write_results_feature_selection_summary(feature_selection_summary_path, path
             with open(path_file) as infile:
                 line = infile.readline()
                 feature_selection_summary_f.write(line)
-                logger.info(f'results_feature - {line}')
             os.remove(path_file)
     feature_selection_summary_f.flush()
     feature_selection_summary_f.close()
