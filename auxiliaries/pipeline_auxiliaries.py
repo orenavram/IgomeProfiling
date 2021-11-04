@@ -9,8 +9,8 @@ import numpy as np
 import logging
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
-import sqlite3
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "CTT": "L", "CTG": "L", "TTG": "L",
@@ -577,3 +577,12 @@ def process_params(args, config_path, map_name_parameters, func_run, phase, argv
         base_map['exp_name'] = ''
         base_map['argv'] = argv
         func_run(**base_map)
+
+
+def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
+    train_data = log_scale(df, rank_method)
+    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
+    plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples, rotation=0)
+    cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
+    cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
+    plt.close()

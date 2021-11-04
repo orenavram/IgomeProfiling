@@ -2,10 +2,8 @@ import time
 import sys
 import os
 import shutil
-import seaborn as sns
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
@@ -22,8 +20,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import submit_pipeline_step, wait_for_results
-from auxiliaries.pipeline_auxiliaries import log_scale
+from auxiliaries.pipeline_auxiliaries import submit_pipeline_step, wait_for_results, log_scale, generate_heat_map
 
 
 def parse_data(file_path):
@@ -95,18 +92,6 @@ def sample_configurations(hyperparameters_grid, num_of_configurations_to_sample,
             configuration[key] = np.random.choice(hyperparameters_grid[key], size=1)[0]
         configurations.append(configuration)
     return configurations
-
-
-
-def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
-    
-    train_data = log_scale(df, rank_method)
-    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
-    plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
-    cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
-    cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
-    plt.close()
-
 
 
 def save_model_features(X, feature_indexes, feature_names, sample_names, output_path):

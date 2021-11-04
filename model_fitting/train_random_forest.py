@@ -1,6 +1,4 @@
-import json 
 import sys
-import seaborn as sns
 import joblib
 import os
 import matplotlib.pyplot as plt
@@ -16,7 +14,7 @@ elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
 else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
-from auxiliaries.pipeline_auxiliaries import log_scale
+from auxiliaries.pipeline_auxiliaries import generate_heat_map
 
 
 def parse_data(file_path):
@@ -55,14 +53,6 @@ def generate_roc_curve(X, y, classifier, number_of_features, output_path):
     plt.close()
 
 
-def generate_heat_map(df, number_of_features, rank_method, number_of_samples, output_path):
-    train_data = log_scale(df, rank_method)
-    cm = sns.clustermap(train_data, cmap="Blues", col_cluster=False, yticklabels=True)
-    plt.setp(cm.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150/number_of_samples)
-    cm.ax_heatmap.set_title(f"A heat-map of the significance of the top {number_of_features} discriminatory motifs")
-    cm.savefig(f"{output_path}.svg", format='svg', bbox_inches="tight")
-    plt.close()
-
 def plot_error_rate(errors, features, cv_num_of_splits, output_path_dir):
     raw_data_path = f"{output_path_dir}/error_rate.txt"
     with open(raw_data_path, 'w') as f:
@@ -77,6 +67,7 @@ def plot_error_rate(errors, features, cv_num_of_splits, output_path_dir):
     plot_path = raw_data_path.replace('.txt', '.png')
     plt.savefig(plot_path)
     plt.close()
+
 
 def train(rf, X, y, feature_names, sample_names, rank_method, output_path, cv_num_of_splits):
 
