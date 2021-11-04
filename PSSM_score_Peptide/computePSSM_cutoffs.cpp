@@ -11,13 +11,17 @@ computePSSM_cutoffs::computePSSM_cutoffs(vector<PSSM> & PSSM_array,
 	alphabet& alph,
 	const string & CutofsPerPSSM_FileName,
 	int totalMemes,
-	double PercentOfRandomHitsPerPSSM) : 
+	double PercentOfRandomHitsPerPSSM,
+	int minLibraryLenght,
+	int maxLibraryLenght) : 
 	_PSSM_array(PSSM_array), 
 	_totalNumberOfRandoSeq(TotalNumberOfRandoSeq), 
 	_alph(alph), 
 	_CutofsPerPSSM_FileName(CutofsPerPSSM_FileName),
 	_totalMemes(totalMemes),
-	_PercentOfRandomHitsPerPSSM(PercentOfRandomHitsPerPSSM)
+	_PercentOfRandomHitsPerPSSM(PercentOfRandomHitsPerPSSM),
+	_minLibraryLenght(minLibraryLenght),
+	_maxLibraryLenght(maxLibraryLenght)
 {
 	generateRandomPeptides();
 	computecCutoffsBasedOnRandomPeptides();
@@ -33,7 +37,7 @@ void computePSSM_cutoffs::generateRandomPeptides() {
 	size_t NumberOfRandoSeq = _totalNumberOfRandoSeq;  
 	srand(931); // Set srand for generating random pepties // TODO set srand from input argument
 	map<string, randomPeptides>::iterator it = _randomPeptideDataSet.begin(); // use iteration and insert to add values to map
-	for (size_t length = 5; length <= 14; length++)
+	for (size_t length = _minLibraryLenght; length <= _maxLibraryLenght; length++)
 	{
 		randomPeptides tmp(_alph._aaFreq, NumberOfRandoSeq, length);
 		tmp.generateRandomSequences();
