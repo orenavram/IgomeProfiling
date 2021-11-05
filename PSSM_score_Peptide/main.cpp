@@ -97,7 +97,7 @@ size_t get_running_mode(int argc, char *argv[]){
 }
 
 void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, int & totalMemes, 
-						  double & PercentOfRandomHitsPerPSSM, int & minLibraryLenght, int & maxLibraryLenght) {
+						  double & PercentOfRandomHitsPerPSSM, int & minLibraryLength, int & maxLibraryLength) {
 	// parse ARGV arguments
 	size_t num_required_params = 6;
 	if (argc != (num_required_params * 2)+2) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
@@ -114,8 +114,8 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		else if (string(argv[i]) == "-pssm_cutoffs") CutofsPerPSSM_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-total_memes") totalMemes = stoi(string(argv[i + 1]));
 		else if (string(argv[i]) == "-cutoff_random_peptitdes_percentile") PercentOfRandomHitsPerPSSM = stod(string(argv[i + 1]));
-		else if (string(argv[i]) == "-min_library_lenght_cutoff") minLibraryLenght = stoi(string(argv[i + 1]));
-		else if (string(argv[i]) == "-max_library_lenght_cutoff") maxLibraryLenght = stoi(string(argv[i + 1]));
+		else if (string(argv[i]) == "-min_library_length_cutoff") minLibraryLength = stoi(string(argv[i + 1]));
+		else if (string(argv[i]) == "-max_library_length_cutoff") maxLibraryLength = stoi(string(argv[i + 1]));
 	}
 }
 
@@ -209,14 +209,14 @@ int computeCutoffsOfPssmMain(int argc, char *argv[])
 	string CutofsPerPSSM_FileName = "";
 	int totalMemes = 0;
 	double PercentOfRandomHitsPerPSSM = 0.05;
-	int minLibraryLenght = 5;
-	int maxLibraryLenght = 14;
-	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, totalMemes, PercentOfRandomHitsPerPSSM, minLibraryLenght, maxLibraryLenght);
+	int minLibraryLength = 5;
+	int maxLibraryLength = 14;
+	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, totalMemes, PercentOfRandomHitsPerPSSM, minLibraryLength, maxLibraryLength);
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	if (totalMemes == 0) 
 		totalMemes = rpif._PSSM_array.size();
 	computePSSM_cutoffs cpc1(rpif._PSSM_array, TotalNumberOfRandoSeq, rpif._alph, CutofsPerPSSM_FileName, totalMemes, 
-							PercentOfRandomHitsPerPSSM, minLibraryLenght, maxLibraryLenght);
+							PercentOfRandomHitsPerPSSM, minLibraryLength, maxLibraryLength);
 	return 0;
 }
 

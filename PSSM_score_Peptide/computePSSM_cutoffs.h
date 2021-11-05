@@ -20,8 +20,8 @@ public:
 						const string & CutofsPerPSSM_FileName,
 						int totalMemes,
 						double PercentOfRandomHitsPerPSSM,
-						int minLibraryLenght, 
-						int maxLibraryLenght);
+						int minLibraryLength, 
+						int maxLibraryLength);
 
 private:
 	void generateRandomPeptides();
@@ -37,8 +37,8 @@ private:
 	alphabet& _alph;
 	int _totalMemes;
 	double _PercentOfRandomHitsPerPSSM;
-	int _minLibraryLenght; 
-	int _maxLibraryLenght;
+	int _minLibraryLength; 
+	int _maxLibraryLength;
 
 
 
