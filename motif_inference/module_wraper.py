@@ -43,6 +43,8 @@ map_names_command_line = {
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
     "cutoff_random_peptitdes_percentile": "cutoff_random_peptitdes_percentile",
+    "min_library_length_cutoff": "min_library_length_cutoff",
+    "max_library_length_cutoff": "max_library_length_cutoff",
     "error_path" : "error_path",
     "queue" : "queue",
     "verbose" : "verbose",
@@ -209,7 +211,7 @@ def align_clean_pssm_weblogo(folder_names_to_handle, max_clusters_to_align, gap_
         logger.info('Skipping memes creation, all found')
 
 
-def compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile,
+def compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
     motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Compute pssm cutoffs for each bc
     logger.info('_'*100)
@@ -224,7 +226,8 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_ra
         output_path = os.path.join(bc_folder, 'cutoffs.txt')
         done_path = f'{logs_dir}/13_{bc}_done_compute_cutoffs.txt'
         if not os.path.exists(done_path):
-            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0, '--cutoff_random_peptitdes_percentile', cutoff_random_peptitdes_percentile])
+            all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', 0, '--cutoff_random_peptitdes_percentile', cutoff_random_peptitdes_percentile,
+                                    '--min_library_length_cutoff', min_library_length_cutoff, '--max_library_length_cutoff', max_library_length_cutoff])
         else:
             logger.debug(f'Skipping cutoff as {done_path} exists')
             num_of_expected_results += 1
@@ -274,7 +277,7 @@ def compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_ra
         logger.info('Skipping split, all exist')
 
 
-def split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile,
+def split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
     motif_inference_output_path, logs_dir, queue_name, error_path, verbose):
     # Count memes per BC (synchrnous)
     memes_per_bc = {}
@@ -334,7 +337,8 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_ra
             output_path = os.path.join(bc_cutoffs_folder, file_name)
             done_path = f'{logs_dir}/14_{bc}_{file_name}_done_compute_cutoffs.txt'
             if not os.path.exists(done_path):
-                all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc], '--cutoff_random_peptitdes_percentile', cutoff_random_peptitdes_percentile])
+                all_cmds_params.append([meme_path, output_path, done_path, '--total_memes', memes_per_bc[bc], '--cutoff_random_peptitdes_percentile', cutoff_random_peptitdes_percentile, 
+                                        '--min_library_length_cutoff', min_library_length_cutoff, '--max_library_length_cutoff', max_library_length_cutoff])
                 cutoffs_bcs.append(bc)
             else:
                 logger.debug(f'Skipping calculate cutoff as {done_path} exists')
@@ -360,7 +364,7 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                  min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, 
                  threshold, word_length, discard, cluster_alg_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cutoff_random_peptitdes_percentile,
-                 queue, verbose, mapitope, error_path, exp_name, argv):
+                 min_library_length_cutoff, max_library_length_cutoff, queue, verbose, mapitope, error_path, exp_name, argv):
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start motif inference step for experiments {exp_name}')
@@ -591,10 +595,10 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                              motifs_path, logs_dir, min_num_of_columns_meme, error_path, queue, verbose, 'biological_conditions')
 
     if concurrent_cutoffs:
-        split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile,
-            motifs_path, logs_dir, queue, error_path,verbose)
+        split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
+            motifs_path, logs_dir, queue, error_path, verbose)
     else:
-        compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile,
+        compute_cutoffs_then_split(biological_conditions, meme_split_size, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
             motifs_path, logs_dir, queue, error_path, verbose)
 
     # TODO: fix this bug with a GENERAL WRAPPER done_path
@@ -656,6 +660,8 @@ if __name__ == '__main__':
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge ')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
+    parser.add_argument('--min_library_length_cutoff', type=int, default=5, help='Minimal value of libraries to generate random peptitdes')
+    parser.add_argument('--max_library_length_cutoff', type=int, default=14, help='Maximum value of libraries to generate random peptitdes')
 
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')

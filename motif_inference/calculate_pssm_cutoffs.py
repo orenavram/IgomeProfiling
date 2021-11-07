@@ -14,12 +14,13 @@ sys.path.insert(0, src_dir)
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty
 
 
-def calculate_pssm_cutoffs(meme_path, output_path, done_path, total_memes, cutoff_random_peptitdes_percentile, argv='no_argv',
-                           pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
+def calculate_pssm_cutoffs(meme_path, output_path, done_path, total_memes, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
+                           argv='no_argv', pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):
         # TODO: any modules to load?
-        cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {output_path} -CalcPSSM_Cutoff -total_memes {total_memes} -cutoff_random_peptitdes_percentile {cutoff_random_peptitdes_percentile}'
+        cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {output_path} -CalcPSSM_Cutoff -total_memes {total_memes} -cutoff_random_peptitdes_percentile {cutoff_random_peptitdes_percentile} ' \
+              f'-min_library_length_cutoff {min_library_length_cutoff} -max_library_length_cutoff {max_library_length_cutoff}'
         logger.info(f'{datetime.datetime.now()}: starting PSSM_score_Peptide. Executed command is:\n{cmd}')
         subprocess.run(cmd, shell=True)
     else:
@@ -44,6 +45,8 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully')
     parser.add_argument('--total_memes', type=int, default=0, help='Total memes in biological condition. Used if input data is splitted')
     parser.add_argument('--cutoff_random_peptitdes_percentile', type=float, default=0.05, help='Calculate cutoff (hit threshold) from random peptides\' top percentile score')
+    parser.add_argument('--min_library_length_cutoff', type=int, default=5, help='Minimal value of libraries to generate random peptitdes')
+    parser.add_argument('--max_library_length_cutoff', type=int, default=14, help='Maximum value of libraries to generate random peptitdes')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -53,4 +56,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
 
-    calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, args.total_memes, args.cutoff_random_peptitdes_percentile, argv=sys.argv)
+    calculate_pssm_cutoffs(args.meme_file_path, args.output_path, args.done_file_path, args.total_memes, args.cutoff_random_peptitdes_percentile,
+                          args.min_library_length_cutoff, args.max_library_length_cutoff, argv=sys.argv)
