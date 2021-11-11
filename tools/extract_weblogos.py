@@ -11,6 +11,7 @@ else:
 sys.path.insert(0, src_dir)
 from motif_inference.generate_weblogo import generate_weblogo as create_weblogo
 
+
 def extract_mapping(file_path: str):
     mapping = {}
     with open(file_path, 'r') as f:
