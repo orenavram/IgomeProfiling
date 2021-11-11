@@ -58,6 +58,7 @@ if __name__ == "__main__":
     parser.add_argument('output_path', type=str, help='A csv file with data matrix to model')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the module finished running successfully')
     parser.add_argument('--motifs_name_path', type=str, default=None, help='Path for csv file that contain the names of motifs to generate weblogo')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
     import logging
