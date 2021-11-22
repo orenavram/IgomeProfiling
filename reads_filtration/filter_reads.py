@@ -173,6 +173,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                 q_in_peptide = False
                 i = 0
                 for i in range(0, len(rest_of_read), 3):
+                    ##### if i so break 
                     codon = rest_of_read[i: i+3]
                     if codon == "TGA" or codon == "TAA":
                         has_stop_codon = True
