@@ -143,7 +143,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                 barcode = dna_read[:barcode_len]
                 if barcode not in barcode2samplename:
                     continue
-
+                #if barcode is legal
                 barcode2statistics[barcode]['legal_barcode'] += 1
 
                 # check that the barcode quality is above the required threshold
@@ -173,16 +173,21 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                 q_in_peptide = False
                 i = 0
                 for i in range(0, len(rest_of_read), 3):
-                    ##### if i so break 
-                    codon = rest_of_read[i: i+3]
-                    if codon == "TGA" or codon == "TAA":
-                        has_stop_codon = True
-                        barcode2statistics[barcode]['stop_codon'] += 1
-                        barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\tcontains a stop codon\t{rest_of_read[i:i+3]}\n")
+                    #only sequence-P3 exp 13 yael
+                    if i == 210: 
                         break
+                    ######
+                    codon = rest_of_read[i: i+3]
+                    #if codon == "TGA" or codon == "TAA":
+                    #   has_stop_codon = True
+                    #   barcode2statistics[barcode]['stop_codon'] += 1
+                    #   barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\tcontains a stop codon\t{rest_of_read[i:i+3]}\n")
+                    #   break
                     if len(codon) < 3:
                         break
+                    #N is problem in the NGS running
                     if codon[0] == 'N' or codon[1] == "N" or codon[2] == 'N':  # unrecognized dna base, e.g., N
+                        barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t'N' in sequence\t{rest_of_read[i:i+3]}\n")
                         break
                     #if codon[0] not in 'ACGT' or codon[1] not in 'ACGT':  # unrecognized dna base, e.g., N
                         #break
