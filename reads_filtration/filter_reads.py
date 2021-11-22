@@ -197,20 +197,20 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     if codon == 'TAG':
                         q_in_peptide = True
 
-                if has_stop_codon:
+                #if has_stop_codon:
                     # all set and documented. We can continue to the next read...
-                    continue
+                #   continue
 
                 random_dna_end = i  # where we stopped seeing NNK
                 rest_of_read = rest_of_read[random_dna_end:] # current right construct + dna remnants
 
                 # if the right construct is too short, just try to match what it has...
-                num_of_mismatches_on_the_right = str_diff(rest_of_read, right_construct)
-                if num_of_mismatches_on_the_right > max_mismatches_allowed - num_of_mismatches_on_the_left:
-                    barcode2statistics[barcode]['too_many_mistakes'] += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t random dna end: {random_dna_end} and random pep seq: {random_peptide} and rest of read: {rest_of_read} \n flanking constructs have {num_of_mismatches_on_the_left} mismatches with the left construct and {num_of_mismatches_on_the_right} mismatches on the right construct (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct} {rest_of_read[:right_construct_length]}\n")
-                    # all set and documented. We can continue to the next read...
-                    continue
+                # num_of_mismatches_on_the_right = str_diff(rest_of_read, right_construct)
+                # if num_of_mismatches_on_the_right > max_mismatches_allowed - num_of_mismatches_on_the_left:
+                #     barcode2statistics[barcode]['too_many_mistakes'] += 1
+                #     barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t random dna end: {random_dna_end} and random pep seq: {random_peptide} and rest of read: {rest_of_read} \n flanking constructs have {num_of_mismatches_on_the_left} mismatches with the left construct and {num_of_mismatches_on_the_right} mismatches on the right construct (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct} {rest_of_read[:right_construct_length]}\n")
+                #     # all set and documented. We can continue to the next read...
+                #     continue
 
                 if (len(random_peptide) < minimal_length_required or
                     (random_peptide.startswith('C') and random_peptide.endswith('C') and
