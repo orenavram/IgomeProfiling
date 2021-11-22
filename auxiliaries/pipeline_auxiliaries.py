@@ -45,7 +45,7 @@ codon_table: {str: str} = {'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
     'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
     'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
     'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
-    'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+    'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'Q',
     'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W'}
 
 def verify_file_is_not_empty(file_path):
