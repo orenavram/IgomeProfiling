@@ -173,8 +173,8 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                 q_in_peptide = False
                 i = 0
                 for i in range(0, len(rest_of_read), 3):
-                    #only sequence-P3=210/p8=151 exp 13 yael
-                    if i == 151: 
+                    #only sequence-P3=210/p8=182 exp 13 yael
+                    if i == 182: 
                         break
                     ######
                     codon = rest_of_read[i: i+3]
