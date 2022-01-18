@@ -9,7 +9,7 @@
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, float rpmFactorValue, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;
@@ -19,7 +19,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
     smatch matches;
     auto end = sequences.end();
     int count = 0;
-    int unique_rpm = 1;
+    int unique_peptides = 1;
     string seqType;
     while (getline(file, line)) {
         if (line[0] == '>') {
@@ -31,7 +31,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
                    result.push_back(s);
                 }
                 seqType = result[3];
-                unique_rpm = stoi(result[7]);
+                unique_peptides = (stof(result[7]) / rpmFactorValue);
             } else {
                 auto lastIndex = line.find_last_of('_');
                 seqType = line.substr(lastIndex + 1);
@@ -48,8 +48,8 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             getline(file, line);
             sequencesByType->push_back(line);
             if (useRpmFaaScanning) {
-                sequncesRpm[line] = unique_rpm;
-                count += unique_rpm;
+                sequncesRpm[line] = unique_peptides;
+                count += unique_peptides;
             } else {
                 auto iter = sequncesRpm.find(line);
                 if (iter == sequncesRpm.end()) {
