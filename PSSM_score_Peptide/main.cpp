@@ -233,14 +233,13 @@ int associatePeptidesWithPSSM(int argc, char *argv[])
 	string CutofsPerPSSM_FileName = "";
 	string Hits_Out_FileName = "";
 	int numberOfSeq = 0;
-	float rpmFactor = 1.0; //not relevent for herer
 	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName);
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, false, numberOfSeq, rpmFactor);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, false, numberOfSeq);
 
 	ofstream HitsReport_OutFileHandle;
 	HitsReport_OutFileHandle.open(Hits_Out_FileName);
