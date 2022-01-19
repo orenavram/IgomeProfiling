@@ -42,7 +42,7 @@ def count_and_collapse(fasta_file, out_fasta_file, rpm_factors_file, done_file_p
             lib = f'{len_seq}'
             if seq.startswith('C') and seq.endswith('C'):
                 lib = f'C{len_seq-2}C'
-            f.write(f'>seq_{i+1}_lib_{lib}_len_{len_seq}_counts_{counts}\n{seq}\n')
+            f.write(f'>seq_{i+1}_lib_{lib}_len_{len_seq}_counts_{counts}_unique_{sequences_to_counts[seq]}\n{seq}\n')
 
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')

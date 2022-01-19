@@ -9,7 +9,7 @@
 #include "trim.hpp"
 
 using namespace std;
-SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, long double rpmFactorValue, bool verbose) {
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& sequncesRpm, bool useRpmFaaScanning, bool verbose) {
     SequencesMap sequences;
     ifstream file(faaPath);
     string line;
@@ -31,7 +31,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
                    result.push_back(s);
                 }
                 seqType = result[3];
-                uniquePeptides = int((stold(result[7]) / rpmFactorValue));
+                uniquePeptides = stoi(result[9]);
             } else {
                 auto lastIndex = line.find_last_of('_');
                 seqType = line.substr(lastIndex + 1);

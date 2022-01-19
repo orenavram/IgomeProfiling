@@ -46,7 +46,6 @@ map_names_command_line = {
     "no_rpm_factor": "no_rpm_factor",
     "no_output_sequences_scanning": "no_output_sequences_scanning",
     "no_use_rpm_faa_scanning": "no_use_rpm_faa_scanning",
-    "rpm_factor_path": "rpm_factor_path",
     "queue" : "queue",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -86,20 +85,13 @@ def repeat_items(list):
     return output
 
 
-def get_rpm_factor_for_sample_name(sample_name_rpm_factor, rpm_factor_path):
-    file_rpm_factor = open(rpm_factor_path,'r')
-    for line in file_rpm_factor.readlines():
-        sample_name, count, rpm_factor = line.split('\t')
-        sample_name_rpm_factor[sample_name] = rpm_factor
-
-
 def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, num_of_random_pssms,
                      done_file_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
                      is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor, no_use_rpm_faa_scanning,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop, no_output_sequences_scanning,
-                     rpm_factor_path, queue, verbose, error_path, mapitope, exp_name, argv):     
+                     queue, verbose, error_path, mapitope, exp_name, argv):     
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start model fitting step for experiments {exp_name}')
@@ -154,12 +146,6 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     num_of_expected_results = 0
     num_of_cmds_per_job = 4
     all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
-    rpm_factor_path = rpm_factor_path or os.path.join(reads_path, 'rpm_factors.txt')
-    sample_name_rpm_factor = {}
-    if not os.path.exists(rpm_factor_path) and (not no_rpm_factor or not no_use_rpm_faa_scanning):
-        logger.error('There is not rpm factor file, hits calculate not gonna be correct')
-    else:
-        get_rpm_factor_for_sample_name(sample_name_rpm_factor, rpm_factor_path)
     for bc in biological_conditions:
         # get current biological condition (splitted) motifs folder
         memes_path = os.path.join(motifs_path, bc, 'memes')
@@ -181,8 +167,6 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
-                    if sample_name in sample_name_rpm_factor.keys():
-                        cmd += ['--rpm_factor_value', sample_name_rpm_factor[sample_name]]
                     if no_output_sequences_scanning:
                         cmd += ['--no_output_sequences_scanning']  
                     else:       
@@ -219,7 +203,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
     if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
         biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'].keys()
         get_sample_for_label = True
-    return
+
     # aggregate scanning scores (hits and values)
     logger.info('_'*100)
     logger.info(f'{datetime.datetime.now()}: aggregating scores')
@@ -372,7 +356,6 @@ if __name__ == '__main__':
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
     parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
-    parser.add_argument('--rpm_factor_path', type=str, help='A path for the file rpm factor')
     parser.add_argument('--error_path', type=str, help='A file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

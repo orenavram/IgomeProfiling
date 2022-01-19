@@ -15,7 +15,7 @@
 
 Memes loadMemes(string memePath, int limit, bool verbose);
 void loadCutoffs(string cutoffsPath, Memes& memes, int limit, bool verbose);
-SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& seeuncesRpm, bool useRpmFaaScanning, long double rpmFactorValue, bool verbose);
+SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& seeuncesRpm, bool useRpmFaaScanning, bool verbose);
 
 // TODO support Repeats_
 // TODO move createShuffles, isHit and getHits?
@@ -231,6 +231,10 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
+float getRpmFactor(int numSequences){
+    return float(1000000) / numSequences;
+}
+
 void factorHits(Memes& memes, float factor) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
@@ -280,7 +284,6 @@ int main(int argc, char *argv[])
         ("useFactor", "To multiply by factor hits for normalization", cxxopts::value<bool>()->default_value("false"))
         ("sequenceHitMotifPath", "Path for results of sequence that had hit with motif", cxxopts::value<string>()->default_value(""))
         ("useRpmFaaScanning", "Performance of scanning script with rpm faa file", cxxopts::value<bool>()->default_value("false"))
-        ("rpmFactorValue", "RPM factor value of the sample", cxxopts::value<long double>()->default_value("1.0"))
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"));
     auto result = options.parse(argc, argv);
 
@@ -296,7 +299,6 @@ int main(int argc, char *argv[])
     auto useFactor = result["useFactor"].as<bool>();
     auto sequenceHitMotifPath = result["sequenceHitMotifPath"].as<string>();
     auto useRpmFaaScanning = result["useRpmFaaScanning"].as<bool>();
-    auto rpmFactorValue = result["rpmFactorValue"].as<long double>();
     auto isVerbose = result["verbose"].as<bool>();
 
     auto begin = chrono::steady_clock::now();
@@ -304,7 +306,7 @@ int main(int argc, char *argv[])
     SequencesRpmMap sequncesRpm;
     auto memes = loadMemes(memesPath, maxMemes, isVerbose);
     loadCutoffs(cutoffsPath, memes, maxMemes, isVerbose);
-    SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, useRpmFaaScanning, rpmFactorValue, isVerbose);
+    SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
     getHits(memes, sequences, memesShuffles, isOutputSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
     MemeRatingMap memesRating;
@@ -312,7 +314,9 @@ int main(int argc, char *argv[])
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
     }
     if (useFactor) {
-        factorHits(memes, rpmFactorValue);
+        float rpmFactor = getRpmFactor(numSequences);
+        cout << "RPM factor: " << rpmFactor << endl;
+        factorHits(memes, rpmFactor);
     }
     writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, isVerbose, shufflesDigits);
 
