@@ -54,9 +54,11 @@ def get_results_shuffles(consensusesValues, sample_name, path):
             motif = line.split()[1].split('_')[0]
             # secand line get hits -  HITS 1043
             hits = f.readline().split()[1]
-            #third line skip
+            # third line skip
             line3 = f.readline()
-            # four line get valeus - RANK 1.00
+            # four line skip
+            line3 = f.readline()
+            # five line get valeus - RANK 1.00
             pvalue = f.readline().split()[1]
 
             if motif not in consensusesValues:
@@ -146,4 +148,3 @@ if __name__ == '__main__':
                             args.biological_condition, args.samplename2biologicalcondition_path,
                             args.aggregated_pvalues_path, args.aggregated_hits_path,
                             args.done_file_path, args.rank_method, args.bc_sample_names, sys.argv)
-
