@@ -150,6 +150,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         # get current biological condition (splitted) motifs folder
         memes_path = os.path.join(motifs_path, bc, 'memes')
         cutoffs_path = os.path.join(motifs_path, bc, 'cutoffs')
+
         for file_name in sorted(os.listdir(memes_path)):
             # extract each split of the motifs to scan peptides against it
             meme_file_path = os.path.join(memes_path, file_name)
@@ -167,7 +168,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
                     if no_output_sequences_scanning:
-                        cmd += ['--no_output_sequences_scanning']  
+                        cmd += ['--no_output_sequences_scanning']
                     else:       
                         sequnces_hits_path =  os.path.join(model_path, bc, 'sequences_hits_scanning',
                                            f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')

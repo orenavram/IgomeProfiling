@@ -17,7 +17,7 @@ from time import time
 
 def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_random_pssms, 
                               shuffles, shuffles_percent, shuffles_digits, no_rpm_factor, output_path, done_path,
-                              rank_method, no_use_rpm_faa_scanning, sequence_hit_motif_path, no_output_sequences_scanning, 
+                              rank_method, no_use_rpm_faa_scanning, sequence_hit_motif_path, no_output_sequences_scanning,
                               argv='no_argv', pssm_score_peptide='./PSSM_score_Peptide/PSSM_score_Peptide'):
 
     if not os.path.exists(output_path):

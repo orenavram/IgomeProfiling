@@ -553,7 +553,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		//cout << "place = " << place << endl;
 		double p_Value = (double(numberOfRandomPSSM) - double(place)) / double(numberOfRandomPSSM);		
 		if (useFactor & numberOfSeq != 0) {
-			double rpmFactorValue = double(1000000) / numberOfSeq;
+			double rpmFactorValue = double(1000000) / double(numberOfSeq);
 			numberOfHitsInRealPSSM *= rpmFactorValue;
 		}
 

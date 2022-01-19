@@ -231,9 +231,13 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
-float getRpmFactor(int numSequences){
-    return float(1000000) / numSequences;
-}
+float getRpmFactor(int numSequences) {
+    float factor;
+    if (numSequences != 0) {
+        factor = float(1000000) / float(numSequences);
+    }
+    return factor;
+}    
 
 void factorHits(Memes& memes, float factor) {
     auto memesIter = memes.getMemes().begin();
