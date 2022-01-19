@@ -26,11 +26,11 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             cmd = f'{pssm_score_peptide} -pssm {meme_path} -pssm_cutoffs {cutoffs_path} -seq {faa_path} ' \
                 f'-out {output_path} -NrandPSSM {number_of_random_pssms} -CalcPSSM_Pval'
             if not no_rpm_factor:
-                cmd += f' -useFactor'
+                cmd += ' -useFactor'
             if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' -outputSequences -sequenceHitMotifPath {sequence_hit_motif_path}'    
             if not no_use_rpm_faa_scanning:
-                cmd += f' -useRpmFaaScanning'
+                cmd += ' -useRpmFaaScanning'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
         elif rank_method == 'tfidf':
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
@@ -39,11 +39,11 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --shuffles {shuffles} '\
                 f'--shufflesPercent {shuffles_percent} --shufflesDigits {shuffles_digits}'
             if not no_rpm_factor:
-                cmd += f' --useFactor'
+                cmd += ' --useFactor'
             if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
             if not no_use_rpm_faa_scanning:
-                cmd += f' --useRpmFaaScanning'
+                cmd += ' --useRpmFaaScanning'
                     
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
 
