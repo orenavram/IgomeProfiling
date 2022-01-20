@@ -364,7 +364,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 	size_t total_seq = 0;
 	fromFileToVectorOfString(fileName,allLines);
 	for (size_t i=0; i<allLines.size(); ++i) {
-		double count = 1;
+		double count = 1.0;
 		string currLine = allLines[i];
 		string FirstChar=currLine.substr(0,1);
 //		FirstChar=">";
@@ -375,7 +375,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 			string name = currLine.substr(1);
 			if (useRpmFaaScanning) {
 				auto lastIndex = currLine.find_last_of('_');
-				count = stoi(currLine.substr(lastIndex + 1));
+				count = stod(currLine.substr(lastIndex + 1));
 			}
 			++i;
 			currLine = allLines[i];
@@ -524,18 +524,27 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	vector<SEQ> Seq_array;
 	bool isSetCopyNumber = false;
 	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, useRpmFaaScanning, numberOfSeq, isSetCopyNumber);
-
+	double rpmFactorValue = double(1000000) / double(numberOfSeq);
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
-	listOfPvaluesFile << "## PSSM_name\tp_Value\tTrue_Hits: num_of_hits" <<endl;
+	listOfPvaluesFile << "## PSSM_name\tp_Value\tHits: num_of_hits\tUse_RPM_Factor: true/false" <<endl;
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
 		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, sequenceHitMotifPath, isOutputSequences, 1);
+		if (useFactor & !useRpmFaaScanning & numberOfSeq != 0) {
+			numberOfHitsInRealPSSM *= rpmFactorValue;
+		}
 		vector<double> numSigPeptides;
 		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
 			PSSM randomPSSM = rpif._PSSM_array[i].randomize(gen); //1 generate a random PPSM.
 			double sum = numberOfTotalHitsPerPSSM(randomPSSM, Seq_array, sequenceHitMotifPath, false, 0);
+			cout << "print the sum :" << sum << endl;
+			if (useFactor & !useRpmFaaScanning & numberOfSeq != 0) {
+				cout << "print the sum before:" << sum << endl;
+				sum *= rpmFactorValue;
+				cout << "print the sum after:" << sum << endl;
+			}
 			numSigPeptides.push_back(sum);// store the number
 		}
 		sort(numSigPeptides.begin(), numSigPeptides.end());
@@ -552,14 +561,8 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
 		double p_Value = (double(numberOfRandomPSSM) - double(place)) / double(numberOfRandomPSSM);		
-		
-		double numberOfHitsNorm = numberOfHitsInRealPSSM;
-		if (useFactor & numberOfSeq != 0) {
-			double rpmFactorValue = double(1000000) / double(numberOfSeq);
-			numberOfHitsNorm *= rpmFactorValue;
-		}
 
-		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tNorm_Hits: " << numberOfHitsNorm << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
+		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tHits: " << numberOfHitsInRealPSSM << "\tUse_RPM_Factor: " << useFactor <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}
 	listOfPvaluesFile.close();

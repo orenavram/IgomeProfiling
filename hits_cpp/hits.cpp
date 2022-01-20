@@ -243,17 +243,13 @@ void factorHits(Memes& memes, MemeShufflesMap& shuffles, double factor) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     while (memesIter != memesEnd) {
-        cout << "hit before rpm: " << memesIter->second.getHitCount() << endl;
         memesIter->second.factorHitCount(factor);
-        cout << "hit after rpm: " << memesIter->second.getHitCount() << endl;
         auto memeShuffles = &shuffles[memesIter->first];
         if (memeShuffles->size()) {
             auto shufflesIter = memeShuffles->begin();
             auto shufflesEnd = memeShuffles->end();
             while (shufflesIter != shufflesEnd) {
-                cout << "shuffles hit before rpm: " << (*shufflesIter).getHitCount() << endl;
                 (*shufflesIter).factorHitCount(factor);
-                cout << "shuffles hit after rpm: " << (*shufflesIter).getHitCount() << endl;
                 shufflesIter++;
             }            
         }
