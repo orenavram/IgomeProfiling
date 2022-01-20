@@ -76,7 +76,7 @@ bool isHit(Meme& meme, AlphabetMap& alphabet, string seqType, string& seq, bool 
     return false;
 }
 
-void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, int& hits, 
+void memeHits(Meme& meme, AlphabetMap& alphabet, SequencesMap& sequences, double& hits, 
     int printInterval, bool isOutputSequences, SequencesRpmMap& sequncesRpm, bool isUseRpmFaa, bool verbose) {
     auto sequencesTypesIter = sequences.begin();
     auto sequencesTypesEnd = sequences.end();
@@ -127,8 +127,8 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
     auto alphabet = memes.getAlphabet();
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
-    int hits = 0;
-    int shuffleHits = 0;
+    double hits = 0.0;
+    double shuffleHits = 0.0;
     int counter = 0;
     int printInterval = 100000;
     if (verbose) {
@@ -151,7 +151,7 @@ int getHits(Memes& memes, SequencesMap& sequences, MemeShufflesMap& shuffles, bo
                     cout << "Calculating hits for shuffle " << ++counter << endl;
                 }
                 memeHits(*shufflesIter, alphabet, sequences, shuffleHits,
-                    printInterval, isOutputSequences, sequncesRpm, false, verbose);
+                    printInterval, isOutputSequences, sequncesRpm, useRpmFaaScanning, verbose);
                 shufflesIter++;
             }            
         }
@@ -231,34 +231,38 @@ MemeRatingMap getRatings(Memes& memes, MemeShufflesMap& shuffles, bool verbose, 
     return ratings;
 }
 
-float getRpmFactor(int numSequences) {
-    float factor;
+double getRpmFactor(int numSequences) {
+    double factor;
     if (numSequences != 0) {
-        factor = float(1000000) / float(numSequences);
+        factor = double(1000000) / double(numSequences);
     }
     return factor;
 }    
 
-void factorHits(Memes& memes, float factor) {
+void factorHits(Memes& memes, MemeShufflesMap& shuffles, double factor) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     while (memesIter != memesEnd) {
+        cout << "hit before rpm: " << memesIter->second.getHitCount() << endl;
         memesIter->second.factorHitCount(factor);
-        memesIter++;
-    }
-}
-
-void setMemesTrueHIT(Memes& memes) {
-    auto memesIter = memes.getMemes().begin();
-    auto memesEnd = memes.getMemes().end();
-    while (memesIter != memesEnd) {
-        memesIter->second.setTrueHIT(memesIter->second.getHitCount());
+        cout << "hit after rpm: " << memesIter->second.getHitCount() << endl;
+        auto memeShuffles = &shuffles[memesIter->first];
+        if (memeShuffles->size()) {
+            auto shufflesIter = memeShuffles->begin();
+            auto shufflesEnd = memeShuffles->end();
+            while (shufflesIter != shufflesEnd) {
+                cout << "shuffles hit before rpm: " << (*shufflesIter).getHitCount() << endl;
+                (*shufflesIter).factorHitCount(factor);
+                cout << "shuffles hit after rpm: " << (*shufflesIter).getHitCount() << endl;
+                shufflesIter++;
+            }            
+        }
         memesIter++;
     }
 }
 
 void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, SequencesRpmMap& sequncesRpm, bool isOutputSequences, \
-                  string& sequenceHitMotifPath, bool verbose, int shufflesDigits) {
+                  string& sequenceHitMotifPath, bool useRPM, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -266,8 +270,8 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
 
     while (memesIter != memesEnd) {
         file << "MOTIF " << memesIter->second.getMotif() << endl;
-        file << "NORM_HITS " << memesIter->second.getHitCount() << endl;
-        file << "TRUE_HITS " << memesIter->second.getTrueHit() << endl;
+        file << "HITS " << memesIter->second.getHitCount() << endl;
+        file << "USE_RPM " << useRPM << endl;
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
@@ -323,17 +327,18 @@ int main(int argc, char *argv[])
     SequencesMap sequences = loadSequences(sequencesPath, numSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
     auto memesShuffles = createShuffles(memes, shuffles);
     getHits(memes, sequences, memesShuffles, isOutputSequences, sequncesRpm, useRpmFaaScanning, isVerbose);
+    
+    if (useFactor & !useRpmFaaScanning) {
+        double rpmFactor = getRpmFactor(numSequences);
+        cout << "RPM factor: " << rpmFactor << endl;
+        factorHits(memes, memesShuffles, rpmFactor);
+    }
+
     MemeRatingMap memesRating;
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
     }
-    setMemesTrueHIT(memes);
-    if (useFactor) {
-        float rpmFactor = getRpmFactor(numSequences);
-        cout << "RPM factor: " << rpmFactor << endl;
-        factorHits(memes, rpmFactor);
-    }
-    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, isVerbose, shufflesDigits);
+    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, useFactor, isVerbose, shufflesDigits);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

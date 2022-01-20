@@ -19,7 +19,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
     smatch matches;
     auto end = sequences.end();
     int count = 0;
-    int uniquePeptides = 1;
+    double uniquePeptides = 0.0;
     string seqType;
     while (getline(file, line)) {
         if (line[0] == '>') {
@@ -31,7 +31,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
                    result.push_back(s);
                 }
                 seqType = result[3];
-                uniquePeptides = stoi(result[9]);
+                uniquePeptides = stod(result[7]);
             } else {
                 auto lastIndex = line.find_last_of('_');
                 seqType = line.substr(lastIndex + 1);
@@ -53,7 +53,7 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             } else {
                 auto iter = sequncesRpm.find(line);
                 if (iter == sequncesRpm.end()) {
-                    sequncesRpm[line] = 1;
+                    sequncesRpm[line] = 1.0;
                 } else {
                     iter->second++;
                 }
