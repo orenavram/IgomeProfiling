@@ -43,7 +43,8 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
             if not no_use_rpm_faa_scanning:
-                cmd += ' --useRpmFaaScanning'    
+                cmd += ' --useRpmFaaScanning'
+                    
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
 
         subprocess.run(cmd, shell=True)

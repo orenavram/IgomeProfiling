@@ -3,7 +3,7 @@
 
 class Meme {
 public:
-    Meme() : _hitCount(0) {
+    Meme() : _hitCount(0), _trueHit(0) {
 
     }
 
@@ -12,6 +12,7 @@ public:
         _alength(other._alength),
         _nsites(other._nsites),
         _hitCount(other._hitCount),
+        _trueHit(other._trueHit),
         _rows(other._rows),
         _cutoffs(other._cutoffs),
         _hitSequences(other._hitSequences) {
@@ -51,6 +52,14 @@ public:
 
     SequencesCount& getHitSequences() {
         return this->_hitSequences;
+    }
+
+    void setTrueHIT(int hit) {
+        this->_trueHit = hit;
+    }
+
+    int getTrueHit() {
+        return this->_trueHit;
     }
 
     int getHitCount() {
@@ -93,6 +102,7 @@ private:
     int _alength;
     int _nsites;
     int _hitCount;
+    int _trueHit;
     MemeRows _rows;
     CutoffsMap _cutoffs;
     SequencesCount _hitSequences;

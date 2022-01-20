@@ -83,7 +83,7 @@ def repeat_items(list):
         output.append(x)
         output.append(x)
     return output
-                      
+
 
 def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, num_of_random_pssms,
                      done_file_path, check_files_valid, cross_experiments_config, stop_before_random_forest, 
@@ -356,7 +356,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
     parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
-    parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
+    parser.add_argument('--error_path', type=str, help='A file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')

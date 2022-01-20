@@ -375,7 +375,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 			string name = currLine.substr(1);
 			if (useRpmFaaScanning) {
 				auto lastIndex = currLine.find_last_of('_');
-				count = stod(currLine.substr(lastIndex + 1));
+				count = stoi(currLine.substr(lastIndex + 1));
 			}
 			++i;
 			currLine = allLines[i];
@@ -552,12 +552,14 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
 		double p_Value = (double(numberOfRandomPSSM) - double(place)) / double(numberOfRandomPSSM);		
+		
+		double numberOfHitsNorm = numberOfHitsInRealPSSM;
 		if (useFactor & numberOfSeq != 0) {
-			float factor = float(1000000) / float(numberOfSeq);
-			numberOfHitsInRealPSSM *= factor;
+			double rpmFactorValue = double(1000000) / double(numberOfSeq);
+			numberOfHitsNorm *= rpmFactorValue;
 		}
 
-		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
+		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tNorm_Hits: " << numberOfHitsNorm << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}
 	listOfPvaluesFile.close();

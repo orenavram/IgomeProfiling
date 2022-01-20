@@ -237,13 +237,22 @@ float getRpmFactor(int numSequences) {
         factor = float(1000000) / float(numSequences);
     }
     return factor;
-}
+}    
 
 void factorHits(Memes& memes, float factor) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     while (memesIter != memesEnd) {
         memesIter->second.factorHitCount(factor);
+        memesIter++;
+    }
+}
+
+void setMemesTrueHIT(Memes& memes) {
+    auto memesIter = memes.getMemes().begin();
+    auto memesEnd = memes.getMemes().end();
+    while (memesIter != memesEnd) {
+        memesIter->second.setTrueHIT(memesIter->second.getHitCount());
         memesIter++;
     }
 }
@@ -257,7 +266,8 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
 
     while (memesIter != memesEnd) {
         file << "MOTIF " << memesIter->second.getMotif() << endl;
-        file << "HITS " << memesIter->second.getHitCount() << endl;
+        file << "NORM_HITS " << memesIter->second.getHitCount() << endl;
+        file << "TRUE_HITS " << memesIter->second.getTrueHit() << endl;
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
@@ -317,9 +327,11 @@ int main(int argc, char *argv[])
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
     }
+    setMemesTrueHIT(memes);
     if (useFactor) {
-        float factor = getRpmFactor(numSequences);
-        factorHits(memes, factor);
+        float rpmFactor = getRpmFactor(numSequences);
+        cout << "RPM factor: " << rpmFactor << endl;
+        factorHits(memes, rpmFactor);
     }
     writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, isVerbose, shufflesDigits);
 
