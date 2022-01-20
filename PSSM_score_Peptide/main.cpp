@@ -539,11 +539,8 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
 			PSSM randomPSSM = rpif._PSSM_array[i].randomize(gen); //1 generate a random PPSM.
 			double sum = numberOfTotalHitsPerPSSM(randomPSSM, Seq_array, sequenceHitMotifPath, false, 0);
-			cout << "print the sum :" << sum << endl;
 			if (useFactor & !useRpmFaaScanning & numberOfSeq != 0) {
-				cout << "print the sum before:" << sum << endl;
 				sum *= rpmFactorValue;
-				cout << "print the sum after:" << sum << endl;
 			}
 			numSigPeptides.push_back(sum);// store the number
 		}
