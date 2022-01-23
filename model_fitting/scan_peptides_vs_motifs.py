@@ -30,7 +30,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' -outputSequences -sequenceHitMotifPath {sequence_hit_motif_path}'    
             if not no_use_rpm_faa_scanning:
-                cmd += ' -useRpmFaaScanning'
+                cmd += ' -useRpmFaaScanning -useFactor'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
         elif rank_method == 'tfidf':
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
@@ -43,7 +43,7 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             if not no_output_sequences_scanning and sequence_hit_motif_path:
                 cmd += f' --outputSequences --sequenceHitMotifPath {sequence_hit_motif_path}'
             if not no_use_rpm_faa_scanning:
-                cmd += ' --useRpmFaaScanning'
+                cmd += ' --useRpmFaaScanning --useFactor'
                     
             logger.info(f'{datetime.datetime.now()}: starting Shuffles\' hits. Executed command is:\n{cmd}')
 

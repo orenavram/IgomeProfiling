@@ -3,7 +3,7 @@
 
 class Meme {
 public:
-    Meme() : _hitCount(0), _trueHit(0) {
+    Meme() : _hitCount(0.0) {
 
     }
 
@@ -12,7 +12,6 @@ public:
         _alength(other._alength),
         _nsites(other._nsites),
         _hitCount(other._hitCount),
-        _trueHit(other._trueHit),
         _rows(other._rows),
         _cutoffs(other._cutoffs),
         _hitSequences(other._hitSequences) {
@@ -54,14 +53,6 @@ public:
         return this->_hitSequences;
     }
 
-    void setTrueHIT(int hit) {
-        this->_trueHit = hit;
-    }
-
-    int getTrueHit() {
-        return this->_trueHit;
-    }
-
     int getHitCount() {
         return this->_hitCount;
     }
@@ -70,7 +61,7 @@ public:
         this->_hitCount *=factor;
     }
 
-    void addHitSequence(string& sequence, bool isStoreSequences = true, int count = 1) {
+    void addHitSequence(string& sequence, bool isStoreSequences = true, double count = 1.0) {
         this->_hitCount += count;
         if (isStoreSequences) {
             if (this->_hitSequences.find(sequence) == this->_hitSequences.end()) {
@@ -101,8 +92,7 @@ private:
     string _motif;
     int _alength;
     int _nsites;
-    int _hitCount;
-    int _trueHit;
+    long double _hitCount;
     MemeRows _rows;
     CutoffsMap _cutoffs;
     SequencesCount _hitSequences;

@@ -30,9 +30,9 @@ def get_results_pval(consensusesValues, sample_name, path):
     with open(path) as f:
         for line in f:
             if line.startswith('##'):
-                # "## PSSM_name	p_Value	True_Hits: num_of_hits"
+                # "## PSSM_name	p_Value	Hits: num_of_hits"
                 continue
-            # "CGGLKGAPFLAC_17b_clusterRank_0000_uniqueMembers_top100_clusterSize_34471.00.faa\t0.01\tNorm_Hits: 767864\tTrue_Hits: 42522"
+            # "CGGLKGAPFLAC_17b_clusterRank_0000_uniqueMembers_top100_clusterSize_34471.00.faa\t0.01\tHits: 767864\tUse_RPM: 1"
             motif = line.split('_')[0]
             line_tokens = line.split('\t')
             pvalue = line_tokens[1]
@@ -56,10 +56,12 @@ def get_results_shuffles(consensusesValues, sample_name, path):
             hits = f.readline().split()[1]
             # third line skip
             line3 = f.readline()
-            # four line skip
-            line3 = f.readline()
-            # five line get values - RANK 1.00
+            # four line get values - RANK 1.00
             pvalue = f.readline().split()[1]
+            # five line skip
+            line5 = f.readline()
+            # six line skip 
+            line6 = f.readline()
 
             if motif not in consensusesValues:
                 motifSamples = {}
