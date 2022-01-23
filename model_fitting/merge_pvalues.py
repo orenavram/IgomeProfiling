@@ -56,10 +56,12 @@ def get_results_shuffles(consensusesValues, sample_name, path):
             hits = f.readline().split()[1]
             # third line skip
             line3 = f.readline()
-            # four line skip
-            line4 = f.readline()
-            # five line get values - RANK 1.00
+            # four line get values - RANK 1.00
             pvalue = f.readline().split()[1]
+            # five line skip
+            line5 = f.readline()
+            # six line skip 
+            line6 = f.readline()
 
             if motif not in consensusesValues:
                 motifSamples = {}

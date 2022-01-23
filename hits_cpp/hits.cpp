@@ -258,7 +258,7 @@ void factorHits(Memes& memes, MemeShufflesMap& shuffles, double factor) {
 }
 
 void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffles, string& outputPath, SequencesRpmMap& sequncesRpm, bool isOutputSequences, \
-                  string& sequenceHitMotifPath, bool useRPM, bool verbose, int shufflesDigits) {
+                  string& sequenceHitMotifPath, bool useRPM, bool useRpmFaaScanning, bool verbose, int shufflesDigits) {
     auto memesIter = memes.getMemes().begin();
     auto memesEnd = memes.getMemes().end();
     auto ratingEnd = ratings.end();
@@ -267,12 +267,13 @@ void writeResults(Memes& memes, MemeRatingMap& ratings, MemeShufflesMap& shuffle
     while (memesIter != memesEnd) {
         file << "MOTIF " << memesIter->second.getMotif() << endl;
         file << "HITS " << memesIter->second.getHitCount() << endl;
-        file << "USE_RPM " << useRPM << endl;
         auto ratingIter = ratings.find(memesIter->first);
         if (ratingIter != ratingEnd) {
             file << "SHUFFLES " << shuffles[memesIter->first].size() << endl;
             file << "RANK " << std::fixed << std::setprecision(shufflesDigits) <<ratingIter->second << endl;
         }
+        file << "USE_RPM_FACTOR " << useRPM << endl;
+        file << "USE_UNIQUE_RPM_FAA " << useRpmFaaScanning << endl;
         //print all the sequences that have hit with the motif
         if (isOutputSequences){
             SequencesCount hitSequences = (memesIter->second).getHitSequences();
@@ -334,7 +335,7 @@ int main(int argc, char *argv[])
     if (shuffles) {
         memesRating = getRatings(memes, memesShuffles, isVerbose, shufflesPercent);
     }
-    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, useFactor, isVerbose, shufflesDigits);
+    writeResults(memes, memesRating, memesShuffles, outputPath, sequncesRpm, isOutputSequences, sequenceHitMotifPath, useFactor, useRpmFaaScanning, isVerbose, shufflesDigits);
 
     auto end = chrono::steady_clock::now();
     cout << chrono::duration_cast<chrono::seconds>(end - begin).count() << "[s]" << endl;

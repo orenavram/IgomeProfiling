@@ -527,7 +527,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	double rpmFactorValue = double(1000000) / double(numberOfSeq);
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
-	listOfPvaluesFile << "## PSSM_name\tp_Value\tHits: num_of_hits\tUse_RPM_Factor: true/false" <<endl;
+	listOfPvaluesFile << "## PSSM_name\tp_Value\tHits: num_of_hits\tUse_RPM_Factor: 0/1\tUse_Unique_RPM_Faa: 0/1" <<endl;
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
 		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, sequenceHitMotifPath, isOutputSequences, 1);
@@ -559,7 +559,7 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		//cout << "place = " << place << endl;
 		double p_Value = (double(numberOfRandomPSSM) - double(place)) / double(numberOfRandomPSSM);		
 
-		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tHits: " << numberOfHitsInRealPSSM << "\tUse_RPM_Factor: " << useFactor <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
+		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tHits: " << numberOfHitsInRealPSSM << "\tUse_RPM_Factor: " << useFactor  << "\tUse_Unique_RPM_Faa: " << useRpmFaaScanning << endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}
 	listOfPvaluesFile.close();

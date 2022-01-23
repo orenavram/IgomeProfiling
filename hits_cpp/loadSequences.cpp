@@ -49,7 +49,6 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
             sequencesByType->push_back(line);
             if (useRpmFaaScanning) {
                 sequncesRpm[line] = uniquePeptides;
-                count += uniquePeptides;
             } else {
                 auto iter = sequncesRpm.find(line);
                 if (iter == sequncesRpm.end()) {
@@ -57,11 +56,11 @@ SequencesMap loadSequences(string faaPath, int& numSequences, SequencesRpmMap& s
                 } else {
                     iter->second++;
                 }
-                count++;
             }
+            count++;
         }
     }
     numSequences = count;
-    cout << "total sequences: " << count << endl;
+    cout << "total sequences in file: " << count << endl;
     return sequences;
 }
