@@ -59,6 +59,11 @@ def get_clusters_sequences(motif_inference_output_path, biological_condition, sa
     return result, result_file_name
 
 
+def remove_consensus_name(clusters):
+    #remove consensus sequence so we have the exact cluster (file) name
+    return [cluster[cluster.index('_')+1:] for cluster in clusters]
+
+
 def unite_clusters(motif_inference_output_path, meme_file, biological_condition, sample_names,
                    max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff,
                    unite_pssm_script_path='./UnitePSSMs/UnitePSSMs', argv='no_argv'):
@@ -79,9 +84,7 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
     with open(clusters_to_combine_path) as f:
         for line in f:
             cluster_names = line.rstrip().split(',')
-            # remove consensus sequence so we have the exact cluster (file) name
-            cluster_without_prefix = [cluster[cluster.index('_')+1:] for cluster in cluster_names]
-            clusters_to_combine.append(cluster_without_prefix)
+            clusters_to_combine.append(cluster_names)
 
     logger.info(f'Sorting clusters by rank...')
     # sort the sublist such that the first one will contain the highest copy number, etc...
@@ -99,7 +102,7 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
             logger.info(f'Merging sequences of the cluster ranked {cluster_rank}')
 
         clusters_sequences, cluster_file_name = get_clusters_sequences(motif_inference_output_path, biological_condition,
-                                                                       sample_names, clusters_to_combine[cluster_rank],
+                                                                       sample_names, remove_consensus_name(clusters_to_combine[cluster_rank]),
                                                                        cluster_rank, max_number_of_members_per_cluster)
         with open(os.path.join(unaligned_sequences_path, cluster_file_name), 'w') as f:
             f.write(clusters_sequences)
