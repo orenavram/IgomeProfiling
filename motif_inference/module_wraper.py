@@ -647,7 +647,7 @@ if __name__ == '__main__':
     parser.add_argument('--word_length', default='4', choices=['2', '3', '4', '5'],
                         help='A heuristic of CD-hit. Choose of word size:\n5 for similarity thresholds 0.7 ~ 1.0\n4 for similarity thresholds 0.6 ~ 0.7\n3 for similarity thresholds 0.5 ~ 0.6\n2 for similarity thresholds 0.4 ~ 0.5')
     parser.add_argument('--discard', default='4', help='Include only sequences longer than <$discard> for the analysis. (CD-hit uses only sequences that are longer than 10 amino acids. When the analysis includes shorter sequences, this threshold should be lowered. Thus, it is set here to 1 by default.)')
-    parser.add_argument('--cluster_algorithm_mode', default='0', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
+    parser.add_argument('--cluster_algorithm_mode', default='1', type=str, help='0 - clustered to the first cluster that meet the threshold (fast). 1 - clustered to the most similar cluster (slow)')
     parser.add_argument('--concurrent_cutoffs', action='store_true',
                         help='Use new method which splits meme before cutoffs and runs cutoffs concurrently')
     parser.add_argument('--meme_split_size', type=int, default=5,
