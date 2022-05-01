@@ -81,8 +81,10 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
-                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor, no_use_rpm_faa_scanning,
-                 no_output_sequences_scanning, run_summary_path, error_path, queue, verbose, argv):
+                 stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor,
+                 no_use_rpm_faa_scanning, no_output_sequences_scanning, use_positive_motifs_script, invalid_mix, threshold_mean, 
+                 threshold_std, threshold_median, min_max_difference, normalize_factor, normalize_method_hits, fixed_min, fixed_max,
+                 run_summary_path, error_path, queue, verbose, argv):
 
     files_are_valid = True
     if multi_exp_config_reads or multi_exp_config_inference or cross_experiments_config:
@@ -180,6 +182,10 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              '--no_rpm_factor' if no_rpm_factor else '',
                              '--no_use_rpm_faa_scanning' if no_use_rpm_faa_scanning else '',
                              f'--no_output_sequences_scanning' if no_output_sequences_scanning else '',
+                             '--use_positive_motifs_script' if use_positive_motifs_script else '',
+                             f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}', f'--threshold_std {threshold_std}', 
+                             f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}', f'--normalize_factor {normalize_factor}',
+                             f'--normalize_method_hits {normalize_method_hits}', f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -300,6 +306,27 @@ if __name__ == '__main__':
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
     parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
+    parser.add_argument('--use_positive_motifs_script', action='store_true', help='Before classification model, remain only positive motifs from the csv file')
+    parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
+    parser.add_argument('--threshold_mean', default=None,
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the mean diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the mean of BC to the mean of other is bigger than the motif is seperate')
+    parser.add_argument('--threshold_std', default=None, 
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the std diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the std of BC to the std of other is bigger than the motif is seperate')
+    parser.add_argument('--threshold_median', default=None,
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the median diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the median of BC to the median of other is bigger than the motif is seperate')
+    parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
+    parser.add_argument('--normalize_factor', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
+    parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
+                        help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
+    parser.add_argument('--normalize_section', choices=['per_motif','per_exp'],  default='per_motif', help='Calculate the min and max per motifs or over all the exp data')
+    parser.add_argument('--fixed_min', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the minimum value')
+    parser.add_argument('--fixed_max', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the maximum value')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -337,4 +364,6 @@ if __name__ == '__main__':
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_experiments_config,
                  args.no_rpm_factor, args.no_use_rpm_faa_scanning, args.no_output_sequences_scanning,
+                 args.use_positive_motifs_script, args.invalid_mix, args.threshold_mean, args.threshold_std, args.threshold_median,
+                 args.min_max_difference, args.normalize_factor, args.normalize_method_hits, args.fixed_min, args.fixed_max,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)

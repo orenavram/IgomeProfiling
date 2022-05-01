@@ -46,6 +46,17 @@ map_names_command_line = {
     "no_rpm_factor": "no_rpm_factor",
     "no_output_sequences_scanning": "no_output_sequences_scanning",
     "no_use_rpm_faa_scanning": "no_use_rpm_faa_scanning",
+    "use_positive_motifs_script": "use_positive_motifs_script",
+    "invalid_mix": "invalid_mix", 
+    "threshold_mean": "threshold_mean",
+    "threshold_std": "threshold_std", 
+    "threshold_median": "threshold_median", 
+    "min_max_difference": "min_max_difference", 
+    "normalize_factor": "normalize_factor", 
+    "normalize_method_hits": "normalize_method_hits", 
+    "normalize_section": "normalize_section", 
+    "fixed_min": "fixed_min", 
+    "fixed_max": "fixed_max",
     "queue" : "queue",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -91,6 +102,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor, no_use_rpm_faa_scanning,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop, no_output_sequences_scanning,
+                     use_positive_motifs_script, invalid_mix, threshold_mean, threshold_std, threshold_median,
+                     min_max_difference, normalize_factor, normalize_method_hits, fixed_min, fixed_max,
                      queue, verbose, error_path, mapitope, exp_name, argv):     
 
     if exp_name:
@@ -253,6 +266,52 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                         error_file_path=error_path, suffix='_done_aggregate_scores.txt')
     else:
         logger.info(f'skipping aggregating scores, all scores found')
+    
+    # Remain only positive motifs in csv file
+    if use_positive_motifs_script:
+        logger.info('_'*100)
+        logger.info(f'{datetime.datetime.now()}: positive motifs')
+        script_name = 'positive_motifs.py'
+        num_of_expected_results = 0
+        all_cmds_params = [] 
+        for bc in biological_conditions:                
+            aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
+            output_values_path = os.path.join(model_path, bc, f'{bc}_values_positive_motifs.csv')
+            values_done_path = os.path.join(logs_dir, f'{bc}_values_done_positive_motifs.txt')
+            aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
+            output_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs.csv')
+            hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_positive_motifs.txt')
+
+            value_cmd = [aggregated_values_path, output_values_path, values_done_path, f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}',
+                    f'--threshold_std {threshold_std}', f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}',
+                    f'--rank_method {rank_method}', f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
+                    f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}']
+            hits_cmd = [aggregated_hits_path, output_hits_path, hits_done_path, f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}',
+                    f'--threshold_std {threshold_std}', f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}',
+                    f'--rank_method hits', f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
+                    f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}']
+            if not os.path.exists(values_done_path):
+                all_cmds_params.append(value_cmd)
+            else:
+                logger.debug(f'Skipping fitting as {values_done_path} found')
+                num_of_expected_results += 1
+            
+            if not os.path.exists(hits_done_path):
+                all_cmds_params.append(hits_cmd)
+            else:
+                logger.debug(f'Skipping fitting as {hits_done_path} found')
+                num_of_expected_results += 1
+        if len(all_cmds_params) > 0:
+            doubled_bc = repeat_items(biological_conditions)
+            for cmds_params, bc in zip(all_cmds_params, doubled_bc):
+                cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
+                                              [cmds_params], logs_dir, f'{bc}_positive_motifs', queue, verbose)   
+            wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
+                            error_file_path=error_path, suffix='_done_positive_motifs.txt')
+        else:
+            logger.info(f'Skipping positive_motifs, all found')
+    else:
+        logger.info(f'Skipping positive_motifs, not to user this script.')
 
     # fitting a random forest model (hits and values)
     if not stop_before_random_forest:
@@ -262,9 +321,13 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         num_of_expected_results = 0
         all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
         for bc in biological_conditions:
-            aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
+            if use_positive_motifs_script:
+                aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values_positive_motifs.csv')
+                aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs.csv')
+            else:
+                aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
+                aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
             pvalues_done_path = os.path.join(logs_dir, f'{bc}_values_done_fitting.txt')
-            aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
             
             value_cmd = [aggregated_values_path, pvalues_done_path, logs_dir, error_path, f'--num_of_configurations_to_sample {num_of_random_configurations_to_sample}', f'--cv_num_of_splits {cv_num_of_splits}',
@@ -356,6 +419,27 @@ if __name__ == '__main__':
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
     parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
+    parser.add_argument('--use_positive_motifs_script', action='store_true', help='Before classification model, remain only positive motifs from the csv file')
+    parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
+    parser.add_argument('--threshold_mean', default=None,
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the mean diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the mean of BC to the mean of other is bigger than the motif is seperate')
+    parser.add_argument('--threshold_std', default=None, 
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the std diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the std of BC to the std of other is bigger than the motif is seperate')
+    parser.add_argument('--threshold_median', default=None,
+                        type=lambda x: float(x) if 0 < float(x) < 1 
+                        else parser.error(f'The threshold of the median diffrence should be between 0 to 1'),
+                        help='If the diffrenece between the median of BC to the median of other is bigger than the motif is seperate')
+    parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
+    parser.add_argument('--normalize_factor', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
+    parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
+                        help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
+    parser.add_argument('--normalize_section', choices=['per_motif','per_exp'],  default='per_motif', help='Calculate the min and max per motifs or over all the exp data')
+    parser.add_argument('--fixed_min', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the minimum value')
+    parser.add_argument('--fixed_max', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the maximum value')
     parser.add_argument('--error_path', type=str, help='A file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
