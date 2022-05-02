@@ -282,7 +282,9 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             output_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_positive_motifs.txt')
 
-            value_cmd = [aggregated_values_path, output_values_path, values_done_path, '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
+            value_cmd = [aggregated_values_path, output_values_path, values_done_path, 
+                    '' if no_rpm_factor else '--is_rpm_normalize', 
+                    '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
                     '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
                     '' if threshold_std is None else f'--threshold_std {threshold_std}',
                     '' if threshold_median is None else f'--threshold_median {threshold_median}',
@@ -293,6 +295,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                     '' if fixed_max is None else f'--fixed_max {fixed_max}']
 
             hits_cmd = [aggregated_hits_path, output_hits_path, hits_done_path, 
+                    '' if no_rpm_factor else '--is_rpm_normalize',
                     '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
                     '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
                     '' if threshold_std is None else f'--threshold_std {threshold_std}',

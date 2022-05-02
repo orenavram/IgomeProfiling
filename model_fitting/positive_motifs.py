@@ -105,19 +105,28 @@ def calculation(df, label):
     return df_calculation
 
 
-def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference):
+def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference, rank_method, is_rpm_normalize):
     positive_motifs = []
     motifs_value = []
     for motif_name in df.columns:
-        if (threshold_mean is None or df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) \
-            and (threshold_std is None or df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) \
-            and (threshold_median is None or df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) \
-            and (not min_max_difference or df.loc['min_BC', motif_name] > df.loc['max_other', motif_name]):
-            positive_motifs.append(motif_name)
-            motifs_value.append('positive')
+        if rank_method == 'hits' and is_rpm_normalize:
+            if (threshold_mean is None or (df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name]) / df.loc['mean_BC', motif_name] > threshold_mean) \
+                and (threshold_std is None or (df.loc['std_BC', motif_name] - df.loc['std_other', motif_name]) / df.loc['std_BC', motif_name] > threshold_std) \
+                and (threshold_median is None or (df.loc['median_BC', motif_name] - df.loc['median_other', motif_name]) / df.loc['median_BC', motif_name] > threshold_median) \
+                and (not min_max_difference or df.loc['min_BC', motif_name] > df.loc['max_other', motif_name]):
+                positive_motifs.append(motif_name)
+                motifs_value.append('positive')
+            else:
+                motifs_value.append('negative')
         else:
-            motifs_value.append('negative')
-
+            if (threshold_mean is None or df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) \
+                and (threshold_std is None or df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) \
+                and (threshold_median is None or df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) \
+                and (not min_max_difference or df.loc['min_BC', motif_name] > df.loc['max_other', motif_name]):
+                positive_motifs.append(motif_name)
+                motifs_value.append('positive')
+            else:
+                motifs_value.append('negative')
     df.loc['values'] = motifs_value
     threshold = [threshold_mean, threshold_std, threshold_median, None, None,
                  threshold_mean, threshold_std, threshold_median, None, None, None]
@@ -125,7 +134,7 @@ def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, mi
     return df,positive_motifs
 
 
-def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_mean, threshold_std, threshold_median,
+def statistical_calculation(df, output_path, done_path, is_rpm_normalize, invalid_mix, threshold_mean, threshold_std, threshold_median,
                             min_max_difference, rank_method, normalize_factor, normalize_method_hits, normalize_section,
                             fixed_min, fixed_max, argv):
     source_df = df.copy()
@@ -142,7 +151,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
         return 
     if rank_method == 'pval':
         df = 1-df
-    if normalize_factor == 'log' or  rank_method =='hits':
+    if not is_rpm_normalize and (normalize_factor == 'log' or  rank_method =='hits'):
         df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
@@ -152,7 +161,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     # Concat two dataframe to one
     df_statistical = pd.concat([df_BC_statistical, df_other_statistical])
     # Left only the positive motifs
-    df_statistical, positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference)
+    df_statistical, positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference, rank_method, is_rpm_normalize)
     # Write the results 
     write_results(source_df, df_statistical, positive_motifs, output_path)
 
@@ -169,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model')
     parser.add_argument('output_path', type=str, help='Path to base name file for output the results')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully.')
+    parser.add_argument('--is_rpm_normalize', action='store_true', help='The data is already normalize by rpm')
     parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
     parser.add_argument('--threshold_mean', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
@@ -200,7 +210,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     df = pd.read_csv(args.data_path)
-    statistical_calculation(df, args.output_path, args.done_file_path, args.invalid_mix,
+    statistical_calculation(df, args.output_path, args.done_file_path, args.is_rpm_normalize, args.invalid_mix,
                             args.threshold_mean, args.threshold_std, args.threshold_median, args.min_max_difference,
                             args.rank_method, args.normalize_factor, args.normalize_method_hits, args.normalize_section,
                             args.fixed_min, args.fixed_max, sys.argv)
