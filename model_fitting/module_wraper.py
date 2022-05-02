@@ -103,7 +103,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                      cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor, no_use_rpm_faa_scanning,
                      stop_machines_flag, type_machines_to_stop, name_machines_to_stop, no_output_sequences_scanning,
                      use_positive_motifs_script, invalid_mix, threshold_mean, threshold_std, threshold_median,
-                     min_max_difference, normalize_factor, normalize_method_hits, fixed_min, fixed_max,
+                     min_max_difference, normalize_factor, normalize_method_hits, normalize_section, fixed_min, fixed_max,
                      queue, verbose, error_path, mapitope, exp_name, argv):     
 
     if exp_name:
@@ -276,20 +276,32 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         all_cmds_params = [] 
         for bc in biological_conditions:                
             aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
-            output_values_path = os.path.join(model_path, bc, f'{bc}_values_positive_motifs.csv')
+            output_values_path = os.path.join(model_path, bc, f'{bc}_values_positive_motifs')
             values_done_path = os.path.join(logs_dir, f'{bc}_values_done_positive_motifs.txt')
             aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits.csv')
-            output_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs.csv')
+            output_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs')
             hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_positive_motifs.txt')
 
-            value_cmd = [aggregated_values_path, output_values_path, values_done_path, f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}',
-                    f'--threshold_std {threshold_std}', f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}',
-                    f'--rank_method {rank_method}', f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
-                    f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}']
-            hits_cmd = [aggregated_hits_path, output_hits_path, hits_done_path, f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}',
-                    f'--threshold_std {threshold_std}', f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}',
-                    f'--rank_method hits', f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
-                    f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}']
+            value_cmd = [aggregated_values_path, output_values_path, values_done_path, '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
+                    '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
+                    '' if threshold_std is None else f'--threshold_std {threshold_std}',
+                    '' if threshold_median is None else f'--threshold_median {threshold_median}',
+                    f'--min_max_difference' if min_max_difference else '', f'--rank_method {rank_method}',
+                    f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
+                    f'--normalize_section {normalize_section}',
+                    '' if fixed_min is None else f'--fixed_min {fixed_min}',
+                    '' if fixed_max is None else f'--fixed_max {fixed_max}']
+
+            hits_cmd = [aggregated_hits_path, output_hits_path, hits_done_path, 
+                    '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
+                    '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
+                    '' if threshold_std is None else f'--threshold_std {threshold_std}',
+                    '' if threshold_median is None else f'--threshold_median {threshold_median}',
+                    f'--min_max_difference' if min_max_difference else '', f'--rank_method hits',
+                    f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
+                    f'--normalize_section {normalize_section}',
+                    '' if fixed_min is None else f'--fixed_min {fixed_min}',
+                    '' if fixed_max is None else f'--fixed_max {fixed_max}']
             if not os.path.exists(values_done_path):
                 all_cmds_params.append(value_cmd)
             else:
@@ -305,7 +317,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
             doubled_bc = repeat_items(biological_conditions)
             for cmds_params, bc in zip(all_cmds_params, doubled_bc):
                 cmd = submit_pipeline_step(f'{src_dir}/model_fitting/{script_name}',
-                                              [cmds_params], logs_dir, f'{bc}_positive_motifs', queue, verbose)   
+                                              [cmds_params], logs_dir, f'{bc}_positive_motifs', queue, verbose)
+                num_of_expected_results += 1                              
             wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
                             error_file_path=error_path, suffix='_done_positive_motifs.txt')
         else:
@@ -322,7 +335,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         all_cmds_params = []  # a list of lists. Each sublist contain different parameters set for the same script to reduce the total number of jobs
         for bc in biological_conditions:
             if use_positive_motifs_script:
-                aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values_positive_motifs.csv')
+                aggregated_values_path = os.path.join(model_path, bc,f'{bc}_values_positive_motifs.csv')
                 aggregated_hits_path = os.path.join(model_path, bc, f'{bc}_hits_positive_motifs.csv')
             else:
                 aggregated_values_path = os.path.join(model_path, bc, f'{bc}_values.csv')
@@ -445,7 +458,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     parser.add_argument('-m', '--mapitope', action='store_true', help='use mapitope encoding')
     args = parser.parse_args()
-
+    
     import logging
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -454,4 +467,3 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     process_params(args, args.cross_experiments_config, map_names_command_line, build_classifier, 'model_fitting', sys.argv)
-    

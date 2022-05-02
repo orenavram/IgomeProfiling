@@ -83,7 +83,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor,
                  no_use_rpm_faa_scanning, no_output_sequences_scanning, use_positive_motifs_script, invalid_mix, threshold_mean, 
-                 threshold_std, threshold_median, min_max_difference, normalize_factor, normalize_method_hits, fixed_min, fixed_max,
+                 threshold_std, threshold_median, min_max_difference, normalize_factor, normalize_method_hits, normalize_section, fixed_min, fixed_max,
                  run_summary_path, error_path, queue, verbose, argv):
 
     files_are_valid = True
@@ -183,10 +183,15 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              '--no_use_rpm_faa_scanning' if no_use_rpm_faa_scanning else '',
                              f'--no_output_sequences_scanning' if no_output_sequences_scanning else '',
                              '--use_positive_motifs_script' if use_positive_motifs_script else '',
-                             f'--invalid_mix {invalid_mix}', f'--threshold_mean {threshold_mean}', f'--threshold_std {threshold_std}', 
-                             f'--threshold_median {threshold_median}', f'--min_max_difference {min_max_difference}', f'--normalize_factor {normalize_factor}',
-                             f'--normalize_method_hits {normalize_method_hits}', f'--fixed_min {fixed_min}', f'--fixed_max {fixed_max}',
-                             f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
+                             '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
+                             '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
+                             '' if threshold_std is None else f'--threshold_std {threshold_std}',
+                             '' if threshold_median is None else f'--threshold_median {threshold_median}',
+                             f'--min_max_difference' if min_max_difference else '',
+                             f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
+                             f'--normalize_section {normalize_section}',
+                             '' if fixed_min is None else f'--fixed_min {fixed_min}',
+                             '' if fixed_max is None else f'--fixed_max {fixed_max}']       
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -365,5 +370,5 @@ if __name__ == '__main__':
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_experiments_config,
                  args.no_rpm_factor, args.no_use_rpm_faa_scanning, args.no_output_sequences_scanning,
                  args.use_positive_motifs_script, args.invalid_mix, args.threshold_mean, args.threshold_std, args.threshold_median,
-                 args.min_max_difference, args.normalize_factor, args.normalize_method_hits, args.fixed_min, args.fixed_max,
+                 args.min_max_difference, args.normalize_factor, args.normalize_method_hits, args.normalize_section, args.fixed_min, args.fixed_max,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
