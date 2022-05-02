@@ -61,3 +61,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     adjustment_meme_file(args.input_path_meme_files, args.output_path)
+    
