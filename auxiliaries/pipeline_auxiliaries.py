@@ -457,6 +457,15 @@ def get_cluster_size_from_name(path):
     return float(os.path.splitext(path)[0].split('clusterSize_')[1])
 
 
+def get_number_samples_from_name(path, biological_condition):
+    return os.path.splitext(path)[0].split(f'{biological_condition}_')[1].split('_')[0]
+
+def get_unique_members_from_name(path):
+    unique_members = os.path.splitext(path)[0].split('uniqueMembers_')[1].split('_')[0]
+    if 'top' in unique_members:
+        return float(unique_members.split('top')[1])
+    return float(unique_members)
+
 def get_count_from(header):
     # e.g., >seq_1_lib_C10C_len_12_counts_325350.363668618
     if 'Type' not in header:

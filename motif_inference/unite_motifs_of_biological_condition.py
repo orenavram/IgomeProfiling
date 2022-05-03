@@ -12,7 +12,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name, load_fasta_to_dict, \
-    get_count_from
+    get_count_from, get_number_samples_from_name, get_unique_members_from_name
 
 
 def get_clusters_sequences(motif_inference_output_path, biological_condition, sample_names,
@@ -87,12 +87,15 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
             clusters_to_combine.append(cluster_names)
 
     logger.info(f'Sorting clusters by rank...')
+    half_num_samples = round(len(sample_names)/2)
     # sort the sublist such that the first one will contain the highest copy number, etc...
-    clusters_to_combine.sort(key=lambda clusters: sum(get_cluster_size_from_name(cluster) for cluster in clusters), reverse=True)
+    clusters_to_combine.sort(key=lambda clusters: (len(set([get_number_samples_from_name(cluster, biological_condition) for cluster in clusters])), sum(get_unique_members_from_name(cluster) for cluster in clusters), sum(get_cluster_size_from_name(cluster) for cluster in clusters)), reverse=True)
     sorted_clusters_to_combine_path = clusters_to_combine_path.replace('cluster_to_combine', 'sorted_cluster_to_combine')
     with open(sorted_clusters_to_combine_path, 'w') as f:
         for cluster_names in clusters_to_combine:
-            f.write(','.join(cluster_names)+'\n')
+            num_of_samples_per_cluster = len(set([get_number_samples_from_name(cluster, biological_condition) for cluster in cluster_names])) 
+            if num_of_samples_per_cluster >= half_num_samples:
+                f.write(','.join(cluster_names)+'\n')
 
     unaligned_sequences_path = os.path.join(output_path, 'unaligned_sequences')
     os.makedirs(unaligned_sequences_path, exist_ok=True)
