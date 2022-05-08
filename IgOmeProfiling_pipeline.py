@@ -82,8 +82,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor,
-                 no_use_rpm_faa_scanning, no_output_sequences_scanning, use_positive_motifs_script, invalid_mix, threshold_mean, 
-                 threshold_std, threshold_median, min_max_difference, normalize_factor, normalize_method_hits, normalize_section, fixed_min, fixed_max,
+                 no_use_rpm_faa_scanning, no_output_sequences_scanning, filter_positive_motifs, invalid_mix_positive_motifs, threshold_mean_positive_motifs, 
+                 threshold_std_positive_motifs, threshold_median_positive_motifs, min_max_difference_positive_motifs, normalize_factor_positive_motifs, 
+                 normalize_method_hits_positive_motifs, normalize_section_positive_motifs, fixed_min_positive_motifs, fixed_max_positive_motifs,
                  run_summary_path, error_path, queue, verbose, argv):
 
     files_are_valid = True
@@ -182,16 +183,18 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              '--no_rpm_factor' if no_rpm_factor else '',
                              '--no_use_rpm_faa_scanning' if no_use_rpm_faa_scanning else '',
                              f'--no_output_sequences_scanning' if no_output_sequences_scanning else '',
-                             '--use_positive_motifs_script' if use_positive_motifs_script else '',
-                             '' if invalid_mix is None else f'--invalid_mix {invalid_mix}',
-                             '' if threshold_mean is None else f'--threshold_mean {threshold_mean}',
-                             '' if threshold_std is None else f'--threshold_std {threshold_std}',
-                             '' if threshold_median is None else f'--threshold_median {threshold_median}',
-                             f'--min_max_difference' if min_max_difference else '',
-                             f'--normalize_factor {normalize_factor}', f'--normalize_method_hits {normalize_method_hits}',
-                             f'--normalize_section {normalize_section}',
-                             '' if fixed_min is None else f'--fixed_min {fixed_min}',
-                             '' if fixed_max is None else f'--fixed_max {fixed_max}']       
+                             '--filter_positive_motifs' if filter_positive_motifs else '',
+                             '' if invalid_mix_positive_motifs is None else f'--invalid_mix {invalid_mix_positive_motifs}',
+                             '' if threshold_mean_positive_motifs is None else f'--threshold_mean {threshold_mean_positive_motifs}',
+                             '' if threshold_std_positive_motifs is None else f'--threshold_std {threshold_std_positive_motifs}',
+                             '' if threshold_median_positive_motifs is None else f'--threshold_median {threshold_median_positive_motifs}',
+                             f'--min_max_difference_positive_motifs' if min_max_difference_positive_motifs else '',
+                             f'--normalize_factor_positive_motifs {normalize_factor_positive_motifs}', 
+                             f'--normalize_method_hits_positive_motifs {normalize_method_hits_positive_motifs}',
+                             f'--normalize_section_positive_motifs {normalize_section_positive_motifs}',
+                             '' if fixed_min_positive_motifs is None else f'--fixed_min_positive_motifs {fixed_min_positive_motifs}',
+                             '' if fixed_max_positive_motifs is None else f'--fixed_max_positive_motifs {fixed_max_positive_motifs}',
+                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']      
         if rank_method == 'tfidf':
             if tfidf_method:
                 module_parameters += ['--tfidf_method', tfidf_method]
@@ -311,27 +314,28 @@ if __name__ == '__main__':
     parser.add_argument('--no_rpm_factor', action='store_true', help='Disable multiplication hits by factor rpm for normalization')
     parser.add_argument('--no_use_rpm_faa_scanning', action='store_true', help='Disable performance of scanning script with unique rpm faa file')
     parser.add_argument('--no_output_sequences_scanning', action='store_true', help='Disable storing the output sequences that had hits')
-    parser.add_argument('--use_positive_motifs_script', action='store_true', help='Before classification model, remain only positive motifs from the csv file')
-    parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
-    parser.add_argument('--threshold_mean', default=None,
+    parser.add_argument('--filter_positive_motifs', action='store_true', help='Filter only positive motifs. This is done after motifs generation and before ranking')
+    parser.add_argument('--invalid_mix_positive_motifs',type=str, default=None, help='Sample name considered negative. e.g. "native')
+    parser.add_argument('--threshold_mean_positive_motifs', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the mean diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the mean of BC to the mean of other is bigger than the motif is seperate')
-    parser.add_argument('--threshold_std', default=None, 
+                        help='Positive motif threshold of the difference between the mean of the BC and mean of others')
+    parser.add_argument('--threshold_std_positive_motifs', default=None, 
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the std diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the std of BC to the std of other is bigger than the motif is seperate')
-    parser.add_argument('--threshold_median', default=None,
+                        help='Positive motif threshold of the difference between the std of the BC and std of others')
+    parser.add_argument('--threshold_median_positive_motifs', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the median diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the median of BC to the median of other is bigger than the motif is seperate')
-    parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
-    parser.add_argument('--normalize_factor', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
-    parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
-                        help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
-    parser.add_argument('--normalize_section', choices=['per_motif','per_exp'],  default='per_motif', help='Calculate the min and max per motifs or over all the exp data')
-    parser.add_argument('--fixed_min', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the minimum value')
-    parser.add_argument('--fixed_max', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the maximum value')
+                        help='Positive motif threshold of the difference between the median of the BC and median of others')
+    parser.add_argument('--min_max_difference_positive_motifs', action='store_true', help='Positive motif if the minmal value of bc is bigger than the maximal value of other')
+    parser.add_argument('--normalize_factor_positive_motifs', choices=['linear', 'log'], default='linear', help='type of factor to normalize the data. \
+                                    If nonlinear data (values are not in the same distance) use log ,otherwise use linear')
+    parser.add_argument('--normalize_method_hits_positive_motifs', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
+                        help='Method affects which values the normalization will change the data. e.g. min max bring all values into the range [0,1]')
+    parser.add_argument('--normalize_section_positive_motifs', choices=['per_motif','per_exp'],  default='per_motif', help='Normalize the data by calculate the min and max per motif or over all the exp data')
+    parser.add_argument('--fixed_min_positive_motifs', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the minimum value')
+    parser.add_argument('--fixed_max_positive_motifs', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the maximum value')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -369,6 +373,7 @@ if __name__ == '__main__':
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_experiments_config,
                  args.no_rpm_factor, args.no_use_rpm_faa_scanning, args.no_output_sequences_scanning,
-                 args.use_positive_motifs_script, args.invalid_mix, args.threshold_mean, args.threshold_std, args.threshold_median,
-                 args.min_max_difference, args.normalize_factor, args.normalize_method_hits, args.normalize_section, args.fixed_min, args.fixed_max,
+                 args.filter_positive_motifs, args.invalid_mix_positive_motifs, args.threshold_mean_positive_motifs, args.threshold_std_positive_motifs,
+                 args.threshold_median_positive_motifs, args.min_max_difference_positive_motifs, args.normalize_factor_positive_motifs, 
+                 args.normalize_method_hits_positive_motifs, args.normalize_section_positive_motifs, args.fixed_min_positive_motifs, args.fixed_max_positive_motifs,
                  run_summary_path, error_path, args.queue, args.verbose, sys.argv)
