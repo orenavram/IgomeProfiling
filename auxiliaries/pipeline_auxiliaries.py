@@ -454,18 +454,26 @@ def get_unique_members_from(header):
 
 
 def get_cluster_size_from_name(path):
+    # e.g., CGGLKGAPFLAC_17b_03_clusterRank_0000_uniqueMembers_167_clusterSize_343425.46.faa
     return float(os.path.splitext(path)[0].split('clusterSize_')[1])
 
 
-def get_number_samples_from_name(path, biological_condition):
-    return os.path.splitext(path)[0].split(f'{biological_condition}_')[1].split('_')[0]
+def get_samples_from_name(path):
+    # e.g., CGGLKGAPFLAC_17b_03_clusterRank_0000_uniqueMembers_167_clusterSize_343425.46.faa
+    path_without_suffix = os.path.splitext(path)[0]
+    split_path = path_without_suffix.split('_')
+    index_of_clusterRank = 0
+    for part_path in split_path:
+        if 'clusterRank' in part_path:
+            break
+        index_of_clusterRank += 1
+    sample_name = '_'.join(split_path[1:index_of_clusterRank])
+    return sample_name
 
 
 def get_unique_members_from_name(path):
-    unique_members = os.path.splitext(path)[0].split('uniqueMembers_')[1].split('_')[0]
-    if 'top' in unique_members:
-        return float(unique_members.split('top')[1])
-    return float(unique_members)
+    # e.g., CGGLKGAPFLAC_17b_03_clusterRank_0000_uniqueMembers_167_clusterSize_343425.46.faa
+    return float(os.path.splitext(path)[0].split('uniqueMembers_')[1].split('_')[0])
 
 
 def get_count_from(header):
