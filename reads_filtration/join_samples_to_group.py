@@ -1,5 +1,6 @@
 import sys
 
+def join_samples_to_group()
 
 if __name__ == '__main__':
     print(f'Starting {sys.argv[0]}. Executed command is:\n{" ".join(sys.argv)}', flush=True)
@@ -20,3 +21,5 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
+
+    join_samples_to_group(args.samples_path_reads, args.output_path_group, args.sample_names, args.done_file_path, sys.argv)
