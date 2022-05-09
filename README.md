@@ -7,7 +7,7 @@ IgOme Profiling pipeline is ...
 
 ### OS
 The pipeline runs on Linux environment only.  
-For Windows the pipeline can run using [WSL and Visual Studio Code](https://code.visualstudio.com/remote-tutorials/wsl/getting-started).
+For Windows the pipeline can run using [WSL and Visual Studio Code](https://code.visualstudio.com/docs/remote/wsl-tutorial).
 
 Tested on Ubuntu 18.04 via Windows.
 
