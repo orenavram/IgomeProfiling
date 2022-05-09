@@ -66,13 +66,14 @@ def adjustment_meme_file(input_path_meme_file, output_path, motifs_per_file):
         elif 'Background letter frequencies' in line:
             lines.append(f'Background letter frequencies\n')
             flag_background = True
-            count_lines = num_line + 3
+            count_lines = num_line + 4
         elif 'position-specific probability matrix' in line:
             flag_background = False
             lines.append(f'\nMOTIF {line.split()[1]}\n')
             line = meme_file_lines[num_line + 2 ]
             num_lines_to_read  = get_num_lines_pssm(line)
-            lines.append(line)
+            new_line = " ".join(line.split()[:8])
+            lines.append(f'{new_line}\n')
             pssm_lines = meme_file_lines[num_line + 3 : num_line + 3+ num_lines_to_read]
             for line in pssm_lines:
                 lines.append(f'{line.lstrip()}')
