@@ -105,19 +105,31 @@ def calculation(df, label):
     return df_calculation
 
 
-def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference):
+def is_positive(df, motif_name, threshold_mean, threshold_std, threshold_median, min_max_difference):
+    if (threshold_mean is None or (df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name]) / df.loc['mean_BC', motif_name] > threshold_mean) \
+            and (threshold_std is None or (df.loc['std_BC', motif_name] - df.loc['std_other', motif_name]) / df.loc['std_BC', motif_name] > threshold_std) \
+            and (threshold_median is None or (df.loc['median_BC', motif_name] - df.loc['median_other', motif_name]) / df.loc['median_BC', motif_name] > threshold_median) \
+            and (not min_max_difference or df.loc['min_BC', motif_name] > df.loc['max_other', motif_name]):
+            return True
+    return False            
+
+
+def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, min_max_difference, rank_method, is_rpm_normalize):
     positive_motifs = []
     motifs_value = []
     for motif_name in df.columns:
-        if (threshold_mean is None or df.loc['mean_BC', motif_name] - df.loc['mean_other', motif_name] > threshold_mean) \
-            and (threshold_std is None or df.loc['std_BC', motif_name] - df.loc['std_other', motif_name] > threshold_std) \
-            and (threshold_median is None or df.loc['median_BC', motif_name] - df.loc['median_other', motif_name] > threshold_median) \
-            and (not min_max_difference or df.loc['min_BC', motif_name] > df.loc['max_other', motif_name]):
-            positive_motifs.append(motif_name)
-            motifs_value.append('positive')
+        if rank_method == 'hits' and is_rpm_normalize:
+            if is_positive(df, motif_name, threshold_mean, threshold_std, threshold_median, min_max_difference):
+                positive_motifs.append(motif_name)
+                motifs_value.append('positive')
+            else:
+                motifs_value.append('negative')
         else:
-            motifs_value.append('negative')
-
+            if is_positive(df, motif_name, threshold_mean, threshold_std, threshold_median, min_max_difference):
+                positive_motifs.append(motif_name)
+                motifs_value.append('positive')
+            else:
+                motifs_value.append('negative')
     df.loc['values'] = motifs_value
     threshold = [threshold_mean, threshold_std, threshold_median, None, None,
                  threshold_mean, threshold_std, threshold_median, None, None, None]
@@ -125,7 +137,7 @@ def find_positive_motifs(df, threshold_mean, threshold_std, threshold_median, mi
     return df,positive_motifs
 
 
-def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_mean, threshold_std, threshold_median,
+def statistical_calculation(df, output_path, done_path, is_rpm_normalize, invalid_mix, threshold_mean, threshold_std, threshold_median,
                             min_max_difference, rank_method, normalize_factor, normalize_method_hits, normalize_section,
                             fixed_min, fixed_max, argv):
     source_df = df.copy()
@@ -142,7 +154,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
         return 
     if rank_method == 'pval':
         df = 1-df
-    if normalize_factor == 'log' or  rank_method =='hits':
+    if not is_rpm_normalize and (normalize_factor == 'log' or  rank_method =='hits'):
         df = normalize(df, normalize_factor, normalize_method_hits, normalize_section, rank_method,  fixed_min, fixed_max) 
     df_BC = df.loc[biological_condition]
     df_other = df.loc['other']
@@ -152,7 +164,7 @@ def statistical_calculation(df, output_path, done_path, invalid_mix, threshold_m
     # Concat two dataframe to one
     df_statistical = pd.concat([df_BC_statistical, df_other_statistical])
     # Left only the positive motifs
-    df_statistical, positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference)
+    df_statistical, positive_motifs = find_positive_motifs(df_statistical, threshold_mean, threshold_std, threshold_median, min_max_difference, rank_method, is_rpm_normalize)
     # Write the results 
     write_results(source_df, df_statistical, positive_motifs, output_path)
 
@@ -169,25 +181,27 @@ if __name__ == '__main__':
     parser.add_argument('data_path', type=str, help='A csv file with data matrix to model')
     parser.add_argument('output_path', type=str, help='Path to base name file for output the results')
     parser.add_argument('done_file_path', type=str, help='A path to a file that signals that the script finished running successfully.')
-    parser.add_argument('--invalid_mix',type=str, default=None, help='A argument to know if there is compare to naive')
+    parser.add_argument('--is_rpm_normalize', action='store_true', help='The data is already normalize by rpm')
+    parser.add_argument('--invalid_mix',type=str, default=None, help='Sample name considered negative. e.g. "native')
     parser.add_argument('--threshold_mean', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the mean diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the mean of BC to the mean of other is bigger than the motif is seperate')
+                        help='Positive motif threshold of the difference between the mean of the BC and mean of others')
     parser.add_argument('--threshold_std', default=None, 
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the std diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the std of BC to the std of other is bigger than the motif is seperate')
+                        help='Positive motif threshold of the difference between the std of the BC and std of others')
     parser.add_argument('--threshold_median', default=None,
                         type=lambda x: float(x) if 0 < float(x) < 1 
                         else parser.error(f'The threshold of the median diffrence should be between 0 to 1'),
-                        help='If the diffrenece between the median of BC to the median of other is bigger than the motif is seperate')
-    parser.add_argument('--min_max_difference', action='store_true', help='motifs is positive if the minmal val of bc is bigger than the maximal value of other')
+                        help='Positive motif threshold of the difference between the median of the BC and median of others')
+    parser.add_argument('--min_max_difference', action='store_true', help='Positive motif if the minmal value of bc is bigger than the maximal value of other')
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles', 'hits'], default='hits', help='Motifs ranking method')
-    parser.add_argument('--normalize_factor', choices=['linear', 'log'], default='linear', help='Type of factor on number for highlight them')
+    parser.add_argument('--normalize_factor', choices=['linear', 'log'], default='linear', help='type of factor to normalize the data. \
+                                    If nonlinear data (values are not in the same distance) use log ,otherwise use linear')
     parser.add_argument('--normalize_method_hits', choices=['min_max', 'max', 'fixed_min_max'], default='min_max', 
-                        help='Type of method to do the normaliztion on hits data, change the values to be between 0 to 1')
-    parser.add_argument('--normalize_section', choices=['per_motif','per_exp'],  default='per_motif', help='Calculate the min and max per motifs or over all the exp data')
+                        help='Method affects which values the normalization will change the data. e.g. min max bring all values into the range [0,1]')
+    parser.add_argument('--normalize_section', choices=['per_motif','per_exp'],  default='per_motif', help='Normalize the data by calculate the min and max per motif or over all the exp data')
     parser.add_argument('--fixed_min', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the minimum value')
     parser.add_argument('--fixed_max', type=int, default=None, help='In case of fixed_min_max for normalize_method_hits set the maximum value')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -200,7 +214,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('main')
 
     df = pd.read_csv(args.data_path)
-    statistical_calculation(df, args.output_path, args.done_file_path, args.invalid_mix,
+    statistical_calculation(df, args.output_path, args.done_file_path, args.is_rpm_normalize, args.invalid_mix,
                             args.threshold_mean, args.threshold_std, args.threshold_median, args.min_max_difference,
                             args.rank_method, args.normalize_factor, args.normalize_method_hits, args.normalize_section,
                             args.fixed_min, args.fixed_max, sys.argv)
