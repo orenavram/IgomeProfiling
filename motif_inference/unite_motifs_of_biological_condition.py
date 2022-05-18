@@ -2,6 +2,7 @@ import datetime
 import subprocess
 import logging
 import os
+import math
 import sys
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
@@ -12,7 +13,7 @@ else:
 sys.path.insert(0, src_dir)
 
 from auxiliaries.pipeline_auxiliaries import verify_file_is_not_empty, get_cluster_size_from_name, load_fasta_to_dict, \
-    get_count_from
+    get_count_from, get_samples_from_name, get_unique_members_from_name
 
 
 def get_clusters_sequences(motif_inference_output_path, biological_condition, sample_names,
@@ -64,8 +65,19 @@ def remove_consensus_name(clusters):
     return [cluster[cluster.index('_')+1:] for cluster in clusters]
 
 
+def get_samples_number_build_cluster(clusters):
+    return len(set([get_samples_from_name(cluster) for cluster in clusters]))
+
+
+def sort_clusters(clusters):
+    sort_by_num_samples = get_samples_number_build_cluster(clusters)
+    sort_by_unique_memebers = sum(get_unique_members_from_name(cluster) for cluster in clusters)
+    sort_by_cluster_size = sum(get_cluster_size_from_name(cluster) for cluster in clusters)
+    return (sort_by_num_samples, sort_by_unique_memebers, sort_by_cluster_size)
+
+
 def unite_clusters(motif_inference_output_path, meme_file, biological_condition, sample_names,
-                   max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff,
+                   max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff, sort_cluster_to_combine_only_by_cluster_size,
                    unite_pssm_script_path='./UnitePSSMs/UnitePSSMs', argv='no_argv'):
 
     clusters_to_combine_path = os.path.join(output_path, 'cluster_to_combine.csv')
@@ -87,12 +99,18 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
             clusters_to_combine.append(cluster_names)
 
     logger.info(f'Sorting clusters by rank...')
+    half_num_samples = 0 if sort_cluster_to_combine_only_by_cluster_size else math.floor(len(sample_names)/2)
     # sort the sublist such that the first one will contain the highest copy number, etc...
-    clusters_to_combine.sort(key=lambda clusters: sum(get_cluster_size_from_name(cluster) for cluster in clusters), reverse=True)
+    if sort_cluster_to_combine_only_by_cluster_size:
+            clusters_to_combine.sort(key=lambda clusters: sum(get_cluster_size_from_name(cluster) for cluster in clusters), reverse=True)
+    else:
+        clusters_to_combine.sort(key=lambda clusters: sort_clusters(clusters), reverse=True)
     sorted_clusters_to_combine_path = clusters_to_combine_path.replace('cluster_to_combine', 'sorted_cluster_to_combine')
     with open(sorted_clusters_to_combine_path, 'w') as f:
         for cluster_names in clusters_to_combine:
-            f.write(','.join(cluster_names)+'\n')
+            num_of_samples_per_cluster = get_samples_number_build_cluster(cluster_names) 
+            if num_of_samples_per_cluster >= half_num_samples:
+                f.write(','.join(cluster_names)+'\n')
 
     unaligned_sequences_path = os.path.join(output_path, 'unaligned_sequences')
     os.makedirs(unaligned_sequences_path, exist_ok=True)
@@ -131,6 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC')
     parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
+    parser.add_argument('--sort_cluster_to_combine_only_by_cluster_size', action='store_true', help='Sort the clusters only by the cluster size')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -142,4 +161,4 @@ if __name__ == '__main__':
 
     unite_clusters(args.motif_inference_output_path, args.meme_file_path, args.biological_condition,
                    args.sample_names.split(','), args.max_number_of_members_per_cluster, args.output_path, args.done_file_path,
-                   args.aln_cutoff, args.pcc_cutoff, argv=sys.argv)
+                   args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size,  argv=sys.argv)
