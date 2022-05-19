@@ -157,7 +157,6 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
     else:
         logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({collapsing_done_path} exists)')
 
-
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 

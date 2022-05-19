@@ -62,7 +62,7 @@ def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename
     if samplename2biologicalcondition_path:
         samples2bc_valid, sample2bc_data = load_and_validate_input_table(samplename2biologicalcondition_path, \
             'Samples {} belongs to more than one bc!!', logger)
-
+    
     if not samples2bc_valid or not barcode2samples_valid:
         return False
     if barcode2samplename_path and samplename2biologicalcondition_path:
