@@ -11,7 +11,7 @@ else:
     src_dir = '.'
 sys.path.insert(0, src_dir)
 
-from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, process_params, submit_pipeline_step
+from auxiliaries.pipeline_auxiliaries import fetch_cmd, wait_for_results, load_table_to_dict, process_params
 from auxiliaries.validation_files import is_input_files_valid
 from auxiliaries.stop_machine_aws import stop_machines
 from global_params import src_dir
