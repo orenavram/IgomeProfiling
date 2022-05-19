@@ -29,7 +29,6 @@ map_names_command_line = {
     "min_sequencing_quality" : "min_sequencing_quality",
     "minimal_length_required" : "minimal_length_required",
     "maximum_length_required" : "maximum_length_required",
-    "samples2group" : "samples2group", 
     "multi_exp_config_reads" : "multi_experiments_config",
     "check_files_valid" : "check_files_valid",
     "stop_machines" : "stop_machines_flag",
@@ -46,14 +45,14 @@ map_names_command_line = {
 
 def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, maximum_length_required,
-                    samples2group, multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
+                    multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
                     no_calculate_rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
 
     if exp_name:
         logger.info(f'{datetime.datetime.now()}: Start reads filtration step for experiments {exp_name})')
     
     # check the validation of files barcode2samplename_path and samplename2biologicalcondition_path
-    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2sample, logger=logger, samples2group=samples2group):
+    if check_files_valid and not is_input_files_valid(samplename2biologicalcondition_path='', barcode2samplename_path=barcode2sample, logger=logger):
         return
 
     if os.path.exists(done_file_path):
@@ -64,7 +63,7 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
     os.makedirs(logs_dir, exist_ok=True)
         
     barcode2samplename_dict = load_table_to_dict(barcode2sample, 'Barcode {} belongs to more than one sample_name!!')
-    sample_names = sorted(barcode2samplename_dict.values())
+    sample_names = list(set(sorted(barcode2samplename_dict.values())))
     error_path = error_path or os.path.join(reads_path, 'error.txt')
 
     script_name = 'filter_reads.py'
@@ -157,41 +156,6 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                     error_file_path=error_path, suffix='collapsing.txt')
     else:
         logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({collapsing_done_path} exists)')
-    
-    
-    if samples2group != None:
-        script_name = 'join_samples_to_group.py'
-        logger.info('_' * 100)
-        logger.info(f'{datetime.datetime.now()}: Join samples to group')
-        num_of_expected_results = 0
-        all_cmds_params = []
-        samples2group_dict = load_table_to_dict(samples2group, '', is_validate_json=False)
-        group_names = sorted(samples2group_dict.values())
-        group_names_to_run = []
-        for group in group_names:
-            input_path = None
-            output_path = None
-            done_path = None
-            samples_name = None
-            if not os.path.exists(done_path):
-                cmds = []
-                all_cmds_params.append(cmds)
-                group_names_to_run.append(group)
-            else:
-                logger.debug(f'Skipping clustering as {done_path} exists')
-                num_of_expected_results += 1
-        
-        if len(all_cmds_params) > 0:
-            for cmds_params, group_name in zip(all_cmds_params, group_names_to_run):
-                cmd = submit_pipeline_step(f'{src_dir}/reads_filtration/{script_name}',
-                                [cmds_params],
-                                logs_dir, f'{group_name}_join',
-                                queue, verbose)
-            num_of_expected_results += 1  # a single job for each biological condition
-            wait_for_results(script_name, logs_dir, num_of_expected_results, example_cmd=cmd,
-                        error_file_path=error_path, suffix='_done_join_samples_to_group.txt')
-        else:
-            logger.info('Skipping join samples to group, all exists')    
 
 
     with open(done_file_path, 'w') as f:
@@ -220,7 +184,6 @@ if __name__ == '__main__':
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully')
     parser.add_argument('minimal_length_required', default=3, type=int, help='Shorter peptides will be discarded')
     
-    parser.add_argument('--samples2group', type=str, help='A path to the barcode to group sample name file')
     parser.add_argument('--maximum_length_required', default=14, type=int, help='Longer peptides will be discarded')
     parser.add_argument('--multi_exp_config_reads', type=str, help='Configuration file for reads phase to run multi expirements')
     parser.add_argument('--check_files_valid', action='store_true', help='Need to check the validation of the files (samplename2biologicalcondition_path / barcode2samplenaem)')

@@ -3,14 +3,10 @@ import re
 import datetime
 
 
-def is_same_samples(samples2bc_dict, barcode2samples_dict, samples2group_dict, samplename2biologicalcondition_path, barcode2samplename_path, logger, samples2group_path=None):
+def is_same_samples(samples2bc_dict, barcode2samples_dict, samplename2biologicalcondition_path, barcode2samplename_path, logger):
     # verify that file sample2biologicalcondition and file barcode2sample have the same samples.
     samples_from_sample2bc = sorted(samples2bc_dict.keys())
     samples_from_barcode2sample = sorted(barcode2samples_dict.values())
-    if samples2group_path != None:
-        groups_from_samples2group = sorted(list(set(samples2group_dict.values())))
-        if groups_from_samples2group not in samples_from_barcode2sample:
-            return False
     if not samples_from_sample2bc == samples_from_barcode2sample:
         barcodes = set(samples_from_barcode2sample)
         bcs = set(samples_from_sample2bc)
@@ -53,12 +49,11 @@ def load_and_validate_input_table(path, error, logger):
     return is_valid, data
 
 
-def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename_path, logger, samples2group_path=None):
+def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename_path, logger):
     samples2bc_valid = True
     barcode2samples_valid = True
     barcode2sample_data = {}
     sample2bc_data = {}
-    samples2group_data = {}
 
     if barcode2samplename_path:
         barcode2samples_valid, barcode2sample_data = load_and_validate_input_table(barcode2samplename_path, \
@@ -67,14 +62,11 @@ def is_input_files_valid(samplename2biologicalcondition_path, barcode2samplename
     if samplename2biologicalcondition_path:
         samples2bc_valid, sample2bc_data = load_and_validate_input_table(samplename2biologicalcondition_path, \
             'Samples {} belongs to more than one bc!!', logger)
-    
-    if samples2group_path != None:
-        samples2group_data =  load_table_to_dict(samples2group_path, '', is_validate_json=False)
 
     if not samples2bc_valid or not barcode2samples_valid:
         return False
     if barcode2samplename_path and samplename2biologicalcondition_path:
-        return is_same_samples(sample2bc_data, barcode2sample_data, samples2group_data, samplename2biologicalcondition_path, barcode2samplename_path, logger, samples2group_path)
+        return is_same_samples(sample2bc_data, barcode2sample_data, samplename2biologicalcondition_path, barcode2samplename_path, logger)
     return True     
 
 
