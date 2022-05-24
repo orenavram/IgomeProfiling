@@ -64,7 +64,7 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
     os.makedirs(logs_dir, exist_ok=True)
         
     barcode2samplename_dict = load_table_to_dict(barcode2sample, 'Barcode {} belongs to more than one sample_name!!')
-    sample_names = sorted(barcode2samplename_dict.values())
+    sample_names = list(set(sorted(barcode2samplename_dict.values())))
     error_path = error_path or os.path.join(reads_path, 'error.txt')
 
     script_name = 'filter_reads.py'
