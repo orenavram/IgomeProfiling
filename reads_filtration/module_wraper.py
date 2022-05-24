@@ -34,6 +34,7 @@ map_names_command_line = {
     "stop_machines" : "stop_machines_flag",
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
+    "name_summary_file_reads" : "name_summary_file_reads",
     "gz" : "gz",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -45,7 +46,7 @@ map_names_command_line = {
 
 def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
                     left_construct, right_construct, max_mismatches_allowed, min_sequencing_quality, minimal_length_required, maximum_length_required,
-                    multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
+                    multi_experiments_config, check_files_valid, stop_machines_flag, type_machines_to_stop, name_machines_to_stop, name_summary_file_reads,
                     no_calculate_rpm, gz, verbose, mapitope, error_path, queue, exp_name, argv):
 
     if exp_name:
@@ -157,6 +158,20 @@ def run_first_phase(fastq, reads_path, logs_dir, barcode2sample, done_file_path,
     else:
         logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({collapsing_done_path} exists)')
 
+    script_name = 'summary_reads.py'
+    done_path = f'{logs_dir}/03_done_summary_reads.txt'
+    if not os.path.exists(done_path):
+        logger.info('_' * 100)
+        logger.info(f'{datetime.datetime.now()}: summary reads for {done_path}')
+        parameters = [barcode2sample, reads_path, done_path, f'--name_summary_file_reads {name_summary_file_reads}',
+                      '--no_calculate_rpm' if no_calculate_rpm else '']
+        fetch_cmd(f'{src_dir}/reads_filtration/{script_name}', parameters, verbose, error_path)
+        num_of_expected_results = 1
+        wait_for_results(script_name, logs_dir, num_of_expected_results,
+                         error_file_path=error_path, suffix='summary_reads.txt')
+    else:
+        logger.info(f'{datetime.datetime.now()}: skipping {script_name} ({done_path} exists)')
+
     with open(done_file_path, 'w') as f:
         f.write(' '.join(argv) + '\n')
 
@@ -190,6 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--no_calculate_rpm', action='store_true', help='Disable normalize counts to "reads per million" (sequence proportion x 1,000,000)')
+    parser.add_argument('--name_summary_file_reads', default='summary_log_reads.csv', type=str, help='A name for summary file summary all reads.')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--gz', action='store_true', help='gzip fastq, filtration_log, fna, and faa files')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
