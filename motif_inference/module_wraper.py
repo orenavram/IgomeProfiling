@@ -33,6 +33,7 @@ map_names_command_line = {
     "aln_cutoff" : "aln_cutoff",
     "pcc_cutoff" : "pcc_cutoff",
     "sort_cluster_to_combine_only_by_cluster_size" : "sort_cluster_to_combine_only_by_cluster_size",
+    "min_number_samples_build_cluster_per_BC" : "min_number_samples_build_cluster_per_BC",
     "threshold" : "threshold",
     "word_length" : "word_length",
     "discard" : "discard",
@@ -362,7 +363,8 @@ def split_then_compute_cutoffs(biological_conditions, meme_split_size, cutoff_ra
 def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
                  max_msas_per_sample, max_msas_per_bc, max_num_of_cluster_per_sample, max_num_of_cluster_per_bc,
                  gap, done_file_path, check_files_valid, multi_exp_config_inference,
-                 min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff, sort_cluster_to_combine_only_by_cluster_size,
+                 min_num_of_columns_meme, prefix_length_in_clstr, aln_cutoff, pcc_cutoff,
+                 sort_cluster_to_combine_only_by_cluster_size, min_number_samples_build_cluster_per_BC,
                  threshold, word_length, discard, cluster_alg_mode, concurrent_cutoffs, meme_split_size, skip_sample_merge_meme,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cutoff_random_peptitdes_percentile,
                  min_library_length_cutoff, max_library_length_cutoff, queue, verbose, mapitope, error_path, exp_name, argv):
@@ -574,7 +576,8 @@ def infer_motifs(reads_path, motifs_path, logs_dir, sample2bc,
             all_cmds_params.append([motifs_path, merged_meme_path, bc, relevant_samples,
                                     max_num_of_cluster_per_bc,
                                     output_path, done_path, f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
-                                    '--sort_cluster_to_combine_only_by_cluster_size' if sort_cluster_to_combine_only_by_cluster_size else ''])
+                                    '--sort_cluster_to_combine_only_by_cluster_size' if sort_cluster_to_combine_only_by_cluster_size else '',
+                                    f'--min_number_samples_build_cluster_per_BC {min_number_samples_build_cluster_per_BC}'])
         else:
             logger.debug(f'Skipping unite as {done_path} exists')
             num_of_expected_results += 1
@@ -644,6 +647,7 @@ if __name__ == '__main__':
     parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC') 
     parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
     parser.add_argument('--sort_cluster_to_combine_only_by_cluster_size', action='store_true', help='Sort the clusters only by the cluster size')
+    parser.add_argument('--min_number_samples_build_cluster_per_BC', type=str, default=1, help='Keep only clusters that build from X minimun number of samples')
     parser.add_argument('--threshold', default='0.6', help='Minimal sequence similarity threshold required',
                         type=lambda x: float(x) if 0.4 <= float(x) <= 1
                                                 else parser.error(f'CD-hit allows thresholds between 0.4 to 1'))
