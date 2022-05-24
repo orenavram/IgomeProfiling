@@ -77,7 +77,8 @@ def sort_clusters(clusters):
 
 
 def unite_clusters(motif_inference_output_path, meme_file, biological_condition, sample_names,
-                   max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff, sort_cluster_to_combine_only_by_cluster_size,
+                   max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff, 
+                   sort_cluster_to_combine_only_by_cluster_size, min_number_samples_build_cluster,
                    unite_pssm_script_path='./UnitePSSMs/UnitePSSMs', argv='no_argv'):
 
     clusters_to_combine_path = os.path.join(output_path, 'cluster_to_combine.csv')
@@ -99,7 +100,6 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
             clusters_to_combine.append(cluster_names)
 
     logger.info(f'Sorting clusters by rank...')
-    half_num_samples = 0 if sort_cluster_to_combine_only_by_cluster_size else math.floor(len(sample_names)/2)
     # sort the sublist such that the first one will contain the highest copy number, etc...
     if sort_cluster_to_combine_only_by_cluster_size:
             clusters_to_combine.sort(key=lambda clusters: sum(get_cluster_size_from_name(cluster) for cluster in clusters), reverse=True)
@@ -109,7 +109,7 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
     with open(sorted_clusters_to_combine_path, 'w') as f:
         for cluster_names in clusters_to_combine:
             num_of_samples_per_cluster = get_samples_number_build_cluster(cluster_names) 
-            if num_of_samples_per_cluster >= half_num_samples:
+            if num_of_samples_per_cluster >= min_number_samples_build_cluster:
                 f.write(','.join(cluster_names)+'\n')
 
     unaligned_sequences_path = os.path.join(output_path, 'unaligned_sequences')
@@ -150,6 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC')
     parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
     parser.add_argument('--sort_cluster_to_combine_only_by_cluster_size', action='store_true', help='Sort the clusters only by the cluster size')
+    parser.add_argument('--min_number_samples_build_cluster_per_BC', type=str, default=1, help='Keep only clusters that build from X minimum number of samples')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
@@ -161,4 +162,5 @@ if __name__ == '__main__':
 
     unite_clusters(args.motif_inference_output_path, args.meme_file_path, args.biological_condition,
                    args.sample_names.split(','), args.max_number_of_members_per_cluster, args.output_path, args.done_file_path,
-                   args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size,  argv=sys.argv)
+                   args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size,
+                   args.min_number_samples_build_cluster, argv=sys.argv)

@@ -76,8 +76,9 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  maximum_length_required, gz, no_calculate_rpm, multi_exp_config_reads,
                  max_msas_per_sample, max_msas_per_bc, max_number_of_cluster_members_per_sample, max_number_of_cluster_members_per_bc,
                  allowed_gap_frequency, threshold, word_length, discard, cluster_algorithm_mode, concurrent_cutoffs, meme_split_size, use_mapitope, aln_cutoff,
-                 pcc_cutoff, sort_cluster_to_combine_only_by_cluster_size, skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, 
-                 prefix_length_in_clstr, multi_exp_config_inference, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
+                 pcc_cutoff, sort_cluster_to_combine_only_by_cluster_size, min_number_samples_build_cluster_per_BC, 
+                 skip_sample_merge_meme, minimal_number_of_columns_required_create_meme, prefix_length_in_clstr,
+                 multi_exp_config_inference, cutoff_random_peptitdes_percentile, min_library_length_cutoff, max_library_length_cutoff,
                  stop_before_random_forest, is_run_random_forest_per_bc_sequentially, number_of_random_pssms, number_parallel_random_forest, min_value_error_random_forest,
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
@@ -148,6 +149,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--minimal_number_of_columns_required_create_meme {minimal_number_of_columns_required_create_meme}',
                              f'--prefix_length_in_clstr {prefix_length_in_clstr}', f'--aln_cutoff {aln_cutoff}', f'--pcc_cutoff {pcc_cutoff}',
                              '--sort_cluster_to_combine_only_by_cluster_size' if sort_cluster_to_combine_only_by_cluster_size else '',
+                             f'--min_number_samples_build_cluster_per_BC {min_number_samples_build_cluster_per_BC}',
                              f'--threshold {threshold}', f'--word_length {word_length}', f'--discard {discard}', f'--cluster_algorithm_mode {cluster_algorithm_mode}',
                              f'--multi_exp_config_inference {multi_exp_config_inference}' if multi_exp_config_inference else '',
                              f'--meme_split_size {meme_split_size}', f'--skip_sample_merge_meme {skip_sample_merge_meme}',
@@ -280,6 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC') 
     parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
     parser.add_argument('--sort_cluster_to_combine_only_by_cluster_size', action='store_true', help='Sort the clusters only by the cluster size')
+    parser.add_argument('--min_number_samples_build_cluster_per_BC', type=str, default=1, help='Keep only clusters that build from X minimum number of samples')
     parser.add_argument('--skip_sample_merge_meme', default='a_weird_str_that_shouldnt_be_a_sample_name_by_any_chance',
                         help='A sample name that should be skipped in merge meme files, e.g., for testing purposes. More than one sample '
                              'name should be separated by commas but no spaces. '
@@ -366,7 +369,7 @@ if __name__ == '__main__':
                  args.maximum_length_required, args.gz, args.no_calculate_rpm, args.multi_exp_config_reads,
                  args.max_msas_per_sample, args.max_msas_per_bc, args.max_number_of_cluster_members_per_sample, args.max_number_of_cluster_members_per_bc,
                  args.allowed_gap_frequency, args.threshold, args.word_length, args.discard, args.cluster_algorithm_mode, concurrent_cutoffs, args.meme_split_size, 
-                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size,
+                 args.mapitope, args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size, args.min_number_samples_build_cluster_per_BC,
                  args.skip_sample_merge_meme, args.minimal_number_of_columns_required_create_meme,
                  args.prefix_length_in_clstr, args.multi_exp_config_inference, args.cutoff_random_peptitdes_percentile,
                  args.min_library_length_cutoff, args.max_library_length_cutoff, 
