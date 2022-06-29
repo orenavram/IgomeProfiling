@@ -71,10 +71,9 @@ def get_samples_number_build_cluster(clusters):
 
 def sort_clusters(clusters):
     sort_by_num_samples = get_samples_number_build_cluster(clusters)
-    sort_by_unique_memebers = sum(get_unique_members_from_name(cluster) for cluster in clusters)
+    sort_by_unique_memebers = sum(get_unique_members_from_name(cluster) for cluster in clusters)*(-1)
     sort_by_cluster_size = sum(get_cluster_size_from_name(cluster) for cluster in clusters)
-    return (sort_by_num_samples, sort_by_unique_memebers, sort_by_cluster_size)
-
+    return (sort_by_num_samples, sort_by_cluster_size , sort_by_unique_memebers)
 
 def unite_clusters(motif_inference_output_path, meme_file, biological_condition, sample_names,
                    max_number_of_members_per_cluster, output_path, done_path, aln_cutoff, pcc_cutoff, 
