@@ -162,4 +162,4 @@ if __name__ == '__main__':
     unite_clusters(args.motif_inference_output_path, args.meme_file_path, args.biological_condition,
                    args.sample_names.split(','), args.max_number_of_members_per_cluster, args.output_path, args.done_file_path,
                    args.aln_cutoff, args.pcc_cutoff, args.sort_cluster_to_combine_only_by_cluster_size,
-                   args.min_number_samples_build_cluster, argv=sys.argv)
+                   args.min_number_samples_build_cluster_per_BC, argv=sys.argv)
