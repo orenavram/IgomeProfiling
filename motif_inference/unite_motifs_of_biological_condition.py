@@ -108,7 +108,7 @@ def unite_clusters(motif_inference_output_path, meme_file, biological_condition,
     with open(sorted_clusters_to_combine_path, 'w') as f:
         for cluster_names in clusters_to_combine:
             num_of_samples_per_cluster = get_samples_number_build_cluster(cluster_names) 
-            if int(num_of_samples_per_cluster) >= int(min_number_samples_build_cluster):
+            if num_of_samples_per_cluster >= min_number_samples_build_cluster:
                 f.write(','.join(cluster_names)+'\n')
 
     unaligned_sequences_path = os.path.join(output_path, 'unaligned_sequences')
