@@ -149,7 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('--aln_cutoff', default='24', help='The cutoff for pairwise alignment score to unite motifs of BC')
     parser.add_argument('--pcc_cutoff', default='0.7', help='Minimal PCC R to unite motifs of BC')
     parser.add_argument('--sort_cluster_to_combine_only_by_cluster_size', action='store_true', help='Sort the clusters only by the cluster size')
-    parser.add_argument('--min_number_samples_build_cluster_per_BC', type=str, default=1, help='Keep only clusters that build from X minimum number of samples')
+    parser.add_argument('--min_number_samples_build_cluster_per_BC', type=int, default=1, help='Keep only clusters that build from X minimum number of samples')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
 
