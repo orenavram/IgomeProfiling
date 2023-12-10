@@ -2,6 +2,7 @@ import datetime
 import gzip
 import os
 import sys
+import regex
 if os.path.exists('/groups/pupko/orenavr2/'):
     src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
 elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
@@ -37,30 +38,22 @@ def get_barcodes_dictionaries(barcode_to_samplename, output_dir, gz) -> {str: {s
 
         # add filenames
         barcode2filepaths[barcode] = {}
-        # translated seq
-        barcode2filepaths[barcode]['fastq'] = f'{subdir_path}/{sample_name}.fastq{extension}'
-        # translated seq
-        barcode2filepaths[barcode]['fna'] = f'{subdir_path}/{sample_name}.fna{extension}'
-        # translated seq
-        barcode2filepaths[barcode]['faa'] = f'{subdir_path}/{sample_name}.faa{extension}'
-        # where in the filter seqs dropped
         barcode2filepaths[barcode]['filtration_log'] = f'{subdir_path}/{sample_name}.filtration_log.txt{extension}'
 
         # add filehandlers
         barcode2filehandlers[barcode] = {}
-        barcode2filehandlers[barcode]['fastq'] = open_function(barcode2filepaths[barcode]['fastq'], mode)
-        barcode2filehandlers[barcode]['fna'] = open_function(barcode2filepaths[barcode]['fna'], mode)
-        barcode2filehandlers[barcode]['faa'] = open_function(barcode2filepaths[barcode]['faa'], mode)
         barcode2filehandlers[barcode]['filtration_log'] = open_function(barcode2filepaths[barcode]['filtration_log'], mode)
 
         barcode2statistics[barcode] = dict.fromkeys(['legal_barcode',
-                                     'poor_quality_barcode',
-                                     'high_quality_barcode',
-                                     'too_many_mistakes',
                                      'stop_codon',
                                      'too_short',
                                      'total_translated_sequences',
-                                     'uag'], 0)
+                                     'uag',
+                                     'no_left',
+                                     'no_right',
+                                     'left_and_right',
+                                     'not_divisible_by_3',
+                                     'divisible_by_3_not_NNK'], 0)
         barcode2statistics[barcode]['lib_type'] = {}
 
         barcode2info_filenames[barcode] = f'{subdir_path}/{sample_name}_info.txt'
@@ -90,9 +83,6 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
 
     start_time = datetime.datetime.now()
     from auxiliaries.pipeline_auxiliaries import nnk_table, codon_table
-
-    left_construct_length = len(left_construct)
-    right_construct_length = len(right_construct)
 
     logger.info(f'{datetime.datetime.now()}: Loading barcode2samplename file from:\n{barcode2samplename_path}')
 
@@ -145,79 +135,72 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     continue
                 #if barcode is legal
                 barcode2statistics[barcode]['legal_barcode'] += 1
-
-                # check that the barcode quality is above the required threshold
-                barcode_quality = quality[:barcode_len]
-                lowest_scored_character = min([ord(c) for c in barcode_quality])
-                if lowest_scored_character < min_sequencing_quality:
-                    barcode2statistics[barcode]['poor_quality_barcode'] += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"{barcode2statistics['legal_barcode']}\tlow quality barcode ({lowest_scored_character})\t{dna_read}\n")
-                    continue
-                barcode2statistics[barcode]['high_quality_barcode'] += 1
-
+                
+                # start with the seq and if will be a problem, write it
+                barcode2filehandlers[barcode]['filtration_log'].write(f"\nSequence number {barcode2statistics[barcode]['legal_barcode']}: {dna_read}\t") 
+                dna = dna_read[8:]
                 # verify left construct
-                current_left_construct = dna_read[barcode_len: barcode_len + left_construct_length]
-                # if regex.match(f'({current_left_construct})' + '{s<='f"{max_mismatches_allowed}"'}', left_construct) == None:
-                num_of_mismatches_on_the_left = str_diff(current_left_construct, left_construct)
-                if num_of_mismatches_on_the_left > max_mismatches_allowed:
-                    barcode2statistics[barcode]['too_many_mistakes'] += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\tleft construct has {num_of_mismatches_on_the_left} (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct}\n")
-                    continue
+                # current_left_construct = dna_read[barcode_len: barcode_len + left_construct_length]
+                left_search = regex.search(f'({left_construct}){{s<=1}}', dna, regex.BESTMATCH)
+                if left_search == None: # Don't find left
+                    barcode2statistics[barcode]['no_left'] += 1
+                    barcode2filehandlers[barcode]['filtration_log'].write(f"left construct has more than 1 mistake\t")
+                    continue                   
+                else: # Find the right construct
+                    right_serach = regex.search(f'({right_construct}){{s<=1}}', dna, regex.BESTMATCH)
+                    if right_serach == None:
+                        barcode2statistics[barcode]['no_right'] += 1
+                        barcode2filehandlers[barcode]['filtration_log'].write(f"right construct has more than 1 mistake\t")
+                        continue
+                    else: # Left and right!
+                        barcode2statistics[barcode]['left_and_right'] += 1
+                        
+
 
                 # extract random fragment (according to the currently assumed library)
-                random_dna_start = barcode_len + left_construct_length
-                rest_of_read = dna_read[random_dna_start:]
-
+                random_dna_start = left_search.span()[1]
+                random_dna_end = right_serach.span()[0]
+                rest_of_read = dna[random_dna_start:random_dna_end]
+                if len(rest_of_read)%3 != 0 :
+                    barcode2statistics[barcode]['not_divisible_by_3'] += 1
+                    barcode2filehandlers[barcode]['filtration_log'].write(f"not_divisible_by_3\t")
+                    continue
+                # for sure divisible by 3
                 random_peptide = ''
                 has_stop_codon = False
                 q_in_peptide = False
                 i = 0
                 for i in range(0, len(rest_of_read), 3):
-                    #only sequence-P3=210/p8=182 exp 13 yael
-                    if i == 182: 
-                        break
-                    ######
                     codon = rest_of_read[i: i+3]
-                    #if codon == "TGA" or codon == "TAA":
-                    #   has_stop_codon = True
-                    #   barcode2statistics[barcode]['stop_codon'] += 1
-                    #   barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\tcontains a stop codon\t{rest_of_read[i:i+3]}\n")
-                    #   break
-                    if len(codon) < 3:
+                    if codon == "TGA" or codon == "TAA":
+                      has_stop_codon = True
+                      barcode2statistics[barcode]['stop_codon'] += 1
+                      barcode2filehandlers[barcode]['filtration_log'].write(f"contains a stop codon\t")
+                      break
+
+                    if codon[0] not in 'ACGT' or codon[1] not in 'ACGT':  # unrecognized dna base, e.g., N
+                        barcode2statistics[barcode]['divisible_by_3_not_NNK'] += 1
+                        barcode2filehandlers[barcode]['filtration_log'].write(f"divisible_by_3_not_NNK\t")
                         break
-                    #N is problem in the NGS running
-                    if codon[0] == 'N' or codon[1] == "N" or codon[2] == 'N':  # unrecognized dna base, e.g., N
-                        barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t'N' in sequence\t{rest_of_read[i:i+3]}\n")
+                    if codon[2] not in 'GT':  # K group (of NNK) = G or T
+                        barcode2statistics[barcode]['divisible_by_3_not_NNK'] += 1
+                        barcode2filehandlers[barcode]['filtration_log'].write(f"divisible_by_3_not_NNK\t")
                         break
-                    #if codon[0] not in 'ACGT' or codon[1] not in 'ACGT':  # unrecognized dna base, e.g., N
-                        #break
-                    #if codon[2] not in 'GT':  # K group (of NNK) = G or T
-                        #break
                     random_peptide += codon_table[codon]
                     if codon == 'TAG':
                         q_in_peptide = True
 
-                #if has_stop_codon:
-                    # all set and documented. We can continue to the next read...
-                #   continue
 
-                random_dna_end = i  # where we stopped seeing NNK
-                rest_of_read = rest_of_read[random_dna_end:] # current right construct + dna remnants
-
-                # if the right construct is too short, just try to match what it has...
-                # num_of_mismatches_on_the_right = str_diff(rest_of_read, right_construct)
-                # if num_of_mismatches_on_the_right > max_mismatches_allowed - num_of_mismatches_on_the_left:
-                #     barcode2statistics[barcode]['too_many_mistakes'] += 1
-                #     barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\t random dna end: {random_dna_end} and random pep seq: {random_peptide} and rest of read: {rest_of_read} \n flanking constructs have {num_of_mismatches_on_the_left} mismatches with the left construct and {num_of_mismatches_on_the_right} mismatches on the right construct (max mismatches allowed is: {max_mismatches_allowed})\t{current_left_construct} {rest_of_read[:right_construct_length]}\n")
-                #     # all set and documented. We can continue to the next read...
-                #     continue
 
                 if (len(random_peptide) < minimal_length_required or
                     (random_peptide.startswith('C') and random_peptide.endswith('C') and
                     len(random_peptide)-2 < minimal_length_required)):  # minimum required length (excluding flanking Cysteine)
                     barcode2statistics[barcode]['too_short'] += 1
-                    barcode2filehandlers[barcode]['filtration_log'].write(f"Sequence number {barcode2statistics[barcode]['legal_barcode']}\trandom peptide is too short\t{random_peptide}\n")
+                    barcode2filehandlers[barcode]['filtration_log'].write(f"random peptide is too short\t{random_peptide}\t")
                     # all set and documented. We can continue to the next read...
+                    continue
+
+                if has_stop_codon:
                     continue
 
                 # reached here? read is valid!! woohoo
@@ -234,19 +217,8 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     lib_types.add(current_lib_type)
                 barcode2statistics[barcode]['lib_type'][current_lib_type] = barcode2statistics[barcode]['lib_type'].get(current_lib_type, 0) + 1
 
-                # add record to a dedicated fastq file
-                barcode2filehandlers[barcode]['fastq'].write(f'{line1}\n{dna_read}\n{line3}\n{quality}\n')
-                # add dna read to a dedicated fna file
-                barcode2filehandlers[barcode]['fna'].write(
-                    f">Seq_{barcode2statistics[barcode]['legal_barcode']}_Lib_{current_lib_type}\n{dna_read[random_dna_start: random_dna_end]}\n")
-                # add peptide (translated dna) to a dedicated faa file
-                barcode2filehandlers[barcode]['faa'].write(
-                    f">Seq_{barcode2statistics[barcode]['legal_barcode']}_Lib_{current_lib_type}\n{random_peptide}\n")
 
-    for barcode in barcode2samplename:
-        barcode2filehandlers[barcode]['fastq'].close()
-        barcode2filehandlers[barcode]['faa'].close()
-        barcode2filehandlers[barcode]['fna'].close()
+    for barcode in barcode2samplename:    
         barcode2filehandlers[barcode]['filtration_log'].close()
 
     lib_types = sorted(lib_types, key=lambda x: int(x) if x.isdigit() else 100 + int(x[1:-1]))  # no C's then C's
@@ -264,20 +236,25 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     f'max_mismatches_allowed = {max_mismatches_allowed}\n'
                     f'min_sequencing_quality = {min_sequencing_quality}\n')
 
-            total_filtered_reads_per_barcode = barcode2statistics[barcode]['poor_quality_barcode'] + \
-                                   barcode2statistics[barcode]['too_many_mistakes'] + \
-                                   barcode2statistics[barcode]['stop_codon'] + \
-                                   barcode2statistics[barcode]['too_short']
+            total_filtered_reads_per_barcode = barcode2statistics[barcode]['stop_codon'] + \
+                                   barcode2statistics[barcode]['too_short'] + \
+                                   barcode2statistics[barcode]['no_left'] + \
+                                   barcode2statistics[barcode]['no_right'] + \
+                                   barcode2statistics[barcode]['not_divisible_by_3'] + \
+                                   barcode2statistics[barcode]['divisible_by_3_not_NNK']
 
-            sanity_check = barcode2statistics[barcode]['poor_quality_barcode'] + barcode2statistics[barcode]['high_quality_barcode'] == barcode2statistics[barcode]['legal_barcode']
-            assert sanity_check, 'poor_quality + high_quality != total'
+            # sanity_check = barcode2statistics[barcode]['poor_quality_barcode'] + barcode2statistics[barcode]['high_quality_barcode'] == barcode2statistics[barcode]['legal_barcode']
+            # assert sanity_check, 'poor_quality + high_quality != total'
 
             write_header(f, f"Total sequences with a appropriate barcode: {barcode2statistics[barcode]['legal_barcode']}\n")
             write_header(f, f"Total number of reads that were filtered (due to the following reasons) -> {total_filtered_reads_per_barcode}\n")
-            f.write(f"Poor quality barcode -> {barcode2statistics[barcode]['poor_quality_barcode']}\n" 
-                    f"More than {max_mismatches_allowed} mistakes in the flanking constant sequences -> {barcode2statistics[barcode]['too_many_mistakes']}\n"
+            f.write(f"More than {max_mismatches_allowed} mistakes in the left constant sequences -> {barcode2statistics[barcode]['no_left']}\n"
+                    f"More than {max_mismatches_allowed} mistakes in the right constant sequences -> {barcode2statistics[barcode]['no_right']}\n"
+                    f"Sequences with left and right constant -> {barcode2statistics[barcode]['left_and_right']}\n"
                     f"Nonsense stop codon -> {barcode2statistics[barcode]['stop_codon']}\n"           
-                    f"Too short NNK sequences -> {barcode2statistics[barcode]['too_short']}\n")
+                    f"Too short NNK sequences -> {barcode2statistics[barcode]['too_short']}\n"
+                    f"Not divisible by 3 -> {barcode2statistics[barcode]['not_divisible_by_3']}\n"
+                    f"Divisible by 3 but not NNK -> {barcode2statistics[barcode]['divisible_by_3_not_NNK']}\n")
 
             write_header(f, f"\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {barcode2statistics[barcode]['total_translated_sequences']}\n\n")
 
@@ -312,22 +289,34 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
         for barcode in barcode2samplename:
             log_f.write(f'{barcode} -> {barcode2statistics[barcode]["legal_barcode"]}\n')
 
-        total_filtered_reads = sum(barcode2statistics[barcode]['poor_quality_barcode'] +
-                               barcode2statistics[barcode]['too_many_mistakes'] +
-                               barcode2statistics[barcode]['stop_codon'] +
-                               barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)
+        total_filtered_reads = sum(barcode2statistics[barcode]['no_left'] + 
+                                barcode2statistics[barcode]['no_right'] + 
+                                barcode2statistics[barcode]['not_divisible_by_3'] + 
+                                barcode2statistics[barcode]['divisible_by_3_not_NNK'] +
+                                barcode2statistics[barcode]['stop_codon'] +
+                                barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)
 
         write_header(log_f, f"Total number of reads that were filtered (due to the following reasons) -> {total_filtered_reads}\n")
 
-        log_f.write(f"Poor quality barcode -> {sum(barcode2statistics[barcode]['poor_quality_barcode'] for barcode in barcode2samplename)}\n"
-                    f"More than {max_mismatches_allowed} mistakes in the flanking constant sequences -> "
-                               f"{sum(barcode2statistics[barcode]['too_many_mistakes'] for barcode in barcode2samplename)}\n"
-                    f"Nonsense stop codon -> {sum(barcode2statistics[barcode]['stop_codon'] for barcode in barcode2samplename)}\n"
-                    f"Not NNK sequences -> {sum(barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)}\n")
-
+        log_f.write(f"More than {max_mismatches_allowed} mistakes in the left constant sequences -> {sum(barcode2statistics[barcode]['no_left'] for barcode in barcode2samplename)}\n"
+                    f"More than {max_mismatches_allowed} mistakes in the right constant sequences -> {sum(barcode2statistics[barcode]['no_right'] for barcode in barcode2samplename)}\n"
+                    f"Nonsense stop codon -> {sum(barcode2statistics[barcode]['stop_codon'] for barcode in barcode2samplename)}\n"          
+                    f"Too short NNK sequences -> {sum(barcode2statistics[barcode]['too_short'] for barcode in barcode2samplename)}\n"
+                    f"Not divisible by 3 -> {sum(barcode2statistics[barcode]['not_divisible_by_3'] for barcode in barcode2samplename)}\n"
+                    f"Divisible by 3 not NNK -> {sum(barcode2statistics[barcode]['divisible_by_3_not_NNK'] for barcode in barcode2samplename)}\n")
+        
+                
         total_translated_sequences = sum(barcode2statistics[barcode]['total_translated_sequences'] for barcode in barcode2samplename)
-        write_header(log_f, f'\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {total_translated_sequences}\n\n')
 
+        write_header(log_f, f'\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {total_translated_sequences}\n\n')
+        write_header(log_f, 'No left constant (per barcode):\n')
+        for barcode in barcode2samplename:
+            log_f.write(f'{barcode} -> {barcode2statistics[barcode]["no_left"]}\n')
+        
+        write_header(log_f, 'No right constant (per barcode):\n')
+        for barcode in barcode2samplename:
+            log_f.write(f'{barcode} -> {barcode2statistics[barcode]["no_right"]}\n')
+        
         write_header(log_f, 'Translated sequences (per library):\n')
         for lib_type in lib_types:
             log_f.write(f"{lib_type} -> {sum(barcode2statistics[barcode]['lib_type'].get(lib_type, 0) for barcode in barcode2samplename)}\n")
